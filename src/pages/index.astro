@@ -1,0 +1,122 @@
+---
+import Base from '../layouts/Base.astro';
+import { cardSearchText, imgUrl, index, isBattlefield, representativePrinting, setPrimaryRelease, type IndexCard } from '../lib/catalog';
+
+const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'showcase'];
+const typeOrder = ['legend', 'unit', 'spell', 'rune', 'gear', 'battlefield', 'other'];
+
+const byKnownFirst = (order: string[], fallback: number) => (a: string, b: string) => {
+	const ia = order.indexOf(a);
+	const ib = order.indexOf(b);
+	return (ia < 0 ? fallback : ia) - (ib < 0 ? fallback : ib);
+};
+
+const types = [...new Set(index.cards.flatMap((c) => c.types))].sort(byKnownFirst(typeOrder, 99));
+const rarities = [...new Set(index.cards.flatMap((c) => c.printings.map((p) => p.rarity).filter((r): r is string => Boolean(r))))].sort(
+	byKnownFirst(rarityOrder, 99),
+);
+const sets = [...index.sets].sort((a, b) => {
+	const ra = setPrimaryRelease(a)?.releasedAt ?? '9999-99-99';
+	const rb = setPrimaryRelease(b)?.releasedAt ?? '9999-99-99';
+	return ra.localeCompare(rb) || a.name.localeCompare(b.name);
+});
+
+// Client-side filter payload: what the vanilla-TS island needs to filter and
+// search entirely in memory (no network round-trips).
+const gridData = index.cards.map((card) => ({
+	slug: card.slug,
+	name: card.name,
+	types: card.types,
+	rarities: [...new Set(card.printings.map((p) => p.rarity).filter((r): r is string => Boolean(r)))],
+	sets: [...new Set(card.printings.map((p) => p.setSlug))],
+	variants: card.printings.length,
+	text: cardSearchText(card),
+}));
+// <script> safety: escape any literal `<` so a card's text can never close
+// the JSON tag early.
+const gridPayload = JSON.stringify(gridData).replace(/</g, '\\u003c');
+
+function gridCard(card: IndexCard) {
+	const rep = representativePrinting(card);
+	const imageId = rep?.imageIds[0];
+	return { card, rep, imageId };
+}
+---
+
+<Base title="Browse cards — Riftbound Deck Manager">
+	<h1 class="text-2xl font-bold">Browse cards</h1>
+	<p class="mt-1 text-sm text-slate-400">Every card in the local snapshot — filter by type, rarity, set, or free text. Card art loads from OpenRift as you scroll.</p>
+
+	<div class="mt-4 flex flex-wrap items-center gap-2">
+		<input
+			id="grid-search"
+			type="search"
+			placeholder="Search name or card text…"
+			autocomplete="off"
+			class="min-w-56 flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm outline-none placeholder:text-slate-500 focus:border-amber-400/70"
+		/>
+		<select id="grid-type" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70">
+			<option value="">All types</option>
+			{types.map((t) => <option value={t}>{t}</option>)}
+		</select>
+		<select id="grid-rarity" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70">
+			<option value="">All rarities</option>
+			{rarities.map((r) => <option value={r}>{r}</option>)}
+		</select>
+		<select id="grid-set" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70">
+			<option value="">All sets</option>
+			{sets.map((s) => (
+				<option value={s.slug}>{s.name} ({s.slug})</option>
+			))}
+		</select>
+		<button id="grid-reset" type="button" class="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:border-amber-400/60 hover:text-amber-200">Reset</button>
+	</div>
+	<p id="grid-count" class="mt-2 text-sm text-slate-400" aria-live="polite">Showing all {index.cards.length.toLocaleString('en-US')} cards</p>
+
+	<ul id="grid-list" class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+		{
+			index.cards.map((card) => {
+				const { rep, imageId } = gridCard(card);
+				const rotateArt = isBattlefield(card);
+				return (
+					<li data-slug={card.slug}>
+						<a href={`/cards/${card.slug}`} class="group block">
+							<div class="relative aspect-[5/7] w-full overflow-hidden rounded-md bg-slate-900">
+								<div class="absolute inset-0 flex items-center justify-center text-sm text-slate-500">no art</div>
+								{imageId && (
+									<img
+										src={imgUrl(imageId, '240w')}
+										alt={`${card.name} card art${rep?.setSlug ? ` (${rep.setSlug})` : ''}`}
+										loading="lazy"
+										width={rotateArt ? 336 : 240}
+										height={rotateArt ? 240 : 336}
+										class={rotateArt ? 'absolute left-1/2 top-1/2 w-[140%] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90' : 'absolute inset-0 h-full w-full object-cover'}
+										onerror="this.onerror=null;this.remove()"
+									/>
+								)}
+							</div>
+							<div class="mt-2">
+								<div class="font-medium group-hover:text-amber-200">{card.name}</div>
+								<div class="mt-0.5 flex items-center justify-between gap-2 text-xs text-slate-400">
+									<span>{rep?.rarity ?? '—'} · {card.types.join(' / ')}</span>
+									<span class="whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 text-amber-300">
+										{rep?.setSlug ?? '—'}
+									</span>
+								</div>
+							</div>
+						</a>
+					</li>
+				);
+			})
+		}
+	</ul>
+	<p id="grid-empty" class="mt-8 hidden rounded-lg border border-slate-800 bg-slate-900 p-6 text-center text-slate-400">
+		No cards match the current filters. Try <em>Reset</em> or shorter search text.
+	</p>
+
+	<script type="application/json" id="grid-data" set:html={gridPayload} />
+</Base>
+
+<script>
+	import '../scripts/grid-filters';
+</script>

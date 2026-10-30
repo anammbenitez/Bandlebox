@@ -1,0 +1,46 @@
+---
+import '../styles/global.css';
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const { title = 'Riftbound Deck Manager', description = 'Personal, offline-first browser for every available Riftbound card.' } = Astro.props;
+
+const nav = [
+	{ href: '/', label: 'Browse cards' },
+	{ href: '/sets', label: 'Sets' },
+];
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content={description} />
+		<title>{title}</title>
+	</head>
+	<body class="flex min-h-screen flex-col bg-slate-950 text-slate-100">
+		<header class="border-b border-slate-800 bg-slate-900/60">
+			<nav class="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
+				<a href="/" class="font-semibold tracking-wide">Riftbound <span class="text-amber-300">Deck Manager</span></a>
+				{nav.map((n) => <a class="text-sm text-slate-300 hover:text-amber-200" href={n.href}>{n.label}</a>)}
+			</nav>
+		</header>
+		<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+			<slot />
+		</main>
+		<footer class="border-t border-slate-800 bg-slate-900/60 px-4 py-4 text-xs text-slate-400">
+			<div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1">
+				<span>Card data &amp; art: RIFTBOUND © Riot Games.</span>
+				<span>Catalog from <a class="text-amber-300 hover:underline" href="https://openrift.app">OpenRift</a>.</span>
+				<span>Images are requested from OpenRift when needed and never mirrored locally.</span>
+			</div>
+		</footer>
+	</body>
+</html>

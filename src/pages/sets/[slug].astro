@@ -1,0 +1,62 @@
+---
+import Base from '../../layouts/Base.astro';
+import { imgUrl, index, isBattlefield, representativePrintingForSet, setPrimaryRelease, setTypeLabel, type IndexSet } from '../../lib/catalog';
+
+export function getStaticPaths() {
+	return index.sets.map((set) => ({ params: { slug: set.slug }, props: { set } }));
+}
+
+interface Props {
+	set: IndexSet;
+}
+const { set } = Astro.props;
+
+const cards = index.cards.filter((card) => card.printings.some((p) => p.setSlug === set.slug));
+const release = setPrimaryRelease(set);
+---
+
+<Base title={`${set.name} (${set.slug}) — Riftbound Deck Manager`}>
+	<p class="mb-4 text-sm"><a class="text-amber-300 hover:underline" href="/sets">← All sets</a></p>
+	<h1 class="flex flex-wrap items-baseline gap-2 text-2xl font-bold">
+		{set.name}
+		<span class="rounded bg-slate-800 px-1.5 py-0.5 text-sm font-medium text-amber-300">{set.slug}</span>
+	</h1>
+	<p class="mt-1 text-sm text-slate-400">
+		{setTypeLabel(set)} · {cards.length} card{cards.length === 1 ? '' : 's'} · released {release?.releasedAt ?? '—'}
+	</p>
+	<ul class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+		{
+			cards.map((card) => {
+				const rep = representativePrintingForSet(card, set.slug);
+				const imageId = rep?.imageIds[0];
+				const rotateArt = isBattlefield(card);
+				return (
+					<li>
+						<a href={`/cards/${card.slug}`} class="group block">
+							<div class="relative aspect-[5/7] w-full overflow-hidden rounded-md bg-slate-900">
+								<div class="absolute inset-0 flex items-center justify-center text-sm text-slate-500">no art</div>
+								{imageId && (
+									<img
+										src={imgUrl(imageId, '240w')}
+										alt={`${card.name} card art (${set.slug})`}
+										loading="lazy"
+										width={rotateArt ? 336 : 240}
+										height={rotateArt ? 240 : 336}
+										class={rotateArt ? 'absolute left-1/2 top-1/2 w-[140%] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90' : 'absolute inset-0 h-full w-full object-cover'}
+										onerror="this.onerror=null;this.remove()"
+									/>
+								)}
+							</div>
+							<div class="mt-2">
+								<div class="font-medium group-hover:text-amber-200">{card.name}</div>
+								<div class="text-xs text-slate-400">
+									{rep?.rarity ?? '—'} · {card.types.join(' / ')}
+								</div>
+							</div>
+						</a>
+					</li>
+				);
+			})
+		}
+	</ul>
+</Base>

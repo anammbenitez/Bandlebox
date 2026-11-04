@@ -43,7 +43,8 @@ the rune-ratio count. They are never decoration.
 - Page header: `.page-head` (title, lede, meta) with a hairline rule.
 - Deck manager at `lg`: browser column, 12px resize grip, viewer column
   (`--deck-viewer-w`, default 520px). Both columns are sticky and scroll
-  independently; below `lg` they stack and a jump link moves to the deck.
+  independently. Below `lg` the Deck / Back to cards buttons swap the browser
+  and the deck as panes, so the deck is never buried behind an endless list.
 - Spacing scale: 2 / 4 / 6 / 8 / 10 / 12 / 16 px rhythm. Tight inside groups,
   generous between them.
 

@@ -89,10 +89,6 @@ const checklistEl = document.getElementById('deck-checklist') as HTMLUListElemen
 function syncNavHeight(): void {
 	const nav = document.getElementById('site-nav');
 	document.documentElement.style.setProperty('--nav-h', `${Math.round(nav?.getBoundingClientRect().height ?? 0)}px`);
-	// the deck bar wraps to two rows on narrow screens; the jump links need its
-	// real height so a targeted section never lands underneath it
-	const bar = document.querySelector('.deck-bar');
-	document.documentElement.style.setProperty('--deck-bar-h', `${Math.round(bar?.getBoundingClientRect().height ?? 0)}px`);
 }
 syncNavHeight();
 window.addEventListener('resize', syncNavHeight, { passive: true });
@@ -291,37 +287,68 @@ function canAdd(section: SectionKey, slug: string): { ok: boolean; why: string }
 	}
 }
 
+/** Pointer-level refusal: briefly rings the card face and surfaces the reason
+ *  in its tooltip (the section note already carries the message). */
+const refusalTimers = new WeakMap<HTMLElement, number>();
 function flashAddButton(button: HTMLElement, why: string): void {
-	// Steppers are drawn icons now, so the control's markup (not its text) is
-	// what must come back after the refusal message clears.
-	if (button.dataset.flashing === '1') return;
-	const original = button.innerHTML;
-	button.dataset.flashing = '1';
-	button.textContent = `✕ ${why}`;
-	button.setAttribute('aria-disabled', 'true');
-	setTimeout(() => {
-		button.innerHTML = original;
-		delete button.dataset.flashing;
-		button.removeAttribute('aria-disabled');
-	}, 1100);
+	const host = button.closest<HTMLElement>('[data-slug], [data-champion-face], [data-champion-zone]') ?? button;
+	// The card's own title (name, copy count) is kept and the reason appended;
+	// it is saved once so a second refusal during the flash restores the real
+	// title instead of freezing the first reason in place.
+	if (!host.dataset.refuseSaved) {
+		host.dataset.refuseSaved = '1';
+		host.dataset.refuseTitle = host.title;
+	}
+	const pending = refusalTimers.get(host);
+	if (pending) window.clearTimeout(pending);
+	host.classList.remove('refuse-flash');
+	void host.offsetWidth; // restart the animation
+	host.classList.add('refuse-flash');
+	const base = host.dataset.refuseTitle ?? '';
+	host.title = base ? `${base} — ${why}` : why;
+	refusalTimers.set(
+		host,
+		window.setTimeout(() => {
+			host.classList.remove('refuse-flash');
+			host.title = host.dataset.refuseTitle ?? '';
+			if (host.title === '') host.removeAttribute('title');
+			delete host.dataset.refuseSaved;
+			delete host.dataset.refuseTitle;
+			refusalTimers.delete(host);
+		}, 1400),
+	);
 }
 
-/** Visible refusal on the drop-target section (no placement). */
+/** Refusals are announced politely with a short clear, so repeating the same
+ *  message is spoken again instead of being ignored as unchanged. */
+let liveTimer = 0;
+function announceRefusal(message: string): void {
+	const live = document.getElementById('deck-live');
+	if (!live) return;
+	window.clearTimeout(liveTimer);
+	live.textContent = '';
+	liveTimer = window.setTimeout(() => {
+		live.textContent = message;
+	}, 60);
+}
+
+/** Visible refusal on the drop-target section (no placement). The reason
+ *  rides as a small note over the section instead of replacing its count, so
+ *  long messages never squeeze the header row. */
 function flashRefusal(section: SectionKey, why: string): void {
 	const el = document.querySelector<HTMLElement>(`[data-section="${section}"]`);
 	if (!el) return;
 	el.classList.remove('drag-refuse');
 	void el.offsetWidth; // restart the CSS animation
 	el.classList.add('drag-refuse');
-	const counter = el.querySelector<HTMLElement>('[data-count]');
-	if (counter) {
-		const original = counter.textContent;
-		counter.textContent = `✕ ${why}`;
-		setTimeout(() => {
-			counter.textContent = original;
-			renderCounts();
-		}, 900);
-	}
+	el.querySelector('.refusal-note')?.remove();
+	const note = document.createElement('span');
+	note.className = 'refusal-note';
+	note.textContent = why;
+	note.setAttribute('aria-hidden', 'true'); // the live region speaks it instead
+	el.appendChild(note);
+	announceRefusal(`${SECTION_LABELS[section]}: ${why}`);
+	setTimeout(() => note.remove(), 1800);
 }
 
 /** Shared mutate+add used by drag drops and chips; refusal falls back to the
@@ -342,9 +369,9 @@ function tryAdd(section: SectionKey, slug: string, flash: HTMLElement | null = n
 // --- rendering: sections ----------------------------------------------------
 
 const ICON_MINUS =
-	'<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M2 5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+	'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 const ICON_PLUS =
-	'<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M5 2v6M2 5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+	'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 2.5v7M2.5 6h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 
 function thumbHtml(slug: string): string {
 	const entry = bySlug.get(slug);
@@ -798,6 +825,7 @@ function focusSection(section: SectionKey): void {
 	for (const pill of Array.from(pillsEl.querySelectorAll<HTMLButtonElement>('button[data-pill]'))) {
 		pill.setAttribute('aria-pressed', String(pill.dataset.pill === activeSection));
 	}
+	renderCounts(); // the meta line names the focused section
 }
 
 /* --- pills: generic section filters (spec: pill filters) --- */
@@ -1170,13 +1198,28 @@ function isChampionUnitCard(slug: string): boolean {
 
 // --- header actions ---------------------------------------------------------
 
-// In-page jumps are buttons, not #anchors: the deck lives in the URL hash
-// (#d/<id> / #s/<payload>), so replacing it with #deck-viewer would lose the
-// deck on reload. scrollIntoView still honours each target's scroll-margin.
+// Below lg, Deck / Back to cards swap the two panes rather than scrolling: the
+// deck lives in the URL hash (#d/<id> / #s/<payload>), so an #anchor would
+// replace it, and the infinite catalog list would push a scroll target away as
+// it reveals more cards.
+let cardsScrollY = 0;
+const browserPaneEl = document.getElementById('deck-browser');
+const viewerPaneEl = document.getElementById('deck-viewer');
 for (const trigger of Array.from(document.querySelectorAll<HTMLElement>('[data-scroll-to]'))) {
 	trigger.addEventListener('click', () => {
-		const target = document.getElementById(trigger.dataset.scrollTo ?? '');
-		target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		const goingToDeck = trigger.dataset.scrollTo === 'deck-viewer';
+		if (goingToDeck) {
+			cardsScrollY = window.scrollY;
+			appEl.dataset.view = 'deck';
+			// the trigger itself is now display:none; hand focus to the pane so
+			// keyboard and screen-reader users are not dropped back to the body
+			viewerPaneEl?.focus({ preventScroll: true });
+			window.scrollTo({ top: 0 });
+		} else {
+			appEl.dataset.view = 'cards';
+			browserPaneEl?.focus({ preventScroll: true });
+			window.scrollTo({ top: cardsScrollY });
+		}
 	});
 }
 

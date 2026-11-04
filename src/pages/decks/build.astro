@@ -42,6 +42,10 @@ const domainPayload = escapedJson(
 		</div>
 	</header>
 
+	<!-- refusals are visual by nature (the section flashes); this live region
+	     carries the same message to screen readers -->
+	<p id="deck-live" class="sr-only" role="status" aria-live="polite"></p>
+
 	<div id="deck-storage-warning" hidden class="callout mt-4" data-tone="warning">
 		Decks are not being saved this visit — browser storage is unavailable or full. Keep this window open, or try again in a normal browser window.
 	</div>
@@ -62,6 +66,7 @@ const domainPayload = escapedJson(
 	     presents the field zones) → the main deck reads large without the grip. -->
 	<div
 		id="deck-app"
+		data-view="cards"
 		class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_12px_min(var(--deck-viewer-w,520px),50vw)] lg:gap-0 lg:items-start xl:[--deck-viewer-w:520px]"
 	>
 		<!-- card browser -->
@@ -69,7 +74,9 @@ const domainPayload = escapedJson(
 		     working area caps at the screen height at lg+ and scrolls its own
 		     contents; sticky keeps the other side pinned while one scrolls -->
 		<section
+			id="deck-browser"
 			aria-label="Card browser"
+			tabindex="-1"
 			class="scroll-column min-w-0 lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:overflow-y-auto lg:overscroll-contain"
 		>
 			<!-- browser chrome sticks inside the column scroller at lg+
@@ -109,7 +116,7 @@ const domainPayload = escapedJson(
 			<!-- container-driven card grid (spec: card impressions size with their
 			     container): auto-fill recomputes columns from the actual browser
 			     column width — the viewer drag or a window resize reflows it -->
-			<ul id="bd-list" class="mt-2 grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2.5"></ul>
+			<ul id="bd-list" class="mt-2 grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-3"></ul>
 			<li id="bd-sentinel" class="col-span-full" aria-hidden="true"></li>
 			<p id="bd-empty" hidden class="empty-state mt-4">No cards match the filters.</p>
 			<p id="bd-hint" class="mt-2 text-[11px] text-slate-500">Added cards enter the focused section. Copy counts come from the deck panel.</p>
@@ -123,7 +130,8 @@ const domainPayload = escapedJson(
 		<aside
 			id="deck-viewer"
 			aria-label="Deck"
-			class="scroll-column min-w-0 scroll-mt-24 lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:overflow-y-auto lg:overscroll-contain"
+			tabindex="-1"
+			class="scroll-column min-w-0 lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:overflow-y-auto lg:overscroll-contain"
 		>
 			<!-- below lg the viewer sits under a long browser list: give the way
 			     back to the cards the same one-tap affordance as the jump down -->
@@ -152,7 +160,7 @@ const domainPayload = escapedJson(
 							<div class="section-body">
 								{key === 'rune' && <div data-rune-ratio class="mb-2 hidden"></div>}
 								{key === 'legend' ? (
-									<div class="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2">
+									<div class="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2">
 										<ul data-rows="legend" class="contents"></ul>
 										<div data-champion-zone class="min-w-0 rounded-md border border-slate-800/70 p-1.5">
 											<div class="flex items-baseline justify-between gap-2 px-0.5">
@@ -172,7 +180,7 @@ const domainPayload = escapedJson(
 								) : key === 'battlefields' ? (
 									<ul data-rows="battlefields" class="flex flex-wrap gap-1.5"></ul>
 								) : (
-									<ul data-rows={key} class="grid grid-cols-[repeat(auto-fill,minmax(5.6rem,1fr))] gap-1.5"></ul>
+									<ul data-rows={key} class="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-1.5"></ul>
 								)}
 							</div>
 						</section>
@@ -192,11 +200,14 @@ const domainPayload = escapedJson(
 </Base>
 
 <style is:global>
-	/* jump targets clear the stacked nav + deck bar (heights measured in
-	 * deck-builder.ts, so a wrapped bar is accounted for) */
-	#deck-viewer,
-	#bd-list {
-		scroll-margin-top: calc(var(--nav-h, 0px) + var(--deck-bar-h, 0px) + 0.75rem);
+	/* Below lg the browser is an endless list, so the deck cannot be reached by
+	 * scrolling past it. The Deck / Back to cards buttons swap the two panes
+	 * instead (a tab, not a scroll): the deck lands immediately below the bar. */
+	@media (max-width: 63.99rem) {
+		#deck-app[data-view='deck'] #deck-browser,
+		#deck-app[data-view='deck'] #deck-grip {
+			display: none;
+		}
 	}
 	/* Copied-artwork battlefield thumbs sit sideways inside small boxes.
 	 * `max-width: none` beats Tailwind preflight's img cap so 140% can cover

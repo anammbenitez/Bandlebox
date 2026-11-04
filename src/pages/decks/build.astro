@@ -1,0 +1,175 @@
+---
+// Deck manager (tasks 5.1-6.4). The server renders the payload programs (the
+// same card payload the catalog grid uses, plus the snapshot's legality
+// facts); everything interactive runs from src/scripts/deck-builder.ts —
+// deck state, sections, browser, checklist, share. Decks come from the hash:
+// #d/<id> opens a saved deck, #s/<payload> opens a shared one as view+copy.
+// `wide` opts the page out of the site max-width (user request: full-window
+// layout for the deck manager only).
+import Base from '../../layouts/Base.astro';
+import { SECTION_KEYS, SECTION_LABELS, sectionTarget } from '../../lib/deck';
+import { buildDeckRuleIndexes } from '../../lib/deck-rules';
+import { buildGridPayload, escapedJson } from '../../lib/grid-payload';
+import { index, snapshot } from '../../lib/catalog';
+
+const ruleIndexes = escapedJson(buildDeckRuleIndexes(snapshot, index));
+const cardPayload = escapedJson(buildGridPayload());
+const domainPayload = escapedJson(
+	(snapshot.enums?.domains ?? []) as Array<{ slug: string; label?: string }>,
+);
+---
+
+<Base title="Deck manager — Riftbound Deck Manager" wide>
+	<header class="flex flex-wrap items-center justify-between gap-3">
+		<div>
+			<h1 id="deck-name" class="text-2xl font-bold">Deck</h1>
+			<p id="deck-meta" class="mt-1 text-sm text-slate-400">0 cards</p>
+		</div>
+		<div class="flex items-center gap-2">
+			<span id="deck-verdict" class="rounded-full border px-3 py-1 text-xs font-semibold" data-legal="unknown">—</span>
+			<button id="deck-rename" type="button" class="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-amber-400/60 hover:text-amber-200">Rename</button>
+			<button id="deck-share" type="button" class="rounded border border-amber-400/50 bg-slate-900 px-3 py-1.5 text-sm text-amber-200 hover:border-amber-300">Copy deck link</button>
+			<button id="deck-save-shared" type="button" hidden class="rounded bg-amber-400 px-3 py-1.5 text-sm font-semibold text-slate-950 hover:bg-amber-300">Save as my deck</button>
+			<a href="/decks" class="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500">All decks</a>
+		</div>
+	</header>
+
+	<div id="deck-storage-warning" hidden class="mt-4 rounded-md border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">Decks are not being saved this visit — browser storage is unavailable or full. Keep this window open, or try again in a normal browser window.</div>
+	<div id="deck-unknown-warning" hidden class="mt-4 rounded-md border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200"></div>
+	<p id="deck-missing" hidden class="mt-6 rounded-lg border border-slate-800 bg-slate-900 p-6 text-slate-400">
+		This deck could not be loaded — it may have been deleted. Head back to <a class="text-amber-300 underline" href="/decks">your decks</a>.
+	</p>
+	<p id="deck-broken-share" hidden class="mt-6 rounded-lg border border-slate-800 bg-slate-900 p-6 text-slate-400">
+		This deck link is not a valid deck payload. Ask for the link again — copying it fresh usually fixes it.
+	</p>
+
+	<div id="deck-app" class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start xl:grid-cols-[minmax(0,1fr)_440px]">
+		<!-- card browser -->
+		<section aria-label="Card browser">
+			<!-- section pills: generic retarget of the whole browser (spec: pill filters) -->
+			<div id="bd-pills" class="flex flex-wrap items-center gap-1.5">
+				{SECTION_KEYS.filter((k) => k !== 'side').map((key) => (
+					<button
+						type="button"
+						data-pill={key}
+						aria-pressed="false"
+						class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-200 hover:border-amber-400/60"
+					>
+						{key === 'rune' ? 'Runes' : SECTION_LABELS[key]}
+					</button>
+				))}
+				<button
+					type="button"
+					data-pill="all"
+					aria-pressed="false"
+					class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-200 hover:border-amber-400/60"
+				>
+					All
+				</button>
+			</div>
+			<div class="mt-2 flex flex-wrap items-center gap-2">
+				<input
+					id="bd-search"
+					type="search"
+					placeholder="Search name or card text…"
+					autocomplete="off"
+					class="min-w-56 flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm outline-none placeholder:text-slate-500 focus:border-amber-400/70"
+				/>
+				<select id="bd-type" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70"></select>
+				<select id="bd-rarity" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70"></select>
+				<select id="bd-set" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70"></select>
+				<button id="bd-reset" type="button" class="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:border-amber-400/60 hover:text-amber-200">Reset</button>
+			</div>
+			<!-- domain chips: the Legend's colors come preselected -->
+			<div id="bd-domains" class="mt-2 flex flex-wrap items-center gap-1.5"></div>
+			<p id="bd-count" class="mt-2 text-sm text-slate-400" aria-live="polite"></p>
+			<ul id="bd-list" class="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"></ul>
+			<li id="bd-sentinel" class="col-span-full" aria-hidden="true"></li>
+			<p id="bd-empty" hidden class="mt-6 rounded-lg border border-slate-800 bg-slate-900 p-4 text-center text-sm text-slate-400">No cards match the filters.</p>
+			<p id="bd-hint" class="mt-2 text-xs text-slate-500">Added cards enter the focused section. Copy counts come from the deck on the right.</p>
+		</section>
+
+		<!-- deck sections + checklist -->
+		<aside aria-label="Deck">
+			<div class="space-y-3">
+				{SECTION_KEYS.map((key) => {
+					const { exact, cap } = sectionTarget(key);
+					return (
+						<section
+							data-section={key}
+							class="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
+						>
+							<button
+								type="button"
+								data-focus-section={key}
+								class="flex w-full items-center justify-between gap-2 text-left"
+							>
+								<span class="font-medium text-slate-200">{SECTION_LABELS[key]}</span>
+								<span class="text-xs text-slate-400">
+									<span data-count={key}>0</span>&nbsp;/&nbsp;{exact != null ? String(exact) : `≤ ${cap}`}
+								</span>
+							</button>
+							{key === 'rune' && <div data-rune-ratio class="mt-2 hidden"></div>}
+							<ul data-rows={key} class="mt-2 grid grid-cols-5 gap-1.5 xl:grid-cols-6"></ul>
+						</section>
+					);
+				})}
+			</div>
+
+			<section class="mt-4 rounded-lg border border-slate-800 bg-slate-900/60 p-3" aria-label="Deck legality">
+				<h2 class="text-sm font-semibold text-slate-200">Deck legality</h2>
+				<ul id="deck-checklist" class="mt-2 space-y-1.5 text-sm"></ul>
+			</section>
+		</aside>
+	</div>
+</Base>
+
+<style is:global>
+	/* Copied-artwork battlefield thumbs sit sideways inside small boxes.
+	 * `max-width: none` beats Tailwind preflight's img cap so 140% can cover
+	 * the whole portrait box (the catalog grid uses max-w-none the same way). */
+	#bd-list img[data-rotate] {
+		position: absolute;
+		inset: 0;
+		width: 140%;
+		max-width: none;
+		height: auto;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%) rotate(90deg);
+	}
+	[data-section] img[data-rotate] {
+		position: absolute;
+		inset: 0;
+		width: 140%;
+		max-width: none;
+		height: auto;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%) rotate(90deg);
+	}
+	/* drag hover + refusal flashes on the drop-target sections */
+	[data-section].drag-accept {
+		outline: 2px solid rgb(251 191 36 / 0.7);
+		outline-offset: 1px;
+	}
+	[data-section].drag-refuse {
+		animation: refuse-flash 700ms ease-out;
+	}
+	@keyframes refuse-flash {
+		0%, 40% {
+			outline: 2px solid rgb(248 113 113 / 0.9);
+		}
+		100% {
+			outline: 2px solid transparent;
+		}
+	}
+</style>
+
+<script type="application/json" id="deck-card-data" set:html={cardPayload} />
+<script type="application/json" id="deck-rules-data" set:html={ruleIndexes} />
+<script type="application/json" id="deck-domains-data" set:html={domainPayload} />
+
+<script>
+	import '../../scripts/deck-builder';
+</script>

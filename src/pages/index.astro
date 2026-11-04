@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
-import { cardSearchText, imgUrl, index, isBattlefield, representativePrinting, setPrimaryRelease, type IndexCard } from '../lib/catalog';
-import { GRID_STEP, gridItemHtml, type GridItemData } from '../lib/grid-item';
+import { index, setPrimaryRelease, type IndexCard } from '../lib/catalog';
+import { buildGridPayload, escapedJson, GRID_STEP, gridItemHtml } from '../lib/grid-payload';
 
 const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'showcase'];
 const typeOrder = ['legend', 'unit', 'spell', 'rune', 'gear', 'battlefield', 'other'];
@@ -23,34 +23,9 @@ const sets = [...index.sets].sort((a, b) => {
 });
 
 // Client-side filter payload: precomputed everything the grid controller
-// needs to filter, search, and rebuild items entirely in memory (no network
-// round-trips). `art` carries the representative printing's image reference.
-const payload = index.cards.map((card) => {
-	const rep = representativePrinting(card);
-	const imageId = rep?.imageIds[0];
-	const rotateArt = isBattlefield(card);
-	const entry: GridItemData & { types: string[]; rarities: string[]; sets: string[]; variants: number; text: string } = {
-		slug: card.slug,
-		name: card.name,
-		types: card.types,
-		rarities: [...new Set(card.printings.map((p) => p.rarity).filter((r): r is string => Boolean(r)))],
-		sets: [...new Set(card.printings.map((p) => p.setSlug))],
-		variants: card.printings.length,
-		text: cardSearchText(card),
-		meta: `${rep?.rarity ?? '—'} · ${card.types.join(' / ')}`,
-		art: imageId
-			? {
-					url: imgUrl(imageId, '240w'),
-					rotate: rotateArt,
-					setSlug: rep?.setSlug ?? '',
-				}
-			: null,
-	};
-	return entry;
-});
-// <script> safety: escape any literal `<` so a card's text can never close
-// the JSON tag early.
-const gridPayload = JSON.stringify(payload).replace(/</g, '\\u003c');
+// needs (shared with the deck manager browser via grid-payload).
+const payload = buildGridPayload();
+const gridPayload = escapedJson(payload);
 
 // Server-rendered initial window; the controller reveals further steps.
 const firstWindow = payload.slice(0, GRID_STEP).map(gridItemHtml).join('');

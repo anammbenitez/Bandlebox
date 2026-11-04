@@ -4,13 +4,16 @@ import '../styles/global.css';
 interface Props {
 	title?: string;
 	description?: string;
+	/** Deck manager only (user request): full-window layout, uncapped width. */
+	wide?: boolean;
 }
 
-const { title = 'Riftbound Deck Manager', description = 'Personal, offline-first browser for every available Riftbound card.' } = Astro.props;
+const { title = 'Riftbound Deck Manager', description = 'Personal, offline-first browser for every available Riftbound card.', wide = false } = Astro.props;
 
 const nav = [
 	{ href: '/', label: 'Browse cards' },
 	{ href: '/sets', label: 'Sets' },
+	{ href: '/decks', label: 'Decks' },
 ];
 ---
 
@@ -32,7 +35,7 @@ const nav = [
 				{nav.map((n) => <a class="text-sm text-slate-300 hover:text-amber-200" href={n.href}>{n.label}</a>)}
 			</nav>
 		</header>
-		<main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+		<main class={`mx-auto w-full flex-1 px-4 py-6 ${wide ? 'mx-0' : 'max-w-6xl'}`}>
 			<slot />
 		</main>
 		<footer class="border-t border-slate-800 bg-slate-900/60 px-4 py-4 text-xs text-slate-400">

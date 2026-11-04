@@ -1,1 +1,5 @@
 @import "tailwindcss";
+
+/* Deck pages inject most of their markup from src/scripts/*.ts at runtime;
+ * without this hint Tailwind classes used only there are not generated. */
+@source "../scripts";

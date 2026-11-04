@@ -26,46 +26,46 @@ const legends = index.cards
 ---
 
 <Base title="Your decks — Riftbound Deck Manager">
-	<h1 class="text-2xl font-bold">Your decks</h1>
-	<p class="mt-1 text-sm text-slate-400">Decks live in this browser and save themselves as you build. The deck's Legend fronts its tile.</p>
+	<header class="page-head">
+		<div>
+			<h1 class="page-title">Your decks</h1>
+			<p class="page-lede">Decks live in this browser and save themselves as you build. The deck's Legend fronts its tile.</p>
+		</div>
+	</header>
 
-	<div id="deck-storage-warning" hidden class="mt-4 rounded-md border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">
+	<div id="deck-storage-warning" hidden class="mt-4 rounded-md border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
 		Decks are not being saved this visit — browser storage is unavailable or full. Keep this window open, or try again in a normal browser window.
 	</div>
 
 	<!-- tile grid: the create tile (with the plus affordance) is part of the grid -->
 	<ul id="deck-grid" class="mt-5 grid list-none grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5"></ul>
 
+	<p id="deck-empty" hidden class="mt-4 text-sm text-slate-400">No decks yet — the plus tile starts your first one.</p>
+
 	<!-- creation modal: Legend picker + deck name, both required -->
-	<div id="deck-create-modal" hidden class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 p-4" role="dialog" aria-modal="true" aria-labelledby="deck-create-title">
-		<div class="w-full max-w-lg rounded-lg border border-slate-700 bg-slate-900 p-4 shadow-xl">
-			<h2 id="deck-create-title" class="text-lg font-bold">New deck</h2>
+	<div id="deck-create-modal" hidden class="dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="deck-create-title">
+		<div class="dialog">
+			<h2 id="deck-create-title" class="text-base font-semibold">New deck</h2>
 			<p class="mt-1 text-sm text-slate-400">Choose the Legend to play and name the deck. Cancel keeps everything as it was.</p>
 
-			<label class="mt-3 block">
-				<span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Deck name</span>
-				<input id="modal-name" type="text" placeholder="e.g. Poro Swarm" autocomplete="off" maxlength="80"
-					class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-amber-400/70" />
+			<label class="mt-4 block">
+				<span class="label">Deck name</span>
+				<input id="modal-name" type="text" placeholder="e.g. Poro Swarm" autocomplete="off" maxlength="80" class="field mt-1.5 w-full" />
 			</label>
 
-			<div class="mt-3">
-				<span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Legend</span>
-				<input id="modal-legend-search" type="search" placeholder="Search legends…" autocomplete="off"
-					class="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-amber-400/70" />
-				<div id="modal-selected" class="mt-2 hidden rounded-md border border-amber-400/50 bg-amber-400/10 px-2 py-1 text-xs text-amber-200"></div>
-				<ul id="modal-legend-list" class="mt-2 grid max-h-56 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4"></ul>
+			<div class="mt-4">
+				<span class="label">Legend</span>
+				<input id="modal-legend-search" type="search" placeholder="Search legends…" autocomplete="off" class="field mt-1.5 w-full" />
+				<div id="modal-selected" class="mt-2 hidden rounded border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs text-amber-300"></div>
+				<ul id="modal-legend-list" class="mt-2 grid max-h-56 grid-cols-4 gap-2 overflow-y-auto pr-1 sm:grid-cols-5"></ul>
 			</div>
 
-			<div class="mt-4 flex justify-end gap-2">
-				<button id="modal-cancel" type="button" class="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:border-slate-500">Cancel</button>
-				<button id="modal-accept" type="button" disabled class="rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40">Create deck</button>
+			<div class="mt-5 flex justify-end gap-2">
+				<button id="modal-cancel" type="button" class="btn">Cancel</button>
+				<button id="modal-accept" type="button" disabled class="btn" data-variant="primary">Create deck</button>
 			</div>
 		</div>
 	</div>
-
-	<p id="deck-empty" class="mt-8 hidden rounded-lg border border-slate-800 bg-slate-900 p-6 text-center text-slate-400">
-		No decks yet — the plus tile starts your first one.
-	</p>
 </Base>
 
 <script type="application/json" id="deck-rules-data" set:html={ruleIndexes} />

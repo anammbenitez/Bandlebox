@@ -19,6 +19,8 @@ interface CompactDeck {
 	n: string;
 	/** Sections as [slug, qty] pairs. */
 	s: Partial<Record<SectionCode, Array<[string, number]>>>;
+	/** Champion zone pick (optional; absent on older links = empty zone). */
+	c?: string;
 }
 
 const shareableSections: SectionKey[] = ['legend', 'battlefields', 'main', 'rune', 'side'];
@@ -30,7 +32,9 @@ function toPairs(slots: DeckSlot[]): Array<[string, number]> {
 function compact(deck: Deck): CompactDeck {
 	const s: CompactDeck['s'] = {};
 	for (const key of shareableSections) s[CODE_BY_SECTION[key]] = toPairs(deck[key]);
-	return { v: DECK_SCHEMA_VERSION, n: deck.name, s };
+	const compacted: CompactDeck = { v: DECK_SCHEMA_VERSION, n: deck.name, s };
+	if (deck.champion) compacted.c = deck.champion;
+	return compacted;
 }
 
 function fromCompact(raw: CompactDeck): Deck {
@@ -54,6 +58,8 @@ function fromCompact(raw: CompactDeck): Deck {
 			.filter((p) => Array.isArray(p) && typeof p[0] === 'string' && typeof p[1] === 'number' && p[1] > 0)
 			.map((p) => ({ card: p[0], qty: p[1] }));
 	}
+	// champion pick is optional and read tolerantly (spec: legacy links open unchanged)
+	if (typeof raw.c === 'string' && raw.c) deck.champion = raw.c;
 	return deck;
 }
 

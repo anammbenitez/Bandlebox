@@ -62,6 +62,7 @@ const verdictEl = document.getElementById('deck-verdict')!;
 const renameBtn = document.getElementById('deck-rename') as HTMLButtonElement;
 const shareBtn = document.getElementById('deck-share') as HTMLButtonElement;
 const saveSharedBtn = document.getElementById('deck-save-shared') as HTMLButtonElement;
+const actionsEl = document.getElementById('deck-actions')!;
 const storageWarnEl = document.getElementById('deck-storage-warning')!;
 const unknownWarnEl = document.getElementById('deck-unknown-warning')!;
 const missingEl = document.getElementById('deck-missing')!;
@@ -80,6 +81,23 @@ const sentinelEl = document.getElementById('bd-sentinel')!;
 const countEl = document.getElementById('bd-count')!;
 const emptyEl = document.getElementById('bd-empty')!;
 const checklistEl = document.getElementById('deck-checklist') as HTMLUListElement;
+
+// --- deck chrome sticking (spec: editor chrome stays visible on scroll) ------
+// the deck topbar sticks just under the fixed nav; --nav-h is measured once
+// (and on resize) rather than hard-coded, so nav wrapping stays harmless.
+
+function syncNavHeight(): void {
+	const nav = document.getElementById('site-nav');
+	document.documentElement.style.setProperty('--nav-h', `${Math.round(nav?.getBoundingClientRect().height ?? 0)}px`);
+	// the deck bar wraps to two rows on narrow screens; the jump links need its
+	// real height so a targeted section never lands underneath it
+	const bar = document.querySelector('.deck-bar');
+	document.documentElement.style.setProperty('--deck-bar-h', `${Math.round(bar?.getBoundingClientRect().height ?? 0)}px`);
+}
+syncNavHeight();
+window.addEventListener('resize', syncNavHeight, { passive: true });
+// web fonts settle after first paint and can change the wrapped bar height
+if (document.fonts?.ready) void document.fonts.ready.then(() => syncNavHeight());
 
 function esc(text: string): string {
 	return text.replace(/[&<>"']/g, (ch) =>
@@ -160,6 +178,8 @@ function loadDeckFromHash(): void {
 	nameEl.textContent = 'Deck manager';
 	metaEl.textContent =
 		'Open a deck from your deck list, or create one there first — decks always live in your browser.';
+	const noneEl = document.getElementById('deck-none');
+	if (noneEl) noneEl.hidden = false;
 	appEl.hidden = true;
 }
 
@@ -185,13 +205,18 @@ function seedDefaultRunes(): void {
 
 function bootDeck(): void {
 	nameEl.textContent = deck?.name || 'Deck';
+	actionsEl.hidden = false;
 	shareBtn.hidden = shared;
+	// a shared deck is read-only: rename would silently do nothing
+	renameBtn.hidden = shared;
 	saveSharedBtn.hidden = !shared;
+	syncNavHeight(); // the topbar's final height depends on which actions show
 	const warning = shared ? null : takeStorageProblem();
 	if (warning && storageWarnEl) {
 		storageWarnEl.hidden = false;
 		storageWarnEl.textContent = warning;
 	}
+	renderHint();
 	// domain chips seed from the Legend's colors (once per opened deck)
 	selectedDomains.clear();
 	for (const domain of legendDomains() ?? []) selectedDomains.add(domain);
@@ -202,6 +227,7 @@ function bootDeck(): void {
 	renderSections();
 	renderCounts();
 	renderChecklist();
+	renderChampion();
 	focusSection('main'); // builds filter options + first window
 }
 
@@ -225,12 +251,19 @@ function renderUnknownWarning(): void {
 function mutate(fn: (d: Deck) => void): void {
 	if (!deck || shared) return;
 	fn(deck);
+	// the champion pick tracks its pick's main-deck copies (spec: champion
+	// copies are main-deck copies) and the Legend's tag: clear it when its
+	// copies all leave, or when a replaced legend leaves it without a match
+	if (deck.champion && (qtyOf(deck.main, deck.champion) === 0 || !championZoneVerdict(deck.champion))) {
+		delete deck.champion;
+	}
 	deck = saveDeck(deck);
 	renderSections();
 	renderChecklist();
 	renderCounts();
 	renderRatio();
 	refreshChips();
+	renderChampion();
 }
 
 function currentQty(section: SectionKey, slug: string): number {
@@ -259,12 +292,17 @@ function canAdd(section: SectionKey, slug: string): { ok: boolean; why: string }
 }
 
 function flashAddButton(button: HTMLElement, why: string): void {
-	const original = button.textContent ?? 'Add';
+	// Steppers are drawn icons now, so the control's markup (not its text) is
+	// what must come back after the refusal message clears.
+	if (button.dataset.flashing === '1') return;
+	const original = button.innerHTML;
+	button.dataset.flashing = '1';
 	button.textContent = `✕ ${why}`;
-	button.disabled = true;
+	button.setAttribute('aria-disabled', 'true');
 	setTimeout(() => {
-		button.textContent = original;
-		button.disabled = false;
+		button.innerHTML = original;
+		delete button.dataset.flashing;
+		button.removeAttribute('aria-disabled');
 	}, 1100);
 }
 
@@ -303,9 +341,14 @@ function tryAdd(section: SectionKey, slug: string, flash: HTMLElement | null = n
 
 // --- rendering: sections ----------------------------------------------------
 
+const ICON_MINUS =
+	'<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M2 5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const ICON_PLUS =
+	'<svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M5 2v6M2 5h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+
 function thumbHtml(slug: string): string {
 	const entry = bySlug.get(slug);
-	if (!entry?.art) return '<span class="absolute inset-0 grid place-items-center text-[10px] text-slate-600">no art</span>';
+	if (!entry?.art) return '<span class="absolute inset-0 grid place-items-center text-[10px] text-slate-500">no art</span>';
 	if (entry.art.rotate) {
 		return `<img data-rotate src="${esc(entry.art.url)}" alt="" loading="lazy" onerror="this.remove()">`;
 	}
@@ -313,22 +356,13 @@ function thumbHtml(slug: string): string {
 }
 
 /** The Legend section shows its single card as a big face (like the browser
- *  impressions — reference: card art + "L1" badge + controls), not a row. */
+ *  impressions — reference: card art + "L1" badge; spec: no copy chip on the
+ *  legend face). The legend is replaced by placing another legend, as before. */
 function legendCardHtml(section: SectionKey, slug: string, qty: number, name: string): string {
 	return (
-		`<li data-slug="${esc(slug)}" class="relative mx-auto w-44 aspect-[5/7] overflow-hidden rounded-md border border-amber-400/60 bg-slate-900 shadow">` +
+		`<li data-slug="${esc(slug)}" class="face relative aspect-[5/7] w-full max-w-44 border-amber-400/50 shadow-lg shadow-black/50">` +
 		`<a href="/cards/${esc(slug)}" aria-label="${esc(name)}" class="absolute inset-0">${thumbHtml(slug)}</a>` +
-		`<div class="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full border border-slate-800 bg-slate-950/90 text-xs font-bold text-amber-200">L${qty}</div>` +
-		`<div class="absolute inset-x-0 bottom-0 border-t border-slate-800 bg-slate-950/85 px-1.5 py-1">` +
-		(shared
-			? `<span class="text-[10px] text-slate-400">× ${qty}</span>`
-			: `<span class="mt-0.5 flex items-center justify-center gap-1 text-xs">` +
-				`<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="-1" class="h-6 w-6 rounded border border-slate-700 text-slate-300 hover:border-slate-500">−</button>` +
-				`<span class="w-5 text-center text-slate-200">${qty}</span>` +
-				`<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="1" class="h-6 w-6 rounded border border-slate-700 text-slate-300 hover:border-slate-500">+</button>` +
-				`<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="-1" data-remove class="h-6 rounded border border-slate-700 px-1.5 text-xs text-slate-400 hover:border-red-400/60 hover:text-red-300">remove</button>` +
-				`</span>`) +
-		`</div>` +
+		`<div title="Legend copies" class="absolute right-1.5 top-1.5 grid h-6 min-w-6 place-items-center rounded border border-slate-800 bg-slate-950/90 px-1 text-[11px] font-semibold text-amber-300 tnum">L${qty}</div>` +
 		`</li>`
 	);
 }
@@ -338,20 +372,42 @@ function rowHtml(section: SectionKey, slug: string, qty: number): string {
 	if (section === 'legend' && qty > 0) {
 		return legendCardHtml(section, slug, qty, name);
 	}
-	// deck-side card faces (user reference): 5 per row, badge chip with the
-	// section-committed copies, minus/plus overlaid — smaller than the Legend
+	if (section === 'battlefields') {
+		// field-zone presentation (spec: battlefields lie horizontally): a
+		// landscape card, raw art cropped to the wide box — no rotated crops
+		const entry = bySlug.get(slug);
+		const art = entry?.art
+			? `<img src="${esc(entry.art.url)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="this.remove()">`
+			: `<span class="absolute inset-0 grid place-items-center text-[10px] text-slate-500">no art</span>`;
+		return (
+			`<li data-slug="${esc(slug)}" title="${esc(name)}"` +
+			` class="face relative aspect-[7/5] min-w-[9rem] flex-1 basis-[calc(33.333%-0.375rem)]">` +
+			`<span class="absolute inset-0">${art}</span>` +
+			(shared
+				? `<div class="face-bar justify-center"><span class="count-chip">${esc(SHORT[section])} ${qty}</span></div>`
+				: `<div class="face-bar">` +
+					`<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="-1" class="stepper" aria-label="Remove ${esc(name)}">${ICON_MINUS}</button>` +
+					`<span class="count-chip">${esc(SHORT[section])} ${qty}</span>` +
+					`<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="1" class="stepper" aria-label="Add ${esc(name)}">${ICON_PLUS}</button>` +
+					`</div>`) +
+			`</li>`
+		);
+	}
+	// deck-side card faces (user reference): plate sized by the panel's
+	// auto-fill track — badge chip with the section-committed copies, minus/plus
+	// overlaid — smaller than the Legend
 	return (
 		`<li data-slug="${esc(slug)}" title="${esc(name)} — ${qty} in the deck"` +
-		` class="relative aspect-[5/7] overflow-hidden rounded border border-slate-800 bg-slate-900 hover:border-slate-600">` +
+		` class="face relative aspect-[5/7]">` +
 		(shared
 			? `<span class="absolute inset-0">${thumbHtml(slug)}</span>`
 			: `<span class="absolute inset-0 cursor-pointer">${thumbHtml(slug)}</span>`) +
-		`<div class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-0.5 border-t border-slate-800 bg-slate-950/85 px-0.5 py-0.5">` +
+		`<div class="face-bar">` +
 		(shared
-			? `<span class="px-1 text-[10px] font-semibold text-slate-200">${esc(SHORT[section])} ${qty}</span>`
-			: `<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="-1" class="rounded bg-slate-800/90 px-1 text-[10px] leading-4 text-slate-300 hover:text-white" aria-label="Remove copy of ${esc(name)}">−</button>` +
-				`<span class="text-[10px] font-semibold text-slate-100">${esc(SHORT[section])} ${qty}</span>` +
-				`<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="1" class="rounded bg-slate-800/90 px-1 text-[10px] leading-4 text-slate-300 hover:text-white" aria-label="Add copy of ${esc(name)}">+</button>`) +
+			? `<span class="count-chip px-1">${esc(SHORT[section])} ${qty}</span>`
+			: `<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="-1" class="stepper" aria-label="Remove copy of ${esc(name)}">${ICON_MINUS}</button>` +
+				`<span class="count-chip">${esc(SHORT[section])} ${qty}</span>` +
+				`<button type="button" data-section-row="${esc(section)}" data-slug="${esc(slug)}" data-qty="1" class="stepper" aria-label="Add copy of ${esc(name)}">${ICON_PLUS}</button>`) +
 		`</div>` +
 		`</li>`
 	);
@@ -361,15 +417,35 @@ function deckTotalCopiesCounted(d: Deck): number {
 	return SECTION_KEYS.reduce((sum, key) => sum + sectionTotal(d[key]), 0);
 }
 
+/** Browser footer copy: a shared deck is read-only, so the add hint is wrong. */
+function renderHint(): void {
+	const hintEl = document.getElementById('bd-hint');
+	if (!hintEl) return;
+	hintEl.textContent = shared
+		? 'Shared view — save it as your deck to edit, or open any card to read it.'
+		: 'Added cards enter the focused section. Copy counts come from the deck panel.';
+}
+
 function renderCounts(): void {
 	if (!deck) return;
 	for (const section of SECTION_KEYS) {
 		const el = document.querySelector<HTMLElement>(`[data-count="${section}"]`);
 		if (el) el.textContent = String(sectionTotal(deck[section]));
 	}
+	const total = deckTotalCopiesCounted(deck);
+	const jump = document.getElementById('deck-jump-count');
+	if (jump) jump.textContent = String(total);
 	metaEl.textContent =
-		`${deckTotalCopiesCounted(deck)} cards · ${SECTION_LABELS[activeSection]} focused` + (shared ? ' · shared view' : '');
+		`${total} cards · ${SECTION_LABELS[activeSection]} focused` + (shared ? ' · shared view' : '');
 }
+
+const SECTION_HINT: Record<SectionKey, string> = {
+	legend: 'Place one Legend from the browser.',
+	battlefields: 'Pick three different battlefields.',
+	main: 'Add units, spells, and gear — 40 cards.',
+	rune: 'Set the rune ratio above.',
+	side: 'Up to 10 optional cards.',
+};
 
 function renderSections(): void {
 	if (!deck) return;
@@ -377,7 +453,9 @@ function renderSections(): void {
 		const rows = document.querySelector<HTMLUListElement>(`ul[data-rows="${section}"]`);
 		if (!rows) continue;
 		const slots = deck[section].slice().sort((a, b) => a.card.localeCompare(b.card));
-		rows.innerHTML = slots.map((s) => rowHtml(section, s.card, s.qty)).join('');
+		rows.innerHTML = slots.length
+			? slots.map((s) => rowHtml(section, s.card, s.qty)).join('')
+			: `<li class="section-empty col-span-full">${esc(SECTION_HINT[section])}</li>`;
 	}
 }
 
@@ -450,21 +528,22 @@ function renderRatio(): void {
 	if (existing.size !== wanted.length || !wanted.every((c) => existing.has(c))) {
 		runeInputsByDomain.clear();
 		host.hidden = false;
-		host.className = 'mt-2 flex flex-wrap items-center gap-2';
+		host.className = 'mb-2 flex flex-wrap items-center gap-2';
 		host.innerHTML =
-			`<span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Rune ratio</span>` +
+			`<span class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">Rune ratio</span>` +
 			wanted
 				.map((domain) => {
 					const label = domains.find((d) => d.slug === domain)?.label ?? domain;
-					// the color names live in the tooltip/aria only — the inputs are
-					// told apart by their domain-colored left edge
+					// the domain is carried by a color dot beside the count, not by
+					// a colored border: the number stays the only thing to read
 					return (
-						`<label class="inline-block">` +
+						`<label class="rune-counter" style="--dot:${esc(DOMAIN_COLORS[domain] ?? '#98a3af')}" title="${esc(label)} runes">` +
+						`<i class="dot"></i>` +
 						`<input type="number" min="0" max="12" step="1" value="0" data-ratio="${esc(domain)}"` +
-						` title="${esc(label)} runes" aria-label="${esc(label)} rune count"` +
-						` style="border-left: 4px solid ${esc(DOMAIN_COLORS[domain] ?? '#94a3b8')}"` +
-						` class="w-14 rounded border-y border-r border-slate-700 bg-slate-950 px-1.5 py-1 text-sm text-slate-100 outline-none focus:border-y-amber-400/70"` +
-						`></label>`
+						` aria-label="${esc(label)} rune count"` +
+						` class="rune-counter-input tnum"` +
+						`>` +
+						`</label>`
 					);
 				})
 				.join('');
@@ -527,30 +606,38 @@ function syncRuneRatio(domain: string, target: number): void {
 
 // --- rendering: checklist ---------------------------------------------------
 
-const STATUS_MARK = { pass: '✓', fail: '✕', pending: '…' } as const;
-const STATUS_CLASS: Record<string, string> = {
-	pass: 'bg-emerald-400/10 text-emerald-300',
-	fail: 'bg-red-500/10 text-red-300',
-	pending: 'bg-amber-400/10 text-amber-200',
+const STATUS_ICON: Record<string, string> = {
+	pass:
+		'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" class="text-emerald-400">' +
+		'<path d="M2.75 7.4 5.5 10.15 11.25 4.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+	fail:
+		'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" class="text-red-400">' +
+		'<circle cx="7" cy="7" r="5.25" stroke="currentColor" stroke-width="1.4"/>' +
+		'<path d="M5.1 5.1 8.9 8.9M8.9 5.1 5.1 8.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+	pending:
+		'<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" class="text-amber-400">' +
+		'<circle cx="7" cy="7" r="5.25" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2.2 2.2"/></svg>',
 };
 
 function renderChecklist(): void {
 	if (!deck) return;
 	const report: LegalityReport = validate(deck, idx);
-	verdictEl.textContent = report.legal ? 'Legal ✓' : 'Not legal';
-	verdictEl.className =
-		'rounded-full border px-3 py-1 text-xs font-semibold ' +
-		(report.legal ? 'border-emerald-400/50 text-emerald-300' : 'border-red-400/50 text-red-300');
+	verdictEl.dataset.legal = String(report.legal);
+	verdictEl.innerHTML = `<i class="dot"></i>${report.legal ? 'Legal' : 'Not legal'}`;
 	checklistEl.innerHTML = report.rules
 		.map(
 			(rule) =>
-				`<li class="flex gap-2">` +
-				`<span class="mt-0.5 rounded px-1 text-xs ${STATUS_CLASS[rule.status]}">${STATUS_MARK[rule.status]}</span>` +
+				`<li class="check-item" data-status="${rule.status}">` +
+				STATUS_ICON[rule.status] +
 				`<span class="min-w-0">` +
-				`<span class="${rule.status === 'pass' ? 'text-slate-400' : rule.status === 'fail' ? 'text-slate-200' : 'text-amber-200'}">${esc(rule.label)}</span>` +
-				(rule.status === 'pass' ? '' : ` <span class="block text-xs text-slate-400">${esc(rule.detail)}</span>`) +
+				`<span>${esc(rule.label)}</span>` +
+				(rule.status === 'pass' ? '' : ` <span class="check-detail">${esc(rule.detail)}</span>`) +
 				(rule.failures.length
-					? `<span class="block break-words text-xs text-red-300/90">${rule.failures.map(esc).join('<br>')}</span>`
+					? (() => {
+							const shown = rule.failures.slice(0, 6);
+							const rest = rule.failures.length - shown.length;
+							return `<span class="check-failure">${shown.map(esc).join('<br>')}${rest > 0 ? `<br>+${rest} more` : ''}</span>`;
+						})()
 					: '') +
 				`</span></li>`,
 		)
@@ -600,22 +687,30 @@ function chipText(slug: string): string {
 	return parts.length ? parts.join('·') : '—';
 }
 
+/** Human-readable location of a card's copies, for the count chip's tooltip. */
+function chipTitle(slug: string): string {
+	if (!deck) return '';
+	const parts = SECTION_KEYS.flatMap((section) => {
+		const qty = qtyOf(deck![section], slug);
+		return qty ? [`${qty} in ${SECTION_LABELS[section]}`] : [];
+	});
+	return parts.length ? parts.join(' · ') : 'Not in the deck';
+}
+
 // the deck-aware browser entry: art-only card impression + copy chip overlay
 function entryHtml(entry: GridEntry): string {
 	const chipControls = shared
-		? `<span class="text-[10px] font-semibold tracking-wide text-slate-200">${esc(chipText(entry.slug))}</span>`
-		: `<button type="button" data-chip-minus="${esc(entry.slug)}" class="rounded bg-slate-800/90 px-1 text-[10px] leading-4 text-slate-300 hover:text-white" aria-label="Pull copies from ${esc(SECTION_LABELS[activeSection])}">−</button>` +
-			`<span data-chip-count class="min-w-6 text-center text-[10px] font-semibold tracking-wide text-slate-100">${esc(chipText(entry.slug))}</span>` +
-			`<button type="button" data-chip-plus="${esc(entry.slug)}" class="rounded bg-slate-800/90 px-1 text-[10px] leading-4 text-slate-300 hover:text-white" aria-label="Add copy to ${esc(SECTION_LABELS[activeSection])}">+</button>`;
+		? `<span class="count-chip px-1">${esc(chipText(entry.slug))}</span>`
+		: `<button type="button" data-chip-minus="${esc(entry.slug)}" class="stepper" aria-label="Pull copies from ${esc(SECTION_LABELS[activeSection])}">${ICON_MINUS}</button>` +
+			`<span data-chip-count title="${esc(chipTitle(entry.slug))}" class="count-chip min-w-5 text-center">${esc(chipText(entry.slug))}</span>` +
+			`<button type="button" data-chip-plus="${esc(entry.slug)}" class="stepper" aria-label="Add copy to ${esc(SECTION_LABELS[activeSection])}">${ICON_PLUS}</button>`;
 	return (
 		`<li data-slug="${esc(entry.slug)}"` +
 		(shared ? '' : ' draggable="true"') +
 		` title="${esc(entry.name)} — ${esc(entry.meta)}"` +
-		` class="group relative aspect-[5/7] overflow-hidden rounded-md border border-slate-800 bg-slate-900 hover:border-amber-400/60">` +
+		` class="face group relative aspect-[5/7] cursor-pointer hover:border-amber-400/50"` +
 		`<a href="/cards/${esc(entry.slug)}" aria-label="${esc(entry.name)}" class="absolute inset-0">${thumbHtml(entry.slug)}</a>` +
-		`<div class="absolute inset-x-0 bottom-0 flex items-center justify-between gap-0.5 border-t border-slate-800 bg-slate-950/85 px-1 py-0.5">` +
-		chipControls +
-		`</div>` +
+		`<div class="face-bar">${chipControls}</div>` +
 		`</li>`
 	);
 }
@@ -697,20 +792,11 @@ function focusSection(section: SectionKey): void {
 	typeEl.value = allowed.length === 1 ? allowed[0] : '';
 	apply();
 	for (const key of SECTION_KEYS) {
-		document
-			.querySelector(`[data-focus-section="${key}"]`)
-			?.classList.toggle('ring-1', key === activeSection);
-		document
-			.querySelector(`[data-focus-section="${key}"]`)
-			?.classList.toggle('ring-amber-400/60', key === activeSection);
+		const el = document.querySelector<HTMLElement>(`[data-section="${key}"]`);
+		if (el) el.dataset.active = String(key === activeSection);
 	}
 	for (const pill of Array.from(pillsEl.querySelectorAll<HTMLButtonElement>('button[data-pill]'))) {
 		pill.setAttribute('aria-pressed', String(pill.dataset.pill === activeSection));
-		pill.className =
-			'rounded-full border px-3 py-1 text-xs ' +
-			(pill.dataset.pill === activeSection
-				? 'border-amber-400 bg-amber-400/10 text-amber-200'
-				: 'border-slate-700 bg-slate-900 text-slate-200 hover:border-amber-400/60');
 	}
 }
 
@@ -736,12 +822,14 @@ function renderDomains(): void {
 		return;
 	}
 	domainsEl.innerHTML =
-		`<span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Domains</span>` +
+		`<span class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">Domains</span>` +
 		domains
 			.map((d) => {
 				const label = d.label ?? d.slug;
+				const color = DOMAIN_COLORS[d.slug] ?? '#98a3af';
 				return `<button type="button" data-domain="${esc(d.slug)}" aria-pressed="${selectedDomains.has(d.slug)}"` +
-					` class="rounded-full border px-2 py-0.5 text-xs ${selectedDomains.has(d.slug) ? 'border-amber-400 bg-amber-400/10 text-amber-200' : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500'}">${esc(label)}</button>`;
+					` class="pill" style="--dot:${esc(color)}" title="${esc(label)} cards">` +
+					`<i class="dot"></i>${esc(label)}</button>`;
 			})
 			.join('');
 }
@@ -792,7 +880,21 @@ listEl.addEventListener('click', (event) => {
 	}
 	// plain card click = add to the corresponding section (shared view passive)
 	if (shared) return;
+	// a keyboard-activated link (Enter/Space on the anchor, detail 0) follows
+	// its href to the card page; pointer clicks keep the add shortcut
+	if (event.detail === 0) return;
 	event.preventDefault();
+	// zone-directed champion placement (spec: champion zone beside the legend):
+	// while the zone's picker is active, a tag-matching champion click places it
+	if (championPicking) {
+		if (!championZoneVerdict(slug)) {
+			flashAddButton(card, 'champion must match the legend');
+			return;
+		}
+		championPicking = false;
+		placeChampion(slug, card);
+		return;
+	}
 	clickAdd(slug, null);
 });
 
@@ -860,6 +962,7 @@ function refreshChips(): void {
 		if (plus) plus.setAttribute('aria-label', `Add copy to ${SECTION_LABELS[activeSection]}`);
 		if (minus) minus.setAttribute('aria-label', `Pull copies from ${SECTION_LABELS[activeSection]}`);
 		chip.textContent = chipText(li.dataset.slug ?? '');
+		chip.setAttribute('title', chipTitle(li.dataset.slug ?? ''));
 	}
 }
 
@@ -925,10 +1028,159 @@ for (const el of Array.from(appEl.querySelectorAll<HTMLElement>('[data-section]'
 	});
 }
 
+// --- champion zone beside the legend (spec: champion zone) -------------------
+//
+// At most one Champion per deck: a single champion-unit card sharing the
+// Legend's champion tag, up to the standard 3-copy cap. Copies live in (and
+// are counted by) the main deck — the zone only stores which card is picked.
+
+const championZoneEl = document.querySelector<HTMLElement>('[data-champion-zone]')!;
+const championFaceEl = document.querySelector<HTMLElement>('[data-champion-face]')!;
+const championCountEl = document.querySelector<HTMLElement>('[data-champion-count]')!;
+const CHAMPION_CHIP_CAP = 3;
+
+let championPicking = false;
+
+/** The Legend's champion tag resolves like the legality checker's
+ *  champion-unit rule (deck-rules): the legend's first champion-ish tag. */
+function legendChampionTag(): string | null {
+	const legend = idx.cards[deck?.legend[0]?.card ?? ''];
+	const tag = legend?.tags.find((t) => idx.championTags.includes(t));
+	return tag ?? null;
+}
+
+function championZoneVerdict(slug: string): boolean {
+	const info = idx.cards[slug];
+	if (!info || !info.types.includes('unit') || !info.superTypes.includes('champion')) return false;
+	const tag = legendChampionTag();
+	return Boolean(tag && info.tags.includes(tag));
+}
+
+/** Drops the pick in (storing the champion designation) and routes one copy
+ *  into the main deck through its standard cap gate. Pick and copy land in
+ *  one mutation so the pick-tracking cleanup never sees zero copies. */
+function placeChampion(slug: string, flash: HTMLElement | null = null): void {
+	if (!deck || shared) return;
+	if (!championZoneVerdict(slug)) {
+		flashAddButton(flash ?? championFaceEl, 'champion must match the legend');
+		return;
+	}
+	const verdict = canAdd('main', slug);
+	if (!verdict.ok) {
+		flashAddButton(flash ?? championFaceEl, verdict.why);
+		return;
+	}
+	mutate((d) => {
+		d.champion = slug;
+		d.main = setQty(d.main, slug, qtyOf(d.main, slug) + 1);
+	});
+}
+
+const ICON_TRASH =
+	'<svg width="11" height="11" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M2 3.1h6M4 3.1V2.1h2v1M3.1 3.1l.45 4.9h2.9l.45-4.9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/** The zone mirrors the pick: empty placement state or the champion face with
+ *  the relocated copy chip; the zone's own Select/Switch control sits in the
+ *  header row and is always available to (re)start pick mode. */
+function renderChampion(): void {
+	if (!deck) return;
+	const pickBtn = document.querySelector<HTMLButtonElement>('[data-champion-pick]');
+	if (pickBtn) {
+		pickBtn.disabled = Boolean(shared);
+		pickBtn.setAttribute('aria-pressed', String(championPicking));
+		pickBtn.textContent = championPicking
+			? 'Picking — click a champion'
+			: deck?.champion ? 'Switch champion' : 'Select champion';
+	}
+	const slug = deck?.champion ?? '';
+	if (!slug || !championZoneVerdict(slug)) {
+		championCountEl.textContent = `0 / ≤ ${CHAMPION_CHIP_CAP}`;
+		championFaceEl.innerHTML = shared
+			? `<div class="flex aspect-[5/7] w-full max-w-32 items-center justify-center rounded-md border border-dashed border-slate-800 bg-slate-900/40 px-2 text-center text-[10px] leading-tight text-slate-500">no champion picked</div>`
+			: `<div class="flex aspect-[5/7] w-full max-w-32 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed ${championPicking ? 'border-amber-400/70' : 'border-slate-700'} bg-slate-900/40 px-2 text-center text-slate-500">` +
+				`<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>` +
+				`<span class="text-[10px] leading-tight">champion unit of the legend's tag</span>` +
+				`</div>`;
+		return;
+	}
+	const qty = qtyOf(deck.main, slug);
+	const cap = Math.min(CHAMPION_CHIP_CAP, copyLimit(slug));
+	championCountEl.textContent = `${qty} / ${cap}`;
+	championFaceEl.innerHTML =
+		`<div data-slug="${esc(slug)}" class="face relative aspect-[5/7] w-full max-w-32 border-amber-400/50 shadow-lg shadow-black/50">` +
+		`<a href="/cards/${esc(slug)}" aria-label="${esc(idx.names[slug] ?? slug)}" class="absolute inset-0">${thumbHtml(slug)}</a>` +
+		`<div title="Champion copies in the main deck" class="absolute right-1.5 top-1.5 grid h-6 min-w-6 place-items-center rounded border border-slate-800 bg-slate-950/90 px-1 text-[11px] font-semibold text-amber-300 tnum">C${qty}</div>` +
+		(shared
+			? `<div class="face-bar justify-center"><span class="count-chip">× ${qty} copies</span></div>`
+			: `<div class="face-bar">` +
+				`<button type="button" data-section-row="main" data-slug="${esc(slug)}" data-qty="-1" class="stepper" aria-label="Pull a copy from ${esc(idx.names[slug] ?? slug)}">${ICON_MINUS}</button>` +
+				`<span class="count-chip">${qty}</span>` +
+				`<button type="button" data-section-row="main" data-slug="${esc(slug)}" data-qty="1" class="stepper" aria-label="Add a copy to ${esc(idx.names[slug] ?? slug)}">${ICON_PLUS}</button>` +
+				`<button type="button" data-section-row="main" data-slug="${esc(slug)}" data-qty="-1" data-remove class="stepper" aria-label="Remove ${esc(idx.names[slug] ?? slug)} from the deck">${ICON_TRASH}</button>` +
+				`</div>`) +
+		`</div>`;
+}
+
+championZoneEl.addEventListener('click', (event) => {
+	if (shared) return;
+	if (!(event.target as HTMLElement).closest('button[data-champion-pick]')) return;
+	championPicking = !championPicking;
+	renderChampion();
+});
+
+championZoneEl.addEventListener('dragover', (event) => {
+	if (!draggingSlug || shared || !championZoneVerdict(draggingSlug)) return;
+	// a tag-matching champion dropped here belongs to the zone: keep it away
+	// from the Legend section's own drop handling
+	event.stopPropagation();
+	championZoneEl.classList.add('drag-accept');
+	event.preventDefault(); // accept the drop on the zone
+});
+
+championZoneEl.addEventListener('dragleave', (event) => {
+	if (event.target === championZoneEl) championZoneEl.classList.remove('drag-accept');
+});
+
+championZoneEl.addEventListener('drop', (event) => {
+	if (!draggingSlug || shared) return;
+	const slug = draggingSlug;
+	if (championZoneVerdict(slug)) {
+		event.preventDefault();
+		event.stopPropagation();
+		draggingSlug = null;
+		hideDragHints();
+		placeChampion(slug);
+		return;
+	}
+	// a champion unit of the wrong tag refuses here, visibly (a non-champion
+	// card falls through to the Legend section's normal refusal)
+	if (isChampionUnitCard(slug)) {
+		event.preventDefault();
+		event.stopPropagation();
+		draggingSlug = null;
+		hideDragHints();
+		flashRefusal('legend', 'champion must match the legend');
+	}
+});
+
+function isChampionUnitCard(slug: string): boolean {
+	const info = idx.cards[slug];
+	return Boolean(info?.types.includes('unit') && info.superTypes.includes('champion'));
+}
+
 // --- header actions ---------------------------------------------------------
 
-renameBtn.addEventListener('click', () => {
-	if (!deck || shared) return;
+// In-page jumps are buttons, not #anchors: the deck lives in the URL hash
+// (#d/<id> / #s/<payload>), so replacing it with #deck-viewer would lose the
+// deck on reload. scrollIntoView still honours each target's scroll-margin.
+for (const trigger of Array.from(document.querySelectorAll<HTMLElement>('[data-scroll-to]'))) {
+	trigger.addEventListener('click', () => {
+		const target = document.getElementById(trigger.dataset.scrollTo ?? '');
+		target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	});
+}
+
+renameBtn.addEventListener('click', () => {	if (!deck || shared) return;
 	const next = window.prompt('Rename deck', deck.name)?.trim();
 	if (next) {
 		mutate((d) => {
@@ -961,11 +1213,111 @@ saveSharedBtn.addEventListener('click', () => {
 	history.replaceState(null, '', `/decks/build#d/${deck.id}`);
 	nameEl.textContent = deck.name;
 	shareBtn.hidden = false;
+	renameBtn.hidden = false;
 	saveSharedBtn.hidden = true;
+	syncNavHeight();
 	renderUnknownWarning();
 	renderRatio();
+	renderChampion();
+	renderHint();
+	renderCounts();
+	// browser impressions were built in the read-only shared shape; drop the
+	// pooled nodes so they are rebuilt with their copy chips
+	pool.clear();
+	listEl.replaceChildren();
 	apply();
 });
+
+// --- deck viewer resize grip (spec: user-adjustable viewer width) -----------
+//
+// The viewer column width drives `--deck-viewer-w` on #deck-app; the grip sits
+// in its own 12px grid column (hidden below lg where the layout stacks). The
+// chosen width persists in local storage, following the deck-library storage
+// posture: every access is guarded and unavailable storage just means the
+// default width, never a broken page.
+
+const gripEl = document.getElementById('deck-grip')!;
+
+const VIEWER_WIDTH_KEY = 'riftbound-deck-viewer-width';
+const VIEWER_WIDTH_DEFAULT = 520;
+const VIEWER_WIDTH_MIN = 280;
+const VIEWER_WIDTH_MAX_BASE = 880;
+
+function viewerWidthMax(): number {
+	// the browser grid must keep room of its own: never take more than half the viewport
+	return Math.min(VIEWER_WIDTH_MAX_BASE, Math.floor(window.innerWidth * 0.5));
+}
+
+function clampViewerWidth(px: number): number {
+	return Math.round(Math.min(Math.max(px, VIEWER_WIDTH_MIN), viewerWidthMax()));
+}
+
+function applyViewerWidth(px: number): void {
+	appEl.style.setProperty('--deck-viewer-w', `${px}px`);
+}
+
+function readStoredViewerWidth(): number | null {
+	try {
+		const raw = globalThis.localStorage?.getItem(VIEWER_WIDTH_KEY) ?? null;
+		const px = raw == null ? Number.NaN : Number(raw);
+		return Number.isFinite(px) ? clampViewerWidth(px) : null;
+	} catch {
+		return null;
+	}
+}
+
+function storeViewerWidth(px: number): void {
+	try {
+		globalThis.localStorage?.setItem(VIEWER_WIDTH_KEY, String(px));
+	} catch {
+		// storage unavailable (private mode, quota): view keeps working, nothing persists
+	}
+}
+
+// init: restore the last chosen width (clamped to current bounds); absence
+// leaves the CSS defaults (380px, 440px at xl) untouched
+const storedViewerWidth = readStoredViewerWidth();
+if (storedViewerWidth != null) applyViewerWidth(storedViewerWidth);
+
+// live drag: pointer math against #deck-app's right edge (the page is the
+// full-window deck layout, but the rect keeps it exact regardless), rAF-throttled
+let viewerWidthRaf = 0;
+let pendingViewerWidth: number | null = null;
+
+function flushViewerWidth(): void {
+	viewerWidthRaf = 0;
+	if (pendingViewerWidth == null) return;
+	applyViewerWidth(pendingViewerWidth);
+	storeViewerWidth(pendingViewerWidth);
+	pendingViewerWidth = null;
+}
+
+function queueViewerWidth(px: number): void {
+	pendingViewerWidth = clampViewerWidth(px);
+	if (viewerWidthRaf === 0) viewerWidthRaf = requestAnimationFrame(flushViewerWidth);
+}
+
+gripEl.addEventListener('pointerdown', (event) => {
+	// no drag below lg (grip is hidden there) and only for the primary button
+	if (event.button !== 0 || gripEl.offsetParent === null) return;
+	event.preventDefault();
+	gripEl.setPointerCapture(event.pointerId);
+	gripEl.dataset.dragging = 'true';
+});
+
+gripEl.addEventListener('pointermove', (event) => {
+	if (gripEl.dataset.dragging !== 'true' || !gripEl.hasPointerCapture(event.pointerId)) return;
+	queueViewerWidth(appEl.getBoundingClientRect().right - event.clientX);
+});
+
+function endViewerDrag(event: PointerEvent): void {
+	if (gripEl.dataset.dragging !== 'true' || !gripEl.hasPointerCapture(event.pointerId)) return;
+	gripEl.releasePointerCapture(event.pointerId);
+	delete gripEl.dataset.dragging;
+}
+
+gripEl.addEventListener('pointerup', endViewerDrag);
+gripEl.addEventListener('pointercancel', endViewerDrag);
 
 // --- go ---------------------------------------------------------------------
 

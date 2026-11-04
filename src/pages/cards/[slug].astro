@@ -52,15 +52,28 @@ const fullUrl = shownImageId ? imgUrl(shownImageId, 'full') : null;
 const onerror = shownImageId
 	? `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${fullUrl}'}else{this.remove()}`
 	: undefined;
+
+const stats = [
+	cardRecord.might != null ? { label: 'Might', value: cardRecord.might, note: cardRecord.mightBonus != null ? `+${cardRecord.mightBonus}` : null } : null,
+	cardRecord.energy != null ? { label: 'Energy', value: cardRecord.energy, note: null } : null,
+	cardRecord.power != null ? { label: 'Power', value: cardRecord.power, note: null } : null,
+].filter((s): s is { label: string; value: number; note: string | null } => s !== null);
 ---
 
 <Base title={`${card.name} — Riftbound Deck Manager`}>
-	<p class="mb-4 text-sm"><a class="text-amber-300 hover:underline" href="/">← Back to all cards</a></p>
+	<p class="text-xs">
+		<a class="inline-flex items-center gap-1 text-slate-400 transition-colors hover:text-amber-300" href="/">
+			<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+				<path d="M7.5 2.5 4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+			</svg>
+			All cards
+		</a>
+	</p>
 
-	<article class="grid gap-6 lg:grid-cols-[280px_1fr]">
-		<div>
-			<div class={`relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full overflow-hidden rounded-lg bg-slate-900`}>
-				<div class={shownImageId ? 'absolute inset-0 flex items-center justify-center text-slate-500' : 'flex h-full items-center justify-center text-slate-500'}>no art</div>
+	<article class="mt-3 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
+		<div class="lg:sticky lg:top-20 lg:self-start">
+			<div class={`relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} mx-auto w-full max-w-[15rem] overflow-hidden rounded-lg border border-slate-800 bg-slate-900 shadow-xl shadow-black/40 sm:max-w-[17rem] lg:mx-0 lg:max-w-none`}>
+				<div class="absolute inset-0 flex items-center justify-center text-xs text-slate-500">no art</div>
 				{shownImageId && (
 					<img
 						src={imgUrl(shownImageId, '400w')}
@@ -75,38 +88,42 @@ const onerror = shownImageId
 			</div>
 			{
 				primaryPrint?.publicCode && (
-					<p class="mt-2 text-xs text-slate-400">
-						Shown: {primaryPrint.publicCode} ({enumLabel('artVariants', primaryPrint.artVariant)} art)
+					<p class="mt-2 text-xs text-slate-500 tnum">
+						Shown: {primaryPrint.publicCode} · {enumLabel('artVariants', primaryPrint.artVariant)} art
 					</p>
 				)
 			}
 		</div>
 
-		<div>
-			<h1 class="text-3xl font-bold">
+		<div class="min-w-0">
+			<h1 class="text-3xl font-semibold leading-tight">
 				<!-- OpenRift courtesy link (design D5) -->
-				<a class="hover:text-amber-200 hover:underline" href={`https://openrift.app/cards/${card.slug}`}>{card.name}</a>
+				<a class="transition-colors hover:text-amber-300" href={`https://openrift.app/cards/${card.slug}`}>{card.name}</a>
 			</h1>
 
-			<div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-				{card.types.map((t) => <span class="rounded bg-slate-800 px-1.5 py-0.5 text-amber-200">{enumLabel('cardTypes', t)}</span>)}
+			<div class="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
+				{card.types.map((t) => <span class="rounded bg-slate-800 px-1.5 py-0.5 font-medium text-amber-300">{enumLabel('cardTypes', t)}</span>)}
 				{(cardRecord.superTypes ?? []).map((st) => <span class="rounded border border-slate-700 px-1.5 py-0.5 text-slate-300">{enumLabel('superTypes', st)}</span>)}
 				{domainLabels(cardRecord.domains).map((d) => <span class="rounded bg-slate-800/60 px-1.5 py-0.5 text-slate-300">{d}</span>)}
 			</div>
 
-			{
-				(cardRecord.might != null || cardRecord.energy != null || cardRecord.power != null) && (
-					<div class="mt-3 flex flex-wrap gap-4 text-sm text-slate-300">
-						{cardRecord.might != null && <span>Might <strong class="text-amber-200">{cardRecord.might}</strong>{cardRecord.mightBonus != null && <span class="text-slate-400"> (+{cardRecord.mightBonus})</span>}</span>}
-						{cardRecord.energy != null && <span>Energy <strong class="text-amber-200">{cardRecord.energy}</strong></span>}
-						{cardRecord.power != null && <span>Power <strong class="text-amber-200">{cardRecord.power}</strong></span>}
-					</div>
-				)
-			}
+			{stats.length > 0 && (
+				<dl class="mt-5 flex flex-wrap gap-x-6 gap-y-3 border-y border-slate-800 py-3">
+					{stats.map((stat) => (
+						<div>
+							<dt class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">{stat.label}</dt>
+							<dd class="mt-0.5 text-lg font-semibold leading-none text-slate-100 tnum">
+								{stat.value}
+								{stat.note && <span class="ml-1 text-xs font-normal text-slate-400">{stat.note}</span>}
+							</dd>
+						</div>
+					))}
+				</dl>
+			)}
 
 			{
 				(cardRecord.keywords ?? []).length > 0 && (
-					<div class="mt-3 flex flex-wrap gap-1.5 text-xs">
+					<div class="mt-4 flex flex-wrap gap-1.5 text-xs">
 						{(cardRecord.keywords ?? []).map((k) => <span class="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-200">{k}</span>)}
 					</div>
 				)
@@ -114,7 +131,7 @@ const onerror = shownImageId
 
 			{
 				cardRecord.maxCopiesOverride != null && (
-					<div class="mt-3 rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+					<div class="callout mt-4" data-tone="warning">
 						Deck limit override: {cardRecord.maxCopiesOverride} copies
 					</div>
 				)
@@ -122,7 +139,7 @@ const onerror = shownImageId
 
 			{
 				cardRecord.errata && (
-					<div class="mt-3 rounded-md border border-sky-400/30 bg-sky-400/10 px-3 py-2 text-sm text-sky-100">
+					<div class="callout mt-4 border-sky-400/30 bg-sky-400/5 text-sky-100">
 						<strong class="font-semibold">Errata</strong>{cardRecord.errata.effectiveDate && <span class="text-sky-200/70"> · effective {cardRecord.errata.effectiveDate}</span>}
 						<p class="mt-1">{cardRecord.errata.correctedRulesText ?? cardRecord.errata.correctedEffectText}</p>
 						{cardRecord.errata.sourceUrl && (
@@ -134,28 +151,28 @@ const onerror = shownImageId
 
 			{
 				(cardRecord.bans ?? []).length > 0 && (
-					<div class="mt-3 rounded-md border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-100">
+					<div class="callout mt-4" data-tone="error">
 						<strong class="font-semibold">Banned</strong>
 						<ul class="mt-1 list-disc pl-4">
 							{(cardRecord.bans ?? []).map((b) => (
-								<li><span>{b.formatName}</span>{b.bannedAt && <span class="text-red-200/70"> · {b.bannedAt}</span>}{b.reason && <span class="text-red-200/70"> — {b.reason}</span>}</li>
+								<li><span>{b.formatName}</span>{b.bannedAt && <span class="text-red-300/70"> · {b.bannedAt}</span>}{b.reason && <span class="text-red-300/70"> — {b.reason}</span>}</li>
 							))}
 						</ul>
 					</div>
 				)
 			}
 
-			<div class="mt-3 space-y-3 text-sm leading-relaxed text-slate-200">
+			<div class="mt-5 max-w-[70ch] space-y-3 text-sm leading-relaxed text-slate-200">
 				{primaryPrint?.printedEffectText && <p>{primaryPrint.printedEffectText}</p>}
 				{primaryPrint?.printedRulesText && <p>{primaryPrint.printedRulesText}</p>}
-				{primaryPrint?.flavorText && <p class="italic text-slate-400">{primaryPrint.flavorText}</p>}
+				{primaryPrint?.flavorText && <p class="border-l border-slate-800 pl-3 italic text-slate-400">{primaryPrint.flavorText}</p>}
 			</div>
 
-			<div class="mt-4 text-xs text-slate-500">{card.printings.length} printing{card.printings.length === 1 ? '' : 's'} in the snapshot</div>
+			<p class="mt-5 text-xs text-slate-500 tnum">{card.printings.length} printing{card.printings.length === 1 ? '' : 's'} in the snapshot</p>
 		</div>
 	</article>
 
-	<h2 class="mt-10 text-xl font-semibold">Printings</h2>
+	<h2 class="mt-12 border-b border-slate-800 pb-2 text-lg font-semibold">Printings</h2>
 	{
 		index.sets
 			.filter((set) => printingsBySet.has(set.slug))
@@ -164,21 +181,20 @@ const onerror = shownImageId
 				const prints = printingsBySet.get(set.slug) ?? [];
 				return (
 					<section class="mt-6">
-						<h3 class="flex flex-wrap items-baseline gap-2 border-b border-slate-800 pb-2 text-lg font-medium">
+						<h3 class="flex flex-wrap items-baseline gap-2 text-sm font-medium text-slate-200">
 							{set.name}
-							<span class="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-medium text-amber-300">{set.slug}</span>
-							<span class="text-xs text-slate-500">{prints.length} printing{prints.length === 1 ? '' : 's'}</span>
+							<span class="tag">{set.slug}</span>
+							<span class="text-xs text-slate-500 tnum">{prints.length} printing{prints.length === 1 ? '' : 's'}</span>
 						</h3>
-						<ul class="mt-3 divide-y divide-slate-800 rounded-lg border border-slate-800 bg-slate-900">
+						<ul class="mt-2 divide-y divide-slate-800 overflow-hidden rounded-lg border border-slate-800">
 							{prints.map((printing) => {
 								const channels = channelLabels(printing.distributionChannels);
 								const markers = markerLabels(printing.markers);
 								const side2 = printing.side2 ? cardByUuid.get(printing.side2.cardId) : undefined;
 								return (
-									<li class={`grid gap-2 p-4 ${rotateArt ? 'sm:grid-cols-[200px_1fr]' : 'sm:grid-cols-[140px_1fr]'}`}>
+									<li class={`grid gap-3 p-3 ${rotateArt ? 'sm:grid-cols-[120px_1fr]' : 'sm:grid-cols-[84px_1fr]'}`}>
 										{printing.images && printing.images.length > 0 && printing.images[0]?.imageId ? (
-											<div class={`relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full overflow-hidden rounded-md bg-slate-800`}>
-												<div class="absolute inset-0 hidden items-center justify-center text-xs text-slate-500 sm:flex">no art</div>
+											<div class={`relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full overflow-hidden rounded bg-slate-800`}>
 												<img
 													src={imgUrl(printing.images[0].imageId, '240w')}
 													alt={`${card.name} card art — ${printing.publicCode ?? printing.shortCode ?? set.slug}`}
@@ -190,32 +206,33 @@ const onerror = shownImageId
 												/>
 											</div>
 										) : (
-											<div class={`flex ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full items-center justify-center rounded-md bg-slate-800 text-xs text-slate-500`}>no art</div>
+											<div class={`flex ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full items-center justify-center rounded bg-slate-800 text-[10px] text-slate-500`}>no art</div>
 										)}
-										<div class="text-sm">
-											<div class="flex flex-wrap items-center gap-2">
-												<span class="font-semibold text-amber-200">{printing.publicCode ?? printing.shortCode ?? '—'}</span>
-												<span>{enumLabel('rarities', printing.rarity)}</span>
-												<span class="text-slate-400">· {enumLabel('finishes', printing.finish)}</span>
-												{printing.artVariant && printing.artVariant !== 'normal' && <span class="rounded bg-slate-800 px-1.5 py-0.5 text-xs">{enumLabel('artVariants', printing.artVariant)}</span>}
-												{printing.isSigned && <span class="rounded bg-slate-800 px-1.5 py-0.5 text-xs">Signed</span>}
-												{printing.isOvernumbered && <span class="rounded bg-slate-800 px-1.5 py-0.5 text-xs">Overnumbered</span>}
-												{printing.size && printing.size !== 'standard' && <span class="rounded bg-slate-800 px-1.5 py-0.5 text-xs">{enumLabel('cardSizes', printing.size)}</span>}
+										<div class="min-w-0 text-sm">
+											<div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+												<span class="font-semibold text-amber-300 tnum">{printing.publicCode ?? printing.shortCode ?? '—'}</span>
+												<span class="text-slate-300">{enumLabel('rarities', printing.rarity)}</span>
+												<span class="text-slate-500">·</span>
+												<span class="text-slate-400">{enumLabel('finishes', printing.finish)}</span>
+												{printing.artVariant && printing.artVariant !== 'normal' && <span class="tag">{enumLabel('artVariants', printing.artVariant)}</span>}
+												{printing.isSigned && <span class="tag">Signed</span>}
+												{printing.isOvernumbered && <span class="tag">Overnumbered</span>}
+												{printing.size && printing.size !== 'standard' && <span class="tag">{enumLabel('cardSizes', printing.size)}</span>}
 											</div>
 											{printing.printedName && printing.printedName !== card.name && <div class="mt-1 text-slate-300">Printed name: {printing.printedName}</div>}
-											<div class="mt-1 text-slate-400">
+											<div class="mt-1 text-xs text-slate-500">
 												{printing.artist && <span>Art by {printing.artist} · </span>}
 												<span>{enumLabel('languages', printing.language)}</span>
 											</div>
 											{(channels.length > 0 || markers.length > 0) && (
-												<div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+												<div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
 													{channels.map((c) => <span class="rounded-full bg-slate-800/70 px-2 py-0.5 text-slate-300">{c}</span>)}
-													{markers.map((m) => <span class="rounded-full border border-amber-400/40 px-2 py-0.5 text-amber-200/90">{m}</span>)}
+													{markers.map((m) => <span class="rounded-full border border-amber-400/40 px-2 py-0.5 text-amber-300">{m}</span>)}
 												</div>
 											)}
 											{printing.comment && <div class="mt-1 text-xs italic text-slate-500">{printing.comment}</div>}
 											{printing.side2 && (
-												<div class="mt-2 rounded-md border border-slate-700 bg-slate-800/50 px-3 py-2 text-xs">
+												<div class="mt-2 rounded border border-slate-800 bg-slate-900 px-2.5 py-1.5 text-xs">
 													<span class="font-medium text-slate-200">Two-sided card — back face:</span>
 													{side2 ? (
 														<a class="ml-1 text-amber-300 hover:underline" href={`/cards/${side2.slug}`}>
@@ -224,7 +241,7 @@ const onerror = shownImageId
 													) : (
 														<span class="ml-1">{printing.side2.printedName ?? 'unknown card'}</span>
 													)}
-													{printing.side2.publicCode && <span class="ml-2 text-slate-400">({printing.side2.publicCode})</span>}
+													{printing.side2.publicCode && <span class="ml-2 text-slate-500">({printing.side2.publicCode})</span>}
 												</div>
 											)}
 										</div>

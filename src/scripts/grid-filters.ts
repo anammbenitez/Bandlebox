@@ -92,7 +92,7 @@ if (dataEl && listEl && sentinelEl && countEl && emptyEl) {
 		countEl!.textContent = f.q || f.type || f.rarity || f.set
 			? `Showing ${matchesCount.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} cards`
 			: `Showing all ${total.toLocaleString('en-US')} cards`;
-		emptyEl!.classList.toggle('hidden', matchesCount > 0);
+		emptyEl!.hidden = matchesCount > 0;
 	}
 
 	/* --- windowing --- */
@@ -198,13 +198,16 @@ if (dataEl && listEl && sentinelEl && countEl && emptyEl) {
 	typeEl?.addEventListener('change', apply);
 	rarityEl?.addEventListener('change', apply);
 	setEl?.addEventListener('change', apply);
-	resetEl?.addEventListener('click', () => {
+
+	const clearFilters = (): void => {
 		if (searchEl) searchEl.value = '';
 		if (typeEl) typeEl.value = '';
 		if (rarityEl) rarityEl.value = '';
 		if (setEl) setEl.value = '';
 		apply();
-	});
+	};
+	resetEl?.addEventListener('click', clearFilters);
+	document.getElementById('grid-empty-reset')?.addEventListener('click', clearFilters);
 
 	if (topEl) {
 		topEl.addEventListener('click', () => {

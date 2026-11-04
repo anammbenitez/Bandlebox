@@ -1,37 +1,65 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { index, setPrimaryRelease, setTypeLabel } from '../../lib/catalog';
+import { index, releaseLabel, setPrimaryRelease, setTypeLabel } from '../../lib/catalog';
 
 const sets = [...index.sets].sort((a, b) => {
 	const ra = setPrimaryRelease(a)?.releasedAt ?? '9999-99-99';
 	const rb = setPrimaryRelease(b)?.releasedAt ?? '9999-99-99';
 	return ra.localeCompare(rb) || a.name.localeCompare(b.name);
 });
+
+// Distinct cards per set, counted from the printings that name the set.
+const cardsBySet = new Map<string, number>();
+for (const card of index.cards) {
+	for (const setSlug of new Set(card.printings.map((p) => p.setSlug))) {
+		cardsBySet.set(setSlug, (cardsBySet.get(setSlug) ?? 0) + 1);
+	}
+}
 ---
 
 <Base title="Sets — Riftbound Deck Manager">
-	<h1 class="text-2xl font-bold">Sets</h1>
-	<p class="mt-1 text-sm text-slate-400">{sets.length} sets in the local catalog snapshot (fetched {index.meta.fetchedAt}).</p>
-	<ul class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+	<header class="page-head">
+		<div>
+			<h1 class="page-title">Sets</h1>
+			<p class="page-lede">{sets.length} sets in the local catalog snapshot (fetched {index.meta.fetchedAt}).</p>
+		</div>
+	</header>
+
+	<ul class="mt-5 divide-y divide-slate-800 overflow-hidden rounded-lg border border-slate-800">
 		{
 			sets.map((set) => {
 				const release = setPrimaryRelease(set);
 				const date = release?.releasedAt;
 				const precision = release?.precision ?? 'day';
+				const count = cardsBySet.get(set.slug) ?? 0;
 				return (
 					<li>
 						<a
 							href={`/sets/${set.slug}`}
-							class="block rounded-lg border border-slate-800 bg-slate-900 p-4 transition hover:border-amber-400/60 hover:bg-slate-900/70"
+							class="group grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-3 transition-colors hover:bg-slate-900"
 						>
-							<div class="flex items-baseline justify-between gap-2">
-								<span class="font-semibold">{set.name}</span>
-								<span class="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-medium text-amber-300">{set.slug}</span>
-							</div>
-							<div class="mt-2 flex items-center justify-between text-xs text-slate-400">
-								<span>{setTypeLabel(set)}</span>
-								<span title={precision !== 'day' ? `Release known only to the ${precision}` : undefined}>{date ?? '—'}</span>
-							</div>
+							<span class="flex min-w-0 items-center gap-3">
+								<span class="tag w-11 justify-center">{set.slug}</span>
+								<span class="min-w-0">
+									<span class="block truncate text-sm font-medium text-slate-200 group-hover:text-amber-300">{set.name}</span>
+									<span class="mt-0.5 block text-xs text-slate-500">{setTypeLabel(set)} · <span class="tnum">{count.toLocaleString('en-US')}</span> card{count === 1 ? '' : 's'}</span>
+								</span>
+							</span>
+							<span class="flex items-center gap-3 text-right text-xs text-slate-400">
+								<span class="tnum w-24" title={precision !== 'day' ? `Release known only to the ${precision}` : undefined}>
+									{releaseLabel(date, precision)}
+								</span>
+								<svg
+									class="hidden text-slate-600 transition-colors group-hover:text-amber-400 sm:block"
+									width="14"
+									height="14"
+									viewBox="0 0 14 14"
+									fill="none"
+									aria-hidden="true"
+								>
+									<path d="M5 3.5 8.5 7 5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+							</span>
 						</a>
 					</li>
 				);

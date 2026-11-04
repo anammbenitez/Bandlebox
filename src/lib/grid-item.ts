@@ -58,14 +58,14 @@ export function gridItemHtml(item: GridItemData): string {
 		: '';
 	return (
 		`<li data-slug="${esc(item.slug)}">` +
-		`<a href="/cards/${esc(item.slug)}" class="group block">` +
-		`<div class="relative aspect-[5/7] w-full overflow-hidden rounded-md bg-slate-900">` +
-		`<div class="absolute inset-0 flex items-center justify-center text-sm text-slate-500">no art</div>` +
+		`<a href="/cards/${esc(item.slug)}" class="card-tile group" title="${esc(item.name)}">` +
+		`<div class="card-tile-art">` +
+		`<div class="absolute inset-0 flex items-center justify-center text-xs text-slate-500">no art</div>` +
 		img +
 		`</div>` +
-		`<div class="mt-2"><div class="font-medium group-hover:text-amber-200">${esc(item.name)}</div>` +
-		`<div class="mt-0.5 flex items-center justify-between gap-2 text-xs text-slate-400"><span>${esc(item.meta)}</span>` +
-		`<span class="whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 text-amber-300">${esc(setBadge || '—')}</span></div></div>` +
+		`<div class="card-tile-name truncate">${esc(item.name)}</div>` +
+		`<div class="card-tile-meta"><span class="truncate">${esc(item.meta)}</span>` +
+		`<span class="tag">${esc(setBadge || '—')}</span></div>` +
 		`</a></li>`
 	);
 }

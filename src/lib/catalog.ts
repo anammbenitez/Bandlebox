@@ -186,6 +186,17 @@ export function setTypeLabel(set: IndexSet): string {
 	return set.setType === 'main' ? 'Main set' : set.setType === 'supplemental' ? 'Supplemental' : set.setType ? set.setType.replace(/^\w/, (c) => c.toUpperCase()) : 'Set';
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** Release date at the precision the snapshot actually knows ("2024", "Aug 2026", "31 Jul 2026"). */
+export function releaseLabel(iso?: string | null, precision?: string | null): string {
+	if (!iso) return '—';
+	const [year, month, day] = iso.split('-');
+	if (precision === 'year' || !month) return year;
+	const monthName = MONTH_NAMES[Number(month) - 1] ?? month;
+	return precision === 'month' ? `${monthName} ${year}` : `${Number(day)} ${monthName} ${year}`;
+}
+
 /** Card-level representative printing: first one with art, else the first. */
 export function representativePrinting(card: IndexCard): IndexPrinting | null {
 	if (card.printings.length === 0) return null;

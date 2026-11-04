@@ -50,47 +50,41 @@ function cardCount(deck: Deck): string {
 
 function badgeHtml(deck: Deck): string {
 	const legal = isLegal(deck);
-	const cls = legal
-		? 'border-emerald-400/60 bg-slate-950/80 text-emerald-300'
-		: 'border-red-400/60 bg-slate-950/80 text-red-300';
-	return `<span class="absolute right-1.5 top-1.5 z-10 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cls}">${legal ? 'Legal ✓' : 'Not legal'}</span>`;
+	return `<span class="deck-badge" data-legal="${legal}"><i class="dot"></i>${legal ? 'Legal' : 'Not legal'}</span>`;
 }
 
 // interaction state on tiles: rename / delete confirmation / name editing
 const interactState = new Map<string, 'confirm'>();
 
+/** Tile face: Legend art under the deck's own name and its two counts. */
 function coverHtml(deck: Deck): string {
 	const legendSlug = deck.legend[0]?.card;
 	const legend = legendBySlug.get(legendSlug ?? '');
-	if (!legend?.url) {
-		return '<span class="absolute inset-0 grid place-items-center text-center text-[11px] text-slate-500">no legend chosen</span>';
-	}
-	const extras = [
-		`<strong>${esc(legend.name)}</strong>`,
-		esc(cardCount(deck)),
-		`updated ${esc(new Date(deck.updatedAt).toLocaleDateString())}`,
-	].filter(Boolean);
+	const face = legend?.url
+		? `<img src="${esc(legend.url)}" alt="Legend art for ${esc(legend.name)}" loading="lazy"` +
+			` class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" onerror="this.remove()">`
+		: '<span class="absolute inset-0 grid place-items-center px-2 text-center text-[11px] text-slate-500">no legend chosen</span>';
 	return (
-		`<img src="${esc(legend.url)}" alt="Legend art for ${esc(legend.name)}" loading="lazy"` +
-		` class="h-full w-full rounded-md object-cover transition group-hover:opacity-90" onerror="this.remove()">` +
-		`<div class="absolute inset-x-0 bottom-0 border-t border-slate-800 bg-slate-950/85 px-2 py-1">` +
-		`<span class="block truncate text-xs font-semibold text-slate-100">${extras[0]}</span>` +
-		`<span class="block text-[10px] text-slate-400">${extras[1]} · ${extras[2]}</span>` +
+		face +
+		`<div class="deck-tile-caption">` +
+		`<span class="block truncate text-xs font-medium text-slate-100">${esc(deck.name)}</span>` +
+		`<span class="mt-0.5 block truncate text-[10px] text-slate-400 tnum">${esc(cardCount(deck))}</span>` +
 		`</div>`
 	);
 }
 
 function deckTileHtml(deck: Deck, confirming: boolean): string {
-	const actions = confirming		? `<span class="absolute left-1.5 top-1.5 z-10 flex flex-col gap-1 text-[10px]">
-				<button type="button" data-deck-confirm class="rounded bg-red-500/90 px-2 py-1 font-semibold text-white hover:bg-red-400">Delete — sure?</button>
-				<button type="button" data-deck-cancel class="rounded border border-slate-600 bg-slate-950/80 px-2 py-1 text-slate-200 hover:border-slate-400">No</button>
+	const actions = confirming
+		? `<span class="absolute left-1.5 top-1.5 z-10 flex flex-col items-start gap-1">
+				<button type="button" data-deck-confirm class="tile-action" data-variant="danger">Delete — sure?</button>
+				<button type="button" data-deck-cancel class="tile-action">Keep</button>
 			</span>`
-		: `<span class="absolute top-1.5 left-1.5 z-10 flex gap-1 text-[10px] opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-				<button type="button" data-deck-rename class="rounded border border-slate-600 bg-slate-950/80 px-1.5 py-0.5 text-slate-200 hover:border-amber-400/60 hover:text-amber-200">Rename</button>
-				<button type="button" data-deck-delete class="rounded border border-slate-600 bg-slate-950/80 px-1.5 py-0.5 text-slate-200 hover:border-red-400/60 hover:text-red-300">Delete</button>
+		: `<span class="absolute top-1.5 left-1.5 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+				<button type="button" data-deck-rename class="tile-action">Rename</button>
+				<button type="button" data-deck-delete class="tile-action">Delete</button>
 			</span>`;
 	return (
-		`<li data-id="${esc(deck.id)}" data-tile class="group relative aspect-square overflow-hidden rounded-md border border-slate-800 bg-slate-900 hover:border-amber-400/40">` +
+		`<li data-id="${esc(deck.id)}" data-tile class="deck-tile group" title="${esc(deck.name)} · updated ${esc(new Date(deck.updatedAt).toLocaleDateString())}">` +
 		badgeHtml(deck) +
 		actions +
 		`<a href="/decks/build#d/${esc(deck.id)}" aria-label="Open ${esc(deck.name)}" class="absolute inset-0">${coverHtml(deck)}</a>` +
@@ -100,10 +94,13 @@ function deckTileHtml(deck: Deck, confirming: boolean): string {
 
 function createTileHtml(): string {
 	return (
-		`<li class="relative aspect-square overflow-hidden rounded-md border border-dashed border-amber-400/40 bg-slate-900 hover:border-amber-400/80">` +
-		`<button id="open-create-modal" type="button" aria-label="Create a new deck"` +
-		` class="grid h-full w-full place-items-center rounded-md text-amber-300/80 hover:text-amber-200">` +
-		`<span class="text-4xl font-light">+</span>` +
+		`<li class="deck-tile border-dashed border-slate-700">` +
+		`<button id="open-create-modal" type="button" aria-label="Create a new deck" class="create-tile">` +
+		`<span class="create-tile-icon">` +
+		`<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">` +
+		`<path d="M7 2.5v9M2.5 7h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>` +
+		`</svg></span>` +
+		`<span class="text-xs font-medium">New deck</span>` +
 		`</button></li>`
 	);
 }
@@ -162,21 +159,23 @@ function legendMatches(entry: LegendEntry, q: string): boolean {
 
 function renderLegendList(): void {
 	const q = legendSearchEl.value.trim().toLowerCase();
-	legendListEl.innerHTML = legends
-		.filter((entry) => legendMatches(entry, q))
-		.slice(0, 48)
-		.map(
-			(entry) =>
-				`<li>` +
-				`<button type="button" data-legend-pick="${esc(entry.slug)}" aria-pressed="${selectedLegend?.slug === entry.slug}"` +
-				` class="relative block w-full aspect-[5/7] overflow-hidden rounded border ${selectedLegend?.slug === entry.slug ? 'border-amber-400' : 'border-slate-700'} bg-slate-950 hover:border-amber-400/70">` +
-				(entry.url
-					? `<img src="${esc(entry.url)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="this.remove()">`
-					: `<span class="grid h-full place-items-center text-slate-600">—</span>`) +
-				`<span class="absolute inset-x-0 bottom-0 truncate bg-slate-950/80 px-1 py-0.5 text-[9px] text-slate-200">${esc(entry.name)}</span>` +
-				`</button></li>`,
-		)
-		.join('');
+	const found = legends.filter((entry) => legendMatches(entry, q));
+	legendListEl.innerHTML = found.length
+		? found
+				.slice(0, 48)
+				.map(
+					(entry) =>
+						`<li>` +
+						`<button type="button" data-legend-pick="${esc(entry.slug)}" aria-pressed="${selectedLegend?.slug === entry.slug}"` +
+						` class="legend-pick">` +
+						(entry.url
+							? `<img src="${esc(entry.url)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="this.remove()">`
+							: `<span class="grid h-full place-items-center text-slate-600">—</span>`) +
+						`<span class="legend-pick-label truncate">${esc(entry.name)}</span>` +
+						`</button></li>`,
+				)
+				.join('')
+		: `<li class="col-span-full py-3 text-center text-xs text-slate-500">No legends match that search.</li>`;
 }
 
 function updateModalState(): void {
@@ -185,9 +184,7 @@ function updateModalState(): void {
 	modalAcceptEl.disabled = !selectedLegend || modalNameEl.value.trim().length === 0;
 	document.querySelectorAll('[data-legend-pick]').forEach((el) => {
 		const pick = el as HTMLElement;
-		const active = pick.dataset.legendPick === selectedLegend?.slug;
-		pick.setAttribute('aria-pressed', String(active));
-		pick.className = `relative block w-full aspect-[5/7] overflow-hidden rounded border ${active ? 'border-amber-400' : 'border-slate-700'} bg-slate-950 hover:border-amber-400/70`;
+		pick.setAttribute('aria-pressed', String(pick.dataset.legendPick === selectedLegend?.slug));
 	});
 }
 
@@ -205,6 +202,7 @@ function closeModal(): void {
 	// Cancel reverts: nothing written, nothing kept.
 	selectedLegend = null;
 	modalEl.hidden = true;
+	document.getElementById('open-create-modal')?.focus();
 }
 
 legendListEl.addEventListener('click', (event) => {

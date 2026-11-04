@@ -20,111 +20,184 @@ const domainPayload = escapedJson(
 ---
 
 <Base title="Deck manager — Riftbound Deck Manager" wide>
-	<header class="flex flex-wrap items-center justify-between gap-3">
-		<div>
-			<h1 id="deck-name" class="text-2xl font-bold">Deck</h1>
-			<p id="deck-meta" class="mt-1 text-sm text-slate-400">0 cards</p>
+	<!-- Deck chrome stays visible on scroll (spec: editor chrome stays visible):
+	     the name/meta/actions bar sticks just below the fixed nav. --nav-h is
+	     measured from #site-nav in deck-builder.ts. -->
+	<header class="deck-bar">
+		<div class="min-w-0">
+			<h1 id="deck-name" class="deck-title truncate">Deck</h1>
+			<p id="deck-meta" class="deck-meta">0 cards</p>
 		</div>
-		<div class="flex items-center gap-2">
-			<span id="deck-verdict" class="rounded-full border px-3 py-1 text-xs font-semibold" data-legal="unknown">—</span>
-			<button id="deck-rename" type="button" class="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-amber-400/60 hover:text-amber-200">Rename</button>
-			<button id="deck-share" type="button" class="rounded border border-amber-400/50 bg-slate-900 px-3 py-1.5 text-sm text-amber-200 hover:border-amber-300">Copy deck link</button>
-			<button id="deck-save-shared" type="button" hidden class="rounded bg-amber-400 px-3 py-1.5 text-sm font-semibold text-slate-950 hover:bg-amber-300">Save as my deck</button>
-			<a href="/decks" class="rounded border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500">All decks</a>
+		<div id="deck-actions" hidden class="flex flex-wrap items-center gap-1.5">
+			<span id="deck-verdict" class="verdict" data-legal="unknown"><i class="dot"></i>—</span>
+			<button id="deck-rename" type="button" class="btn">Rename</button>
+			<button id="deck-share" type="button" class="btn">Copy deck link</button>
+			<button id="deck-save-shared" type="button" hidden class="btn" data-variant="primary">Save as my deck</button>
+			<a href="/decks" class="btn" data-variant="ghost" aria-label="All decks">
+				<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+					<path d="M7.5 2.5 4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+				<span>All decks</span>
+			</a>
 		</div>
 	</header>
 
-	<div id="deck-storage-warning" hidden class="mt-4 rounded-md border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">Decks are not being saved this visit — browser storage is unavailable or full. Keep this window open, or try again in a normal browser window.</div>
-	<div id="deck-unknown-warning" hidden class="mt-4 rounded-md border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200"></div>
-	<p id="deck-missing" hidden class="mt-6 rounded-lg border border-slate-800 bg-slate-900 p-6 text-slate-400">
+	<div id="deck-storage-warning" hidden class="callout mt-4" data-tone="warning">
+		Decks are not being saved this visit — browser storage is unavailable or full. Keep this window open, or try again in a normal browser window.
+	</div>
+	<div id="deck-unknown-warning" hidden class="callout mt-4" data-tone="warning"></div>
+	<p id="deck-missing" hidden class="empty-state mt-6">
 		This deck could not be loaded — it may have been deleted. Head back to <a class="text-amber-300 underline" href="/decks">your decks</a>.
 	</p>
-	<p id="deck-broken-share" hidden class="mt-6 rounded-lg border border-slate-800 bg-slate-900 p-6 text-slate-400">
+	<p id="deck-broken-share" hidden class="empty-state mt-6">
 		This deck link is not a valid deck payload. Ask for the link again — copying it fresh usually fixes it.
 	</p>
+	<div id="deck-none" hidden class="mt-6">
+		<a class="btn" data-variant="primary" href="/decks">Go to your decks</a>
+	</div>
 
-	<div id="deck-app" class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start xl:grid-cols-[minmax(0,1fr)_440px]">
+	<!-- viewer column width is user-adjustable via #deck-grip (spec: user-adjustable
+	     viewer width); min(…, 50vw) is a CSS-side clamp backing the JS drag bounds.
+	     The wider 520px default carries the field-zone layout (spec: deck viewer
+	     presents the field zones) → the main deck reads large without the grip. -->
+	<div
+		id="deck-app"
+		class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_12px_min(var(--deck-viewer-w,520px),50vw)] lg:gap-0 lg:items-start xl:[--deck-viewer-w:520px]"
+	>
 		<!-- card browser -->
-		<section aria-label="Card browser">
-			<!-- section pills: generic retarget of the whole browser (spec: pill filters) -->
-			<div id="bd-pills" class="flex flex-wrap items-center gap-1.5">
+		<!-- viewport fit (spec: two-column layout fits the screen): each
+		     working area caps at the screen height at lg+ and scrolls its own
+		     contents; sticky keeps the other side pinned while one scrolls -->
+		<section
+			aria-label="Card browser"
+			class="scroll-column min-w-0 lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:overflow-y-auto lg:overscroll-contain"
+		>
+			<!-- browser chrome sticks inside the column scroller at lg+
+			     (spec: scrolling the browser keeps its filters) -->
+			<div id="bd-chrome" class="lg:sticky lg:top-0 lg:z-10 lg:bg-slate-950 lg:pb-2">
+				<!-- section pills: generic retarget of the whole browser (spec: pill filters) -->
+				<div id="bd-pills" class="flex flex-wrap items-center gap-1.5">
 				{SECTION_KEYS.filter((k) => k !== 'side').map((key) => (
-					<button
-						type="button"
-						data-pill={key}
-						aria-pressed="false"
-						class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-200 hover:border-amber-400/60"
-					>
+					<button type="button" data-pill={key} aria-pressed="false" class="pill">
 						{key === 'rune' ? 'Runes' : SECTION_LABELS[key]}
 					</button>
 				))}
-				<button
-					type="button"
-					data-pill="all"
-					aria-pressed="false"
-					class="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-200 hover:border-amber-400/60"
-				>
+				<button type="button" data-pill="all" aria-pressed="false" class="pill">
 					All
 				</button>
 			</div>
-			<div class="mt-2 flex flex-wrap items-center gap-2">
+	<div class="mt-2 grid grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:items-center">
 				<input
 					id="bd-search"
+					class="field col-span-2 min-w-0 lg:min-w-48 lg:flex-1"
 					type="search"
 					placeholder="Search name or card text…"
 					autocomplete="off"
-					class="min-w-56 flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm outline-none placeholder:text-slate-500 focus:border-amber-400/70"
 				/>
-				<select id="bd-type" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70"></select>
-				<select id="bd-rarity" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70"></select>
-				<select id="bd-set" class="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm focus:border-amber-400/70"></select>
-				<button id="bd-reset" type="button" class="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 hover:border-amber-400/60 hover:text-amber-200">Reset</button>
+				<select id="bd-type" class="field"></select>
+				<select id="bd-rarity" class="field"></select>
+				<select id="bd-set" class="field"></select>
+				<button id="bd-reset" type="button" class="btn">Reset</button>
 			</div>
 			<!-- domain chips: the Legend's colors come preselected -->
-			<div id="bd-domains" class="mt-2 flex flex-wrap items-center gap-1.5"></div>
-			<p id="bd-count" class="mt-2 text-sm text-slate-400" aria-live="polite"></p>
-			<ul id="bd-list" class="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7"></ul>
+				<div id="bd-domains" class="mt-2 flex flex-wrap items-center gap-1.5"></div>
+			</div>
+			<div class="mt-2 flex items-center justify-between gap-2">
+				<p id="bd-count" class="text-xs text-slate-400 tnum" aria-live="polite"></p>
+				<button type="button" class="btn lg:hidden" data-size="sm" data-scroll-to="deck-viewer">Deck <span id="deck-jump-count" class="tnum">0</span></button>
+			</div>
+			<!-- container-driven card grid (spec: card impressions size with their
+			     container): auto-fill recomputes columns from the actual browser
+			     column width — the viewer drag or a window resize reflows it -->
+			<ul id="bd-list" class="mt-2 grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2.5"></ul>
 			<li id="bd-sentinel" class="col-span-full" aria-hidden="true"></li>
-			<p id="bd-empty" hidden class="mt-6 rounded-lg border border-slate-800 bg-slate-900 p-4 text-center text-sm text-slate-400">No cards match the filters.</p>
-			<p id="bd-hint" class="mt-2 text-xs text-slate-500">Added cards enter the focused section. Copy counts come from the deck on the right.</p>
+			<p id="bd-empty" hidden class="empty-state mt-4">No cards match the filters.</p>
+			<p id="bd-hint" class="mt-2 text-[11px] text-slate-500">Added cards enter the focused section. Copy counts come from the deck panel.</p>
 		</section>
 
+		<!-- resize grip: sits in its own 12px grid column; capped to the
+		     viewport at lg+ so the divider stays on screen with the columns -->
+		<div id="deck-grip" class="hidden lg:block lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:self-stretch" aria-hidden="true"></div>
+
 		<!-- deck sections + checklist -->
-		<aside aria-label="Deck">
-			<div class="space-y-3">
+		<aside
+			id="deck-viewer"
+			aria-label="Deck"
+			class="scroll-column min-w-0 scroll-mt-24 lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:overflow-y-auto lg:overscroll-contain"
+		>
+			<!-- below lg the viewer sits under a long browser list: give the way
+			     back to the cards the same one-tap affordance as the jump down -->
+			<div class="mb-2 flex items-center justify-between lg:hidden">
+				<span class="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400">Deck</span>
+				<button type="button" class="btn" data-size="sm" data-scroll-to="bd-list">
+					<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+						<path d="M7.5 2.5 4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+					</svg>
+					Back to cards
+				</button>
+			</div>
+			<div class="space-y-2.5">
 				{SECTION_KEYS.map((key) => {
 					const { exact, cap } = sectionTarget(key);
 					return (
-						<section
-							data-section={key}
-							class="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
-						>
-							<button
-								type="button"
-								data-focus-section={key}
-								class="flex w-full items-center justify-between gap-2 text-left"
-							>
-								<span class="font-medium text-slate-200">{SECTION_LABELS[key]}</span>
-								<span class="text-xs text-slate-400">
-									<span data-count={key}>0</span>&nbsp;/&nbsp;{exact != null ? String(exact) : `≤ ${cap}`}
+						<section data-section={key} class="section-card">
+							<button type="button" data-focus-section={key} class="section-head">
+								<span class="section-name">{SECTION_LABELS[key]}</span>
+								<span class="section-count">
+									<span data-count={key}>0</span>
+									<span class="mx-1 text-slate-600">/</span>
+									{exact != null ? String(exact) : `≤ ${cap}`}
 								</span>
 							</button>
-							{key === 'rune' && <div data-rune-ratio class="mt-2 hidden"></div>}
-							<ul data-rows={key} class="mt-2 grid grid-cols-5 gap-1.5 xl:grid-cols-6"></ul>
+							<div class="section-body">
+								{key === 'rune' && <div data-rune-ratio class="mb-2 hidden"></div>}
+								{key === 'legend' ? (
+									<div class="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2">
+										<ul data-rows="legend" class="contents"></ul>
+										<div data-champion-zone class="min-w-0 rounded-md border border-slate-800/70 p-1.5">
+											<div class="flex items-baseline justify-between gap-2 px-0.5">
+												<span class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-400">Champion</span>
+												<span data-champion-count class="text-[10px] text-slate-400 tnum" aria-live="polite"></span>
+											</div>
+											<div data-champion-face class="mt-1.5"></div>
+											<button
+												type="button"
+												data-champion-pick
+												aria-pressed="false"
+												class="btn mt-1.5 w-full"
+												data-size="sm"
+											>Select champion</button>
+										</div>
+									</div>
+								) : key === 'battlefields' ? (
+									<ul data-rows="battlefields" class="flex flex-wrap gap-1.5"></ul>
+								) : (
+									<ul data-rows={key} class="grid grid-cols-[repeat(auto-fill,minmax(5.6rem,1fr))] gap-1.5"></ul>
+								)}
+							</div>
 						</section>
 					);
 				})}
 			</div>
 
-			<section class="mt-4 rounded-lg border border-slate-800 bg-slate-900/60 p-3" aria-label="Deck legality">
-				<h2 class="text-sm font-semibold text-slate-200">Deck legality</h2>
-				<ul id="deck-checklist" class="mt-2 space-y-1.5 text-sm"></ul>
+			<section class="panel mt-2.5" aria-label="Deck legality">
+				<div class="panel-head">
+					<h2 class="panel-title">Deck legality</h2>
+					<span class="panel-count">Riftbound constructed</span>
+				</div>
+				<ul id="deck-checklist" class="check-list p-3"></ul>
 			</section>
 		</aside>
 	</div>
 </Base>
 
 <style is:global>
+	/* jump targets clear the stacked nav + deck bar (heights measured in
+	 * deck-builder.ts, so a wrapped bar is accounted for) */
+	#deck-viewer,
+	#bd-list {
+		scroll-margin-top: calc(var(--nav-h, 0px) + var(--deck-bar-h, 0px) + 0.75rem);
+	}
 	/* Copied-artwork battlefield thumbs sit sideways inside small boxes.
 	 * `max-width: none` beats Tailwind preflight's img cap so 140% can cover
 	 * the whole portrait box (the catalog grid uses max-w-none the same way). */
@@ -148,9 +221,36 @@ const domainPayload = escapedJson(
 		top: 50%;
 		transform: translate(-50%, -50%) rotate(90deg);
 	}
-	/* drag hover + refusal flashes on the drop-target sections */
-	[data-section].drag-accept {
-		outline: 2px solid rgb(251 191 36 / 0.7);
+	/* deck viewer resize grip (spec: user-adjustable viewer width): a slim
+	 * divider between the browser and viewer columns; the whole 12px grid
+	 * column is the drag hit area. Hidden below lg with the stacked layout;
+	 * capped to the viewport at lg+ with the confined columns. */	#deck-grip {
+		position: relative;
+		cursor: col-resize;
+		touch-action: none;
+		user-select: none;
+	}
+	#deck-grip::before {
+		content: '';
+		position: absolute;
+		top: 4px;
+		bottom: 4px;
+		left: 50%;
+		width: 2px;
+		border-radius: 1px;
+		transform: translateX(-50%);
+		background: rgb(40 50 61 / 0.9); /* slate-700 */
+	}
+	#deck-grip:hover::before,
+	#deck-grip[data-dragging]::before {
+		width: 3px;
+		background: color-mix(in oklab, #e6c27c 80%, transparent);
+	}
+	/* drag hover + refusal flashes on the drop-target sections (and the
+	 * champion zone, which is a vetted drop target inside the Legend section) */
+	[data-section].drag-accept,
+	[data-champion-zone].drag-accept {
+		outline: 2px solid color-mix(in oklab, #e6c27c 70%, transparent);
 		outline-offset: 1px;
 	}
 	[data-section].drag-refuse {
@@ -158,7 +258,7 @@ const domainPayload = escapedJson(
 	}
 	@keyframes refuse-flash {
 		0%, 40% {
-			outline: 2px solid rgb(248 113 113 / 0.9);
+			outline: 2px solid color-mix(in oklab, #dd6f6f 90%, transparent);
 		}
 		100% {
 			outline: 2px solid transparent;

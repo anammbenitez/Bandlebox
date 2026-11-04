@@ -41,6 +41,10 @@ export interface Deck {
 	main: DeckSlot[];
 	rune: DeckSlot[];
 	side: DeckSlot[];
+	/** Champion zone pick (spec: decks remember their champion pick): the
+	 *  champion-unit slug shown beside the legend. Optional — absent on decks
+	 *  stored before the zone existed; copies always live in `main`. */
+	champion?: string;
 }
 
 export type SectionKey = 'legend' | 'battlefields' | 'main' | 'rune' | 'side';

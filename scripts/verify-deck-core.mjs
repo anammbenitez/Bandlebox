@@ -447,4 +447,36 @@ for (const [count, n] of [[39, 0], [41, 2]]) {
 	assert.equal(out.broken, true);
 }
 
+/* --- champion pick (planned change 4.1 / 4.5: decks remember their pick) -- */
+
+const CHAMPION = CHAMPION_SLUG;
+{
+	const { deck } = completed({ main: [{ card: CHAMPION, qty: 3 }], name: 'Championed' });
+	deck.champion = CHAMPION;
+	const payload = await shareMod.encodeDeck(deck);
+	const round = await shareMod.decodeDeck(payload);
+	assert.equal(round.broken, false);
+	assert.equal(round.deck.champion, CHAMPION, 'champion pick round-trips');
+	assert.equal(round.deck.main.find((s) => s.card === CHAMPION)?.qty, 3, 'champion playset counts in the main deck exactly once');
+	assert.equal(round.deck.main.length, 1, 'no doubled champion rows');
+}
+
+// legacy payload without the field: empty zone, deck intact
+{
+	const raw = { v: 1, n: 'Legacy', s: { m: [[CHAMPION_SLUG, 1]], l: [[LEGEND_SLUG, 1]] } };
+	const payload = 'b' + Buffer.from(JSON.stringify(raw)).toString('base64url');
+	const { deck } = await shareMod.decodeDeck(payload);
+	assert.equal(deck.champion, undefined, 'absent champion field opens with an empty zone');
+	assert.equal(deck.main.length, 1);
+}
+
+// stale pick (unknown slug) keeps the deck open without failing the parse
+{
+	const raw = { v: 1, n: 'Stale Pick', c: 'ghost-champion-xyz', s: { l: [[LEGEND_SLUG, 1]] } };
+	const payload = 'b' + Buffer.from(JSON.stringify(raw)).toString('base64url');
+	const { deck, broken } = await shareMod.decodeDeck(payload);
+	assert.equal(broken, false, 'stale pick does not break the payload');
+	assert.equal(deck.champion, 'ghost-champion-xyz', 'stale pick is carried, not dropped');
+}
+
 console.log('VERIFY OK: deck-core');

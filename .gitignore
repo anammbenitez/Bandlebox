@@ -5,6 +5,8 @@ dist/
 
 # local data (catalog snapshot, etag, derived index) — keep out of VCS
 data/
+# cached card symbols (Riot-owned; fetched by `npm run refresh`, never committed)
+data/glyphs/
 
 # dependencies
 node_modules/

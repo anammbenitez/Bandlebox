@@ -27,6 +27,13 @@ The six Riftbound domains keep their fixed hues (`deck-builder.ts`
 `DOMAIN_COLORS`). They appear only as data: a dot in the domain chip and beside
 the rune-ratio count. They are never decoration.
 
+Keyword labels (`src/lib/keyword-styles.ts`) follow the same rule: the game's
+four keyword-family hues (teal, pink, olive, grey) are printed-card information,
+not accent colour. They appear only inside card text labels and the card's
+keyword summary, and a keyword the palette does not know falls back to the
+neutral grey. Game symbols render as their own artwork; nothing else in the
+interface uses these hues.
+
 ## Type
 
 - One family: the platform sans (`Segoe UI Variable Text`, `Segoe UI`,

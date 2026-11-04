@@ -18,7 +18,7 @@ Card data comes from the OpenRift catalog API (`https://openrift.app/developers`
 | `npm run dev` | **Daily-use command.** Serves the app at `http://localhost:4321`. Reads the local snapshot from `data/`; re-reads when the data changes. Run `npm run refresh` first if `data/` is empty. |
 | `npm run build` | Static build into `dist/` (prerenders the grid, set pages, and one page per card from the snapshot). |
 | `npm run preview` | Serves the production build from `dist/`. Test path over the same code/data as `dev`. |
-| `npm run refresh` | Fetches the English catalog from OpenRift and writes `data/catalog.json` (the verbatim snapshot) + `data/etag.txt`, then rebuilds the derived index `data/index.json`. Sends the stored ETag as `If-None-Match` on later runs, so an unchanged catalog is a cheap `304` no-op. Failures keep the previous snapshot and exit non-zero. |
+| `npm run refresh` | Fetches the English catalog from OpenRift and writes `data/catalog.json` (the verbatim snapshot) + `data/etag.txt`, then rebuilds the derived index `data/index.json`. Also caches the nine card symbols used in card text under `data/glyphs/`, even when the catalog itself is unchanged. Sends the stored ETag as `If-None-Match` on later runs, so an unchanged catalog is a cheap `304` no-op. Failures keep the previous snapshot and exit non-zero; a glyph download failure only warns. |
 
 ## Data directory layout
 
@@ -27,6 +27,7 @@ Local data lives in `data/` and is intentionally not committed (see `.gitignore`
 - `catalog.json` — the OpenRift response, kept verbatim (OpenRift-owned content)
 - `etag.txt` — the response ETag used for conditional revalidation
 - `index.json` — derived card ↔ printing ↔ set index (our normalization, rebuilt from the snapshot on every successful refresh)
+- `glyphs/` — the card symbols used inside card text (might, exhaust, the six domain runes, rainbow), downloaded from OpenRift's glyph paths and kept as a local cache. `glyphs/NOTICE.md` records their origin and ownership. Like the rest of `data/`, this directory is ignored by git and never committed, so Riot-owned artwork is not published with the repository.
 
 A refresh only ever replaces these OpenRift-owned files — never any other local data.
 

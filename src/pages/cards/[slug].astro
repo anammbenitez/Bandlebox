@@ -1,5 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
+import CardText from '../../components/CardText.astro';
+import { renderCardTextHtml, renderKeywordHtml } from '../../lib/card-text';
+import { glyphUrl } from '../../lib/glyphs';
+import { keywordChipStyle } from '../../lib/keyword-styles';
 import {
 	cardByUuid,
 	channelLabels,
@@ -53,11 +57,20 @@ const onerror = shownImageId
 	? `if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${fullUrl}'}else{this.remove()}`
 	: undefined;
 
+/** Detail stats: each figure carries the same symbol it has inside card text. */
+const RUNE_DOMAINS = ['fury', 'calm', 'mind', 'body', 'chaos', 'order'];
+const powerDomain = (cardRecord.domains ?? []).find((d) => RUNE_DOMAINS.includes(d));
 const stats = [
-	cardRecord.might != null ? { label: 'Might', value: cardRecord.might, note: cardRecord.mightBonus != null ? `+${cardRecord.mightBonus}` : null } : null,
-	cardRecord.energy != null ? { label: 'Energy', value: cardRecord.energy, note: null } : null,
-	cardRecord.power != null ? { label: 'Power', value: cardRecord.power, note: null } : null,
-].filter((s): s is { label: string; value: number; note: string | null } => s !== null);
+	cardRecord.might != null
+		? { label: 'Might', value: cardRecord.might, note: cardRecord.mightBonus != null ? `+${cardRecord.mightBonus}` : null, kind: 'might' as const, symbol: ':rb_might:' }
+		: null,
+	cardRecord.energy != null ? { label: 'Energy', value: cardRecord.energy, note: null, kind: 'energy' as const, symbol: `:rb_energy_${cardRecord.energy}:` } : null,
+	cardRecord.power != null
+		? { label: 'Power', value: cardRecord.power, note: null, kind: 'power' as const, symbol: powerDomain ? `:rb_rune_${powerDomain}:` : null }
+		: null,
+].filter((s): s is { label: string; value: number; note: string | null; kind: 'might' | 'energy' | 'power'; symbol: string | null } => s !== null);
+
+const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 ---
 
 <Base title={`${card.name} — Riftbound Deck Manager`}>
@@ -113,7 +126,14 @@ const stats = [
 						<div>
 							<dt class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">{stat.label}</dt>
 							<dd class="mt-0.5 text-lg font-semibold leading-none text-slate-100 tnum">
-								{stat.value}
+								{stat.kind === 'energy' ? (
+									<Fragment set:html={renderCardTextHtml(stat.symbol ?? '', options)} />
+								) : (
+									<>
+										{stat.symbol && <Fragment set:html={renderCardTextHtml(stat.symbol, options)} />}
+										<span class={stat.symbol ? 'ml-1' : undefined}>{stat.value}</span>
+									</>
+								)}
 								{stat.note && <span class="ml-1 text-xs font-normal text-slate-400">{stat.note}</span>}
 							</dd>
 						</div>
@@ -123,9 +143,10 @@ const stats = [
 
 			{
 				(cardRecord.keywords ?? []).length > 0 && (
-					<div class="mt-4 flex flex-wrap gap-1.5 text-xs">
-						{(cardRecord.keywords ?? []).map((k) => <span class="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-200">{k}</span>)}
-					</div>
+					<div
+						class="mt-4 flex flex-wrap items-center gap-1.5 text-sm"
+						set:html={(cardRecord.keywords ?? []).map((k) => renderKeywordHtml(k, options)).join('')}
+					/>
 				)
 			}
 
@@ -141,7 +162,9 @@ const stats = [
 				cardRecord.errata && (
 					<div class="callout mt-4 border-sky-400/30 bg-sky-400/5 text-sky-100">
 						<strong class="font-semibold">Errata</strong>{cardRecord.errata.effectiveDate && <span class="text-sky-200/70"> · effective {cardRecord.errata.effectiveDate}</span>}
-						<p class="mt-1">{cardRecord.errata.correctedRulesText ?? cardRecord.errata.correctedEffectText}</p>
+						<p class="mt-1">
+							<CardText text={cardRecord.errata.correctedRulesText ?? cardRecord.errata.correctedEffectText ?? ''} />
+						</p>
 						{cardRecord.errata.sourceUrl && (
 							<a class="mt-1 inline-block text-xs text-sky-300 hover:underline" href={cardRecord.errata.sourceUrl}>{cardRecord.errata.source}</a>
 						)}
@@ -163,9 +186,21 @@ const stats = [
 			}
 
 			<div class="mt-5 max-w-[70ch] space-y-3 text-sm leading-relaxed text-slate-200">
-				{primaryPrint?.printedEffectText && <p>{primaryPrint.printedEffectText}</p>}
-				{primaryPrint?.printedRulesText && <p>{primaryPrint.printedRulesText}</p>}
-				{primaryPrint?.flavorText && <p class="border-l border-slate-800 pl-3 italic text-slate-400">{primaryPrint.flavorText}</p>}
+				{primaryPrint?.printedEffectText && (
+					<p>
+						<CardText text={primaryPrint.printedEffectText} />
+					</p>
+				)}
+				{primaryPrint?.printedRulesText && (
+					<p>
+						<CardText text={primaryPrint.printedRulesText} />
+					</p>
+				)}
+				{primaryPrint?.flavorText && (
+					<p class="border-l border-slate-800 pl-3 italic text-slate-400">
+						<CardText text={primaryPrint.flavorText} />
+					</p>
+				)}
 			</div>
 
 			<p class="mt-5 text-xs text-slate-500 tnum">{card.printings.length} printing{card.printings.length === 1 ? '' : 's'} in the snapshot</p>

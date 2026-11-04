@@ -1051,6 +1051,75 @@
 		color: var(--color-slate-400);
 	}
 
+	/* --- card text (keyword labels, symbols, energy) ---------------------- */
+
+	/* Keyword labels follow the printed card: colored, slanted, uppercase.
+	 * The color arrives inline from src/lib/keyword-styles.ts as --kw-color. */
+	.kw {
+		display: inline-block;
+		margin: 0 0.06em;
+		padding: 0 0.5em;
+		background: var(--kw-color, var(--color-slate-600));
+		color: var(--kw-ink, #ffffff);
+		font-size: 0.78em;
+		font-style: italic;
+		font-weight: 650;
+		letter-spacing: 0.015em;
+		line-height: 1.5;
+		text-transform: uppercase;
+		white-space: nowrap;
+		vertical-align: 0.06em;
+		clip-path: polygon(0.33em 0, 100% 0, calc(100% - 0.33em) 100%, 0 100%);
+	}
+
+	/* [>] / [>>] markers point the label's right, left, or both edges. */
+	.kw[data-points='right'] {
+		padding-right: 0.62em;
+		clip-path: polygon(0.33em 0, calc(100% - 0.33em) 0, 100% 50%, calc(100% - 0.33em) 100%, 0 100%);
+	}
+
+	.kw[data-points='left'] {
+		clip-path: polygon(0 0, 100% 0, calc(100% - 0.33em) 100%, 0 100%, 0.33em 50%);
+	}
+
+	.kw[data-points='both'] {
+		padding-right: 0.62em;
+		clip-path: polygon(0 0, calc(100% - 0.33em) 0, 100% 50%, calc(100% - 0.33em) 100%, 0 100%, 0.33em 50%);
+	}
+
+	/* Inline symbols: mono glyphs are white SVGs, runes carry their own colors. */
+	.kw-glyph {
+		display: inline-block;
+		width: 1.05em;
+		height: 1.05em;
+		margin: 0 0.02em;
+		vertical-align: -0.2em;
+		object-fit: contain;
+	}
+
+	/* Fallback when a glyph file is missing: keep the word, drop the label voice. */
+	.kw-glyph-text {
+		font-style: normal;
+		text-transform: none;
+	}
+
+	.kw-energy {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.42em;
+		height: 1.42em;
+		margin: 0 0.06em;
+		border-radius: 999px;
+		background: var(--color-slate-100);
+		color: var(--color-slate-950);
+		font-size: 0.72em;
+		font-style: normal;
+		font-weight: 700;
+		line-height: 1;
+		vertical-align: -0.2em;
+	}
+
 	/* --- utilities -------------------------------------------------------- */
 
 	.scroll-column {

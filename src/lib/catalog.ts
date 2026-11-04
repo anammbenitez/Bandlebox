@@ -51,6 +51,14 @@ export interface IndexFile {
 	cards: IndexCard[];
 }
 
+export interface ErrataRecord {
+	effectiveDate?: string | null;
+	correctedRulesText?: string | null;
+	correctedEffectText?: string | null;
+	source?: string | null;
+	sourceUrl?: string | null;
+}
+
 export interface CardRecord {
 	slug: string;
 	name: string;
@@ -66,7 +74,7 @@ export interface CardRecord {
 	tags?: string[];
 	maxCopiesOverride?: number | null;
 	additionalLegendCount?: number | null;
-	errata?: string | null;
+	errata?: ErrataRecord | null;
 	bans?: string[];
 }
 

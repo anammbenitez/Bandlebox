@@ -5,9 +5,10 @@
 //
 // Data ownership: this script ONLY ever writes OpenRift-owned files inside
 // data/ — catalog.json (the verbatim snapshot), etag.txt (revalidation key),
-// and index.json (derived directly from the snapshot). It never creates,
-// modifies, or deletes anything else; app-owned data (collections, decks —
-// later phases) must live elsewhere or under different names.
+// index.json (derived directly from the snapshot), and glyphs/ (the card
+// symbols used by card text). It never creates, modifies, or deletes anything
+// else; app-owned data (collections, decks — later phases) must live elsewhere
+// or under different names.
 //
 // Card text and images in the snapshot are Riot Games / OpenRift content:
 // used locally, never mirrored to other places or hosted publicly.
@@ -29,6 +30,37 @@ const DATA_DIR = path.resolve(process.cwd(), 'data');
 const CATALOG_FILE = path.join(DATA_DIR, 'catalog.json');
 const ETAG_FILE = path.join(DATA_DIR, 'etag.txt');
 const INDEX_FILE = path.join(DATA_DIR, 'index.json');
+const GLYPH_DIR = path.join(DATA_DIR, 'glyphs');
+
+// The symbols card text can reference. Energy is a numbered disc, not a file.
+const GLYPH_NAMES = [
+	'might',
+	'exhaust',
+	'rune-body',
+	'rune-calm',
+	'rune-chaos',
+	'rune-fury',
+	'rune-mind',
+	'rune-order',
+	'rune-rainbow',
+];
+const GLYPH_BASE_PATH = '/images/glyphs/';
+
+const GLYPH_NOTICE = `# Cached card symbols
+
+These SVG files are the Riftbound game symbols used inside card text (might,
+exhaust, the six domain runes, and the rainbow rune). \`npm run refresh\`
+downloads them from OpenRift's glyph paths:
+https://openrift.app/images/glyphs/{name}.svg
+
+The artwork belongs to Riot Games, and OpenRift cannot grant rights to it.
+This directory is a local cache used to render card text offline. It is
+excluded from version control (see .gitignore), so the symbols are not
+mirrored into the public repository. If this project is ever published,
+revisit the asset source before going live.
+
+The app renders card text without these files, falling back to readable text.
+`;
 
 const isPlainObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -60,6 +92,49 @@ async function writeAtomic(file, body) {
 	const tmp = `${file}.tmp`;
 	await writeFile(tmp, body);
 	await rename(tmp, file);
+}
+
+/**
+ * Cache the glyph artwork card text needs. Runs on every refresh — including a
+ * `304` catalog — so a fresh clone with an intact snapshot still fills a
+ * missing cache. A glyph failure is a warning, never a refresh failure: card
+ * text renders without the missing symbols.
+ * @returns {Promise<{total: number, failed: string[]}>}
+ */
+async function syncGlyphs() {
+	const failed = [];
+	await mkdir(GLYPH_DIR, { recursive: true });
+
+	for (const name of GLYPH_NAMES) {
+		const file = path.join(GLYPH_DIR, `${name}.svg`);
+		try {
+			const response = await fetch(`${BASE_URL}${GLYPH_BASE_PATH}${name}.svg`, {
+				headers: { 'User-Agent': USER_AGENT, Accept: 'image/svg+xml' },
+				redirect: 'follow',
+				signal: AbortSignal.timeout(TIMEOUT_MS),
+			});
+			if (response.status !== 200) throw new Error(`HTTP ${response.status}`);
+			const body = await response.text();
+			if (!body.includes('<svg')) throw new Error('response is not an SVG');
+			await writeAtomic(file, body);
+		} catch (err) {
+			failed.push(`${name} (${err instanceof Error ? err.message : String(err)})`);
+		}
+	}
+
+	await writeAtomic(path.join(GLYPH_DIR, 'NOTICE.md'), GLYPH_NOTICE);
+	return { total: GLYPH_NAMES.length, failed };
+}
+
+/** @param {{total: number, failed: string[]}} result */
+function reportGlyphs(result) {
+	if (result.failed.length === 0) {
+		console.log(`[refresh] Glyph cache ready (${result.total}/${result.total}).`);
+		return;
+	}
+	console.warn(
+		`[refresh] Glyph cache incomplete (${result.total - result.failed.length}/${result.total}); text renders without the missing symbols: ${result.failed.join(', ')}.`,
+	);
 }
 
 /**
@@ -205,6 +280,7 @@ async function refresh() {
 
 	if (result.status === 304) {
 		console.log('[refresh] Up to date — server returned 304 Not Modified, snapshot untouched.');
+		reportGlyphs(await syncGlyphs());
 		return 0;
 	}
 
@@ -249,6 +325,7 @@ async function refresh() {
 		`[refresh] Snapshot updated: ${Object.keys(snapshot.cards).length} cards, ${Object.keys(snapshot.printings).length} printings, ${index.sets.length} sets (ETag ${result.etag ?? 'missing'}).`,
 	);
 	console.log(`[refresh] Derived index rebuilt -> data/index.json (+ data/etag.txt).`);
+	reportGlyphs(await syncGlyphs());
 	return 0;
 }
 

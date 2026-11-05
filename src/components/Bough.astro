@@ -1,0 +1,55 @@
+---
+/**
+ * Bough — painted wood at the corners of a panel.
+ *
+ * The pack is one 1536×1024 composition; only its four elbows are used here.
+ * Each corner keeps the crop and the canvas-relative place the painter gave
+ * it, expressed in cqw against the frame's own width, so the detail stays
+ * proportional at every panel size. CSS masks the arms out before they reach
+ * the middle of an edge; this component only places the four corners.
+ *
+ * tone    bark = the working frame; lit = a warmer grade for the deck sheet;
+ *         quiet = the calmer grade behind the card browser
+ */
+import { getImage } from 'astro:assets';
+import cornerTL from '../assets/wood/corner_top_left.png';
+import cornerTR from '../assets/wood/corner_top_right.png';
+import cornerBL from '../assets/wood/corner_bottom_left.png';
+import cornerBR from '../assets/wood/corner_bottom_right.png';
+
+interface Props {
+	tone?: 'bark' | 'lit' | 'quiet';
+	class?: string;
+}
+
+const { tone = 'bark', class: className } = Astro.props;
+
+const url = async (src: ImageMetadata, width: number) =>
+	(await getImage({ src, width, format: 'webp', quality: 88 })).src;
+
+const [tl, tr, bl, br] = await Promise.all([
+	url(cornerTL, cornerTL.width),
+	url(cornerTR, cornerTR.width),
+	url(cornerBL, cornerBL.width),
+	url(cornerBR, cornerBR.width),
+]);
+---
+
+<div class:list={['bough', tone === 'lit' && 'bough--lit', tone === 'quiet' && 'bough--quiet', className]}>
+	<span class="bough-piece bough-tl" style={`background-image:url(${tl})`} aria-hidden="true"></span>
+	<span class="bough-piece bough-tr" style={`background-image:url(${tr})`} aria-hidden="true"></span>
+	<span class="bough-piece bough-bl" style={`background-image:url(${bl})`} aria-hidden="true"></span>
+	<span class="bough-piece bough-br" style={`background-image:url(${br})`} aria-hidden="true"></span>
+	<!-- Each elbow keeps going as a straight billet, thinner than the painted
+	     arm, that dissolves toward the middle of its edge: the corner is the
+	     mark, the run is the fade. No run reaches the midpoint. -->
+	<svg class="bough-run bough-run--h bough-run--top-left" viewBox="0 0 120 12" preserveAspectRatio="none" aria-hidden="true"><use href="#bough-run-h" /></svg>
+	<svg class="bough-run bough-run--h bough-run--top-right" viewBox="0 0 120 12" preserveAspectRatio="none" aria-hidden="true"><use href="#bough-run-h" /></svg>
+	<svg class="bough-run bough-run--h bough-run--bottom-left" viewBox="0 0 120 12" preserveAspectRatio="none" aria-hidden="true"><use href="#bough-run-h" /></svg>
+	<svg class="bough-run bough-run--h bough-run--bottom-right" viewBox="0 0 120 12" preserveAspectRatio="none" aria-hidden="true"><use href="#bough-run-h" /></svg>
+	<svg class="bough-run bough-run--v bough-run--left-top" viewBox="0 0 12 120" preserveAspectRatio="none" aria-hidden="true"><use href="#bough-run-v" /></svg>
+	<svg class="bough-run bough-run--v bough-run--left-bottom" viewBox="0 0 12 120" preserveAspectRatio="none" aria-hidden="true"><use href="#bough-run-v" /></svg>
+	<svg class="bough-run bough-run--v bough-run--right-top" viewBox="0 0 12 120" preserveAspectRatio="none" aria-hidden="true"><use href="#bough-run-v" /></svg>
+	<svg class="bough-run bough-run--v bough-run--right-bottom" viewBox="0 0 12 120" preserveAspectRatio="none" aria-hidden="true"><use href="#bough-run-v" /></svg>
+	<div class="bough-body"><slot /></div>
+</div>

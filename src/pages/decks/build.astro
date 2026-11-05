@@ -7,6 +7,7 @@
 // `wide` opts the page out of the site max-width (user request: full-window
 // layout for the deck manager only).
 import Base from '../../layouts/Base.astro';
+import Bough from '../../components/Bough.astro';
 import { SECTION_KEYS, SECTION_LABELS, sectionTarget } from '../../lib/deck';
 import { buildDeckRuleIndexes } from '../../lib/deck-rules';
 import { buildGridPayload, escapedJson } from '../../lib/grid-payload';
@@ -19,10 +20,10 @@ const domainPayload = escapedJson(
 );
 ---
 
-<Base title="Deck manager — Riftbound Deck Manager" wide>
-	<!-- Deck chrome stays visible on scroll (spec: editor chrome stays visible):
-	     the name/meta/actions bar sticks just below the fixed nav. --nav-h is
-	     measured from #site-nav in deck-builder.ts. -->
+<Base title="Deck manager — Riftbound Deck Manager" wide appShell>
+	<!-- Deck chrome (spec: editor chrome stays visible): the deck page is a
+	     viewport-height shell that never scrolls, so the name/meta/actions bar
+	     is simply the shell's first row and stays on screen by construction. -->
 	<header class="deck-bar">
 		<div class="min-w-0">
 			<h1 id="deck-name" class="deck-title truncate">Deck</h1>
@@ -67,21 +68,24 @@ const domainPayload = escapedJson(
 	<div
 		id="deck-app"
 		data-view="cards"
-		class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_12px_min(var(--deck-viewer-w,520px),50vw)] lg:gap-0 lg:items-start xl:[--deck-viewer-w:520px]"
+		class="mt-2 grid min-h-0 flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_12px_min(var(--deck-viewer-w,520px),50vw)] lg:gap-x-4 xl:[--deck-viewer-w:520px]"
 	>
 		<!-- card browser -->
-		<!-- viewport fit (spec: two-column layout fits the screen): each
-		     working area caps at the screen height at lg+ and scrolls its own
-		     contents; sticky keeps the other side pinned while one scrolls -->
+		<!-- viewport fit (spec: two-column layout fits the screen): the bough
+		     frame fills its grid row and the browser scrolls inside it, so the
+		     wood never rides up over the cards. The deck page's shell is the
+		     viewport: the page itself never scrolls at any width, only this
+		     column does. -->
+		<Bough tone="quiet" class="bd-frame min-h-0 min-w-0 flex flex-col">
 		<section
 			id="deck-browser"
 			aria-label="Card browser"
 			tabindex="-1"
-			class="scroll-column min-w-0 lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:overflow-y-auto lg:overscroll-contain"
+			class="scroll-column min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain"
 		>
 			<!-- browser chrome sticks inside the column scroller at lg+
 			     (spec: scrolling the browser keeps its filters) -->
-			<div id="bd-chrome" class="lg:sticky lg:top-0 lg:z-10 lg:bg-slate-950 lg:pb-2">
+			<div id="bd-chrome" class="browser-chrome">
 				<!-- section pills: generic retarget of the whole browser (spec: pill filters) -->
 				<div id="bd-pills" class="flex flex-wrap items-center gap-1.5">
 				{SECTION_KEYS.filter((k) => k !== 'side').map((key) => (
@@ -115,27 +119,30 @@ const domainPayload = escapedJson(
 			</div>
 			<!-- container-driven card grid (spec: card impressions size with their
 			     container): auto-fill recomputes columns from the actual browser
-			     column width — the viewer drag or a window resize reflows it -->
-			<ul id="bd-list" class="mt-2 grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-3"></ul>
+			     column width — the viewer drag or a window resize reflows it.
+			     9rem, not the catalog's 10.5rem: the frame's rails are real width,
+			     and 10.5 left one giant tile at 1024 and two at 1280. -->
+			<ul id="bd-list" class="mt-2 grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3"></ul>
 			<li id="bd-sentinel" class="col-span-full" aria-hidden="true"></li>
 			<p id="bd-empty" hidden class="empty-state mt-4">No cards match the filters.</p>
 			<p id="bd-hint" class="mt-2 text-[11px] text-slate-500">Added cards enter the focused section. Copy counts come from the deck panel.</p>
 		</section>
+		</Bough>
 
-		<!-- resize grip: sits in its own 12px grid column; capped to the
-		     viewport at lg+ so the divider stays on screen with the columns -->
-		<div id="deck-grip" class="hidden lg:block lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:self-stretch" aria-hidden="true"></div>
+		<!-- resize grip: sits in its own 12px grid column; only shown at lg+
+		     where the browser and viewer share the row -->
+		<div id="deck-grip" class="hidden lg:block" aria-hidden="true"></div>
 
 		<!-- deck sections + checklist -->
 		<aside
 			id="deck-viewer"
 			aria-label="Deck"
 			tabindex="-1"
-			class="scroll-column min-w-0 lg:sticky lg:top-3 lg:max-h-[calc(100vh-1.5rem)] lg:overflow-y-auto lg:overscroll-contain"
+			class="min-h-0 min-w-0 flex flex-col"
 		>
 			<!-- below lg the viewer sits under a long browser list: give the way
 			     back to the cards the same one-tap affordance as the jump down -->
-			<div class="mb-2 flex items-center justify-between lg:hidden">
+			<div class="pane-switch mb-2 flex items-center justify-between lg:hidden">
 				<span class="text-xs font-semibold tracking-[0.08em] uppercase text-slate-400">Deck</span>
 				<button type="button" class="btn" data-size="sm" data-scroll-to="bd-list">
 					<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -148,11 +155,15 @@ const domainPayload = escapedJson(
 			     of the column (five sections, their counts and targets, the focused
 			     one underlined), then hairline-divided sections, then legality at
 			     the foot. A ledger cell focuses a section exactly like its header. -->
-			<div class="sheet">
+			<Bough tone="lit" class="deck-frame min-h-0 flex flex-1 flex-col">
+			<div class="sheet scroll-column min-h-0 flex-1 overflow-y-auto overscroll-contain">
 				<div id="deck-ledger" class="sheet-ledger" role="group" aria-label="Deck sections">
 					{SECTION_KEYS.map((key) => {
 						const { exact, cap } = sectionTarget(key);
+						// Five labels across a 320px phone leave ~45px each; the long
+						// one gets a shorter name rather than sitting on its neighbour.
 						const short = { legend: 'Legend', battlefields: 'Battlefields', main: 'Main', rune: 'Runes', side: 'Side' } as const;
+						const compact = { ...short, battlefields: 'Fields' } as const;
 						return (
 							<button
 								type="button"
@@ -161,7 +172,10 @@ const domainPayload = escapedJson(
 								data-focus-section={key}
 								aria-pressed="false"
 							>
-								<span class="ledger-name">{short[key]}</span>
+								<span class="ledger-name">
+									<span class="ledger-name-full">{short[key]}</span>
+									<span class="ledger-name-short">{compact[key]}</span>
+								</span>
 								<span class="ledger-count tnum">
 									<span data-count={key}>0</span>
 									<span class="ledger-target">/{exact ?? `≤ ${cap}`}</span>
@@ -223,18 +237,68 @@ const domainPayload = escapedJson(
 					<ul id="deck-checklist" class="check-list px-3 pb-3.5"></ul>
 				</section>
 			</div>
+			</Bough>
 		</aside>
 	</div>
 </Base>
 
 <style is:global>
-	/* Below lg the browser is an endless list, so the deck cannot be reached by
-	 * scrolling past it. The Deck / Back to cards buttons swap the two panes
-	 * instead (a tab, not a scroll): the deck lands immediately below the bar. */
+	/* The deck editor owns the viewport: the page itself never scrolls, the
+	 * framed panes do. main becomes the fixed working area between the site
+	 * nav and the colophon, and #deck-app takes all of it. */
+	body.app-shell {
+		/* min-h-screen's 100vh outlives 100dvh on a phone with its URL bar
+		 * showing; reset it or the body grows past the visible viewport. */
+		min-height: 0;
+		height: 100vh;
+		height: 100dvh;
+		overflow: hidden;
+	}
+	body.app-shell > main {
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		overflow: hidden;
+	}
+	/* one row: whichever panes are visible share the full working height */
+	#deck-app {
+		grid-template-rows: minmax(0, 1fr);
+	}
+	/* The colophon's long technical note is the only part of the footer that
+	 * wraps; on a phone it would eat two lines of the working area. The
+	 * attribution and source stay. */
 	@media (max-width: 63.99rem) {
+		body.app-shell .colophon-note {
+			display: none;
+		}
+	}
+	/* Below lg the browser and the deck can no longer stack and share one
+	 * page scroll: they swap places, each scrolling inside its own frame. */
+	@media (max-width: 63.99rem) {
+		#deck-app[data-view='cards'] #deck-viewer {
+			display: none;
+		}
 		#deck-app[data-view='deck'] #deck-browser,
+		#deck-app[data-view='deck'] .bd-frame,
 		#deck-app[data-view='deck'] #deck-grip {
 			display: none;
+		}
+	}
+	/* In a very short window (landscape phone, half-height desktop window) the
+	 * width-based corner padding is taller than the working area itself and
+	 * would leave the panes invisible. Drop the painted corners — they cannot
+	 * fit the aspect anyway — and tighten the frame so the panes keep a
+	 * usable, scrollable height. */
+	@media (max-height: 32rem) {
+		body.app-shell .bd-frame .bough-piece,
+		body.app-shell .deck-frame .bough-piece,
+		body.app-shell .bd-frame::before,
+		body.app-shell .deck-frame::before {
+			display: none;
+		}
+		body.app-shell .bd-frame .bough-body,
+		body.app-shell .deck-frame .bough-body {
+			padding: 0.875rem 1.125rem;
 		}
 	}
 	/* Copied-artwork battlefield thumbs sit sideways inside small boxes.

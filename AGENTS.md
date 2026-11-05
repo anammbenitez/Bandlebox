@@ -8,6 +8,10 @@ astro dev --background
 
 Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
 
+## Design work
+
+Start UI changes from `DESIGN.md`. The painted bough is a corner accent: four corners only, each arm fading out before the middle of its edge — do not rebuild it as a continuous border, tiled vine, or per-frame ornament. Re-run the impeccable check on changed UI before calling it done.
+
 ## Documentation
 
 Full documentation: https://docs.astro.build

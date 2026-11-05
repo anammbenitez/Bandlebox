@@ -1,0 +1,42 @@
+---
+// Rail sprite: the two vector branch runs still used by the nav and the
+// footer. The panels themselves are painted by Bough.astro from the wood pack,
+// so nothing else needs to be defined here — one short <use> per rail instead
+// of a copy of the art.
+---
+
+<svg class="bough-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+	<defs>
+		<g id="bough-edge-h">
+			<path d="M0 17 C 14 14 28 19.6 46 16.4 S 82 15 120 17.6" fill="none" stroke="var(--bough-bark-2)" stroke-width="18.6" stroke-linecap="round"/>
+			<path d="M0 17 C 14 14 28 19.6 46 16.4 S 82 15 120 17.6" fill="none" stroke="var(--bough-bark-1)" stroke-width="14.4" stroke-linecap="round"/>
+			<path d="M0 12 C 14 9 28 14.6 46 11.4 S 82 10 120 12.6" fill="none" stroke="var(--bough-bark-lit)" stroke-width="4.4" stroke-linecap="round"/>
+			<path d="M0 8.6 C 14 5.6 28 11.2 46 8 S 82 6.6 120 9.2" fill="none" stroke="var(--bough-rim)" stroke-width="1.9" stroke-linecap="round" opacity=".75"/>
+			<path d="M0 20.8 C 16 18 32 23.4 50 20.2 S 84 18.8 120 21.4" fill="none" stroke="var(--bough-bark-2)" stroke-width="1.2" stroke-linecap="round" opacity=".3"/>
+			<path d="M0 23.8 C 16 21 32 26.4 50 23.2 S 84 21.8 120 24.4" fill="none" stroke="var(--bough-bark-2)" stroke-width="0.8" stroke-linecap="round" opacity=".18"/>
+		</g>
+		<!-- The straight billet: a cut stem that leaves a painted elbow and keeps
+		     going, thinner, before its mask dissolves it toward the middle of the
+		     edge. Horizontal runs are lit on top, vertical ones on the left, so
+		     the frame still has one light source. -->
+		<g id="bough-run-h">
+			<path d="M0 6 C 26 4.6 74 7.2 120 5.4" fill="none" stroke="var(--bough-bark-2)" stroke-width="7.4" stroke-linecap="round"/>
+			<path d="M0 6 C 26 4.6 74 7.2 120 5.4" fill="none" stroke="var(--bough-bark-1)" stroke-width="5.2" stroke-linecap="round"/>
+			<path d="M0 3.5 C 26 2.1 74 4.7 120 2.9" fill="none" stroke="var(--bough-bark-lit)" stroke-width="1.5" stroke-linecap="round"/>
+			<path d="M0 2.3 C 26 1.2 74 3.4 120 1.9" fill="none" stroke="var(--bough-rim)" stroke-width="0.7" stroke-linecap="round" opacity=".65"/>
+		</g>
+		<g id="bough-run-v">
+			<path d="M6 0 C 4.6 26 7.2 74 5.4 120" fill="none" stroke="var(--bough-bark-2)" stroke-width="7.4" stroke-linecap="round"/>
+			<path d="M6 0 C 4.6 26 7.2 74 5.4 120" fill="none" stroke="var(--bough-bark-1)" stroke-width="5.2" stroke-linecap="round"/>
+			<path d="M3.5 0 C 2.1 26 4.7 74 2.9 120" fill="none" stroke="var(--bough-bark-lit)" stroke-width="1.5" stroke-linecap="round"/>
+			<path d="M2.3 0 C 1.2 26 3.4 74 1.9 120" fill="none" stroke="var(--bough-rim)" stroke-width="0.7" stroke-linecap="round" opacity=".65"/>
+		</g>
+		<g id="bough-edge-h-down">
+			<path d="M0 17 C 14 14 28 19.6 46 16.4 S 82 15 120 17.6" fill="none" stroke="var(--bough-bark-2)" stroke-width="15.4" stroke-linecap="round"/>
+			<path d="M0 17 C 14 14 28 19.6 46 16.4 S 82 15 120 17.6" fill="none" stroke="var(--bough-bark-1)" stroke-width="11.8" stroke-linecap="round"/>
+			<path d="M0 20.8 C 14 17.8 28 23.4 46 20.2 S 82 18.8 120 21.4" fill="none" stroke="var(--bough-bark-lit)" stroke-width="3.2" stroke-linecap="round" opacity=".55"/>
+			<path d="M0 20.8 C 16 18 32 23.4 50 20.2 S 84 18.8 120 21.4" fill="none" stroke="var(--bough-bark-2)" stroke-width="1.2" stroke-linecap="round" opacity=".3"/>
+			<path d="M0 23.8 C 16 21 32 26.4 50 23.2 S 84 21.8 120 24.4" fill="none" stroke="var(--bough-bark-2)" stroke-width="0.8" stroke-linecap="round" opacity=".18"/>
+		</g>
+	</defs>
+</svg>

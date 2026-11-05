@@ -82,18 +82,9 @@ const countEl = document.getElementById('bd-count')!;
 const emptyEl = document.getElementById('bd-empty')!;
 const checklistEl = document.getElementById('deck-checklist') as HTMLUListElement;
 
-// --- deck chrome sticking (spec: editor chrome stays visible on scroll) ------
-// the deck topbar sticks just under the fixed nav; --nav-h is measured once
-// (and on resize) rather than hard-coded, so nav wrapping stays harmless.
-
-function syncNavHeight(): void {
-	const nav = document.getElementById('site-nav');
-	document.documentElement.style.setProperty('--nav-h', `${Math.round(nav?.getBoundingClientRect().height ?? 0)}px`);
-}
-syncNavHeight();
-window.addEventListener('resize', syncNavHeight, { passive: true });
-// web fonts settle after first paint and can change the wrapped bar height
-if (document.fonts?.ready) void document.fonts.ready.then(() => syncNavHeight());
+// --- deck chrome ------------------------------------------------------------
+// The deck page is a viewport-height shell (see pages/decks/build.astro), so
+// the name/meta/actions bar never scrolls away and needs no measured offset.
 
 function esc(text: string): string {
 	return text.replace(/[&<>"']/g, (ch) =>
@@ -206,7 +197,6 @@ function bootDeck(): void {
 	// a shared deck is read-only: rename would silently do nothing
 	renameBtn.hidden = shared;
 	saveSharedBtn.hidden = !shared;
-	syncNavHeight(); // the topbar's final height depends on which actions show
 	const warning = shared ? null : takeStorageProblem();
 	if (warning && storageWarnEl) {
 		storageWarnEl.hidden = false;
@@ -761,7 +751,9 @@ function renderPrefix(count: number, toTop = false): void {
 	}
 	for (let i = 0; i < target; i++) listEl.appendChild(itemFor(seq[i]));
 	renderedCount = target;
-	if (toTop) window.scrollTo(0, 0);
+	// filtering resets the list; the browser column is its own scroller now,
+	// so bring that back to the top rather than the (unscrollable) page
+	if (toTop) document.getElementById('deck-browser')?.scrollTo({ top: 0 });
 }
 
 const maybeFill = (): void => {
@@ -1207,25 +1199,25 @@ function isChampionUnitCard(slug: string): boolean {
 
 // Below lg, Deck / Back to cards swap the two panes rather than scrolling: the
 // deck lives in the URL hash (#d/<id> / #s/<payload>), so an #anchor would
-// replace it, and the infinite catalog list would push a scroll target away as
-// it reveals more cards.
-let cardsScrollY = 0;
+// replace it, and the two framed columns each own their scroll now — the page
+// itself never scrolls, so the browser's scroll offset is kept by hand.
+let cardsScrollTop = 0;
 const browserPaneEl = document.getElementById('deck-browser');
 const viewerPaneEl = document.getElementById('deck-viewer');
 for (const trigger of Array.from(document.querySelectorAll<HTMLElement>('[data-scroll-to]'))) {
 	trigger.addEventListener('click', () => {
 		const goingToDeck = trigger.dataset.scrollTo === 'deck-viewer';
 		if (goingToDeck) {
-			cardsScrollY = window.scrollY;
+			cardsScrollTop = browserPaneEl?.scrollTop ?? 0;
 			appEl.dataset.view = 'deck';
 			// the trigger itself is now display:none; hand focus to the pane so
 			// keyboard and screen-reader users are not dropped back to the body
 			viewerPaneEl?.focus({ preventScroll: true });
-			window.scrollTo({ top: 0 });
 		} else {
 			appEl.dataset.view = 'cards';
 			browserPaneEl?.focus({ preventScroll: true });
-			window.scrollTo({ top: cardsScrollY });
+			// display:none dropped the offset; put the list back where it was
+			browserPaneEl?.scrollTo({ top: cardsScrollTop });
 		}
 	});
 }
@@ -1265,7 +1257,6 @@ saveSharedBtn.addEventListener('click', () => {
 	shareBtn.hidden = false;
 	renameBtn.hidden = false;
 	saveSharedBtn.hidden = true;
-	syncNavHeight();
 	renderUnknownWarning();
 	renderRatio();
 	renderChampion();

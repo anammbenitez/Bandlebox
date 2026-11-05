@@ -52,6 +52,10 @@ interface uses these hues.
   (`--deck-viewer-w`, default 520px). Both columns are sticky and scroll
   independently. Below `lg` the Deck / Back to cards buttons swap the browser
   and the deck as panes, so the deck is never buried behind an endless list.
+- The viewer is one deck sheet, not a stack of boxes: a `.sheet-ledger` of the
+  five sections pins to the top of the column, the sections follow as
+  hairline-divided rows, and legality closes the sheet. Below `lg` the ledger
+  scrolls sideways instead of pinning.
 - Spacing scale: 2 / 4 / 6 / 8 / 10 / 12 / 16 px rhythm. Tight inside groups,
   generous between them.
 
@@ -65,8 +69,12 @@ All in `src/styles/global.css` under `@layer components`.
   border and soft ring on focus, amber caret.
 - **Pills / chips** — `.pill` with `aria-pressed` carrying the selected state;
   `.dot` inside a pill is the domain colour.
-- **Panels / sections** — `.panel` + `.panel-head`; `.section-card` with
-  `data-active="true"` for the deck section the browser is feeding.
+- **Panels / sections** — `.panel` + `.panel-head`.
+- **Deck sheet** — `.sheet` frames the viewer (`overflow: clip` keeps the
+  rounded edge without breaking the pin). `.sheet-ledger` holds five
+  `.ledger-cell` columns (micro-label, count, `/target`); the focused one is
+  gold-underlined and gold-labelled. `.sheet-section` + `.sheet-head` carry
+  each section; `.section-name` turns gold for the section the browser feeds.
 - **Card tiles** — `.card-tile` (catalog) and `.face` (art-only browser and deck
   rows) with `.face-bar` stepper controls and `.count-chip` copy counts.
 - **Legality** — `.verdict` (`data-legal`) and `.check-item[data-status]` with

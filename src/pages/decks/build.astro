@@ -144,27 +144,54 @@ const domainPayload = escapedJson(
 					Back to cards
 				</button>
 			</div>
-			<div class="space-y-2.5">
-				{SECTION_KEYS.map((key) => {
-					const { exact, cap } = sectionTarget(key);
-					return (
-						<section data-section={key} class="section-card">
-							<button type="button" data-focus-section={key} class="section-head">
-								<span class="section-name">{SECTION_LABELS[key]}</span>
-								<span class="section-count">
+			<!-- The deck reads as one sheet: a composition ledger pinned at the top
+			     of the column (five sections, their counts and targets, the focused
+			     one underlined), then hairline-divided sections, then legality at
+			     the foot. A ledger cell focuses a section exactly like its header. -->
+			<div class="sheet">
+				<div id="deck-ledger" class="sheet-ledger" role="group" aria-label="Deck sections">
+					{SECTION_KEYS.map((key) => {
+						const { exact, cap } = sectionTarget(key);
+						const short = { legend: 'Legend', battlefields: 'Battlefields', main: 'Main', rune: 'Runes', side: 'Side' } as const;
+						return (
+							<button
+								type="button"
+								class="ledger-cell"
+								data-ledger-section={key}
+								data-focus-section={key}
+								aria-pressed="false"
+							>
+								<span class="ledger-name">{short[key]}</span>
+								<span class="ledger-count tnum">
 									<span data-count={key}>0</span>
-									<span class="mx-1 text-slate-600">/</span>
-									{exact != null ? String(exact) : `≤ ${cap}`}
+									<span class="ledger-target">/{exact ?? `≤ ${cap}`}</span>
 								</span>
 							</button>
-							<div class="section-body">
+						);
+					})}
+				</div>
+
+				<div class="sheet-sections">
+					{SECTION_KEYS.map((key) => {
+						const { exact, cap } = sectionTarget(key);
+						return (
+							<section data-section={key} class="sheet-section">
+								<button type="button" data-focus-section={key} class="sheet-head">
+									<span class="section-name">{SECTION_LABELS[key]}</span>
+									<span class="section-count">
+										<span data-count={key}>0</span>
+										<span class="mx-1 text-slate-600">/</span>
+										{exact != null ? String(exact) : `≤ ${cap}`}
+									</span>
+								</button>
+								<div class="section-body">
 								{key === 'rune' && <div data-rune-ratio class="mb-2 hidden"></div>}
 								{key === 'legend' ? (
 									<div class="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2">
 										<ul data-rows="legend" class="contents"></ul>
-										<div data-champion-zone class="min-w-0 rounded-md border border-slate-800/70 p-1.5">
+										<div data-champion-zone class="min-w-0">
 											<div class="flex items-baseline justify-between gap-2 px-0.5">
-												<span class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-400">Champion</span>
+												<span class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">Champion</span>
 												<span data-champion-count class="text-[10px] text-slate-400 tnum" aria-live="polite"></span>
 											</div>
 											<div data-champion-face class="mt-1.5"></div>
@@ -182,19 +209,20 @@ const domainPayload = escapedJson(
 								) : (
 									<ul data-rows={key} class="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-1.5"></ul>
 								)}
-							</div>
-						</section>
-					);
-				})}
-			</div>
-
-			<section class="panel mt-2.5" aria-label="Deck legality">
-				<div class="panel-head">
-					<h2 class="panel-title">Deck legality</h2>
-					<span class="panel-count">Riftbound constructed</span>
+								</div>
+							</section>
+						);
+					})}
 				</div>
-				<ul id="deck-checklist" class="check-list p-3"></ul>
-			</section>
+
+				<section class="sheet-section" aria-label="Deck legality">
+					<div class="sheet-head">
+						<h2 class="section-name">Deck legality</h2>
+						<span class="section-count">Riftbound constructed</span>
+					</div>
+					<ul id="deck-checklist" class="check-list px-3 pb-3.5"></ul>
+				</section>
+			</div>
 		</aside>
 	</div>
 </Base>
@@ -283,4 +311,18 @@ const domainPayload = escapedJson(
 
 <script>
 	import '../../scripts/deck-builder';
+
+	// The composition ledger doubles as the deck's table of contents: focusing
+	// a section from it also brings that section into view below the pinned
+	// ledger (scroll-margin-top on .sheet-section keeps the count row clear).
+	const ledger = document.getElementById('deck-ledger');
+	ledger?.addEventListener('click', (event) => {
+		const cell = (event.target as HTMLElement).closest<HTMLElement>('[data-ledger-section]');
+		if (!cell) return;
+		const target = document.querySelector<HTMLElement>(`[data-section="${cell.dataset.ledgerSection}"]`);
+		target?.scrollIntoView({
+			behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+			block: 'start',
+		});
+	});
 </script>

@@ -455,9 +455,10 @@ function renderHint(): void {
 
 function renderCounts(): void {
 	if (!deck) return;
+	// the ledger and the section headers both read these counts
 	for (const section of SECTION_KEYS) {
-		const el = document.querySelector<HTMLElement>(`[data-count="${section}"]`);
-		if (el) el.textContent = String(sectionTotal(deck[section]));
+		const els = document.querySelectorAll<HTMLElement>(`[data-count="${section}"]`);
+		for (const el of els) el.textContent = String(sectionTotal(deck[section]));
 	}
 	const total = deckTotalCopiesCounted(deck);
 	const jump = document.getElementById('deck-jump-count');
@@ -821,6 +822,12 @@ function focusSection(section: SectionKey): void {
 	for (const key of SECTION_KEYS) {
 		const el = document.querySelector<HTMLElement>(`[data-section="${key}"]`);
 		if (el) el.dataset.active = String(key === activeSection);
+	}
+	// the composition ledger carries the same focus as the section headers
+	for (const cell of Array.from(document.querySelectorAll<HTMLElement>('[data-ledger-section]'))) {
+		const on = cell.dataset.ledgerSection === activeSection;
+		cell.dataset.active = String(on);
+		cell.setAttribute('aria-pressed', String(on));
 	}
 	for (const pill of Array.from(pillsEl.querySelectorAll<HTMLButtonElement>('button[data-pill]'))) {
 		pill.setAttribute('aria-pressed', String(pill.dataset.pill === activeSection));

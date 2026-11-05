@@ -56,21 +56,14 @@ function badgeHtml(deck: Deck): string {
 // interaction state on tiles: rename / delete confirmation / name editing
 const interactState = new Map<string, 'confirm'>();
 
-/** Tile face: Legend art under the deck's own name and its two counts. */
+/** Tile face: the deck's Legend art, cropped to the card's 5:7 face. */
 function coverHtml(deck: Deck): string {
 	const legendSlug = deck.legend[0]?.card;
 	const legend = legendBySlug.get(legendSlug ?? '');
-	const face = legend?.url
+	return legend?.url
 		? `<img src="${esc(legend.url)}" alt="Legend art for ${esc(legend.name)}" loading="lazy"` +
-			` class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" onerror="this.remove()">`
+				` class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" onerror="this.remove()">`
 		: '<span class="absolute inset-0 grid place-items-center px-2 text-center text-[11px] text-slate-500">no legend chosen</span>';
-	return (
-		face +
-		`<div class="deck-tile-caption">` +
-		`<span class="block truncate text-xs font-medium text-slate-100">${esc(deck.name)}</span>` +
-		`<span class="mt-0.5 block truncate text-[10px] text-slate-400 tnum">${esc(cardCount(deck))}</span>` +
-		`</div>`
-	);
 }
 
 function deckTileHtml(deck: Deck, confirming: boolean): string {
@@ -84,24 +77,30 @@ function deckTileHtml(deck: Deck, confirming: boolean): string {
 				<button type="button" data-deck-delete class="tile-action">Delete</button>
 			</span>`;
 	return (
-		`<li data-id="${esc(deck.id)}" data-tile class="deck-tile group" title="${esc(deck.name)} · updated ${esc(new Date(deck.updatedAt).toLocaleDateString())}">` +
+		`<li data-id="${esc(deck.id)}" data-tile class="dt-item group" title="${esc(deck.name)} · updated ${esc(new Date(deck.updatedAt).toLocaleDateString())}">` +
 		badgeHtml(deck) +
 		actions +
-		`<a href="/decks/build#d/${esc(deck.id)}" aria-label="Open ${esc(deck.name)}" class="absolute inset-0">${coverHtml(deck)}</a>` +
+		`<a href="/decks/build#d/${esc(deck.id)}" aria-label="Open ${esc(deck.name)}" class="dt-face">${coverHtml(deck)}</a>` +
+		`<div class="dt-label">` +
+		`<span class="dt-name">${esc(deck.name)}</span>` +
+		`<span class="dt-counts tnum">${esc(cardCount(deck))}</span>` +
+		`</div>` +
 		`</li>`
 	);
 }
 
 function createTileHtml(): string {
 	return (
-		`<li class="deck-tile border-dashed border-slate-700">` +
+		`<li class="dt-item">` +
+		`<div class="dt-face" data-empty>` +
 		`<button id="open-create-modal" type="button" aria-label="Create a new deck" class="create-tile">` +
 		`<span class="create-tile-icon">` +
 		`<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">` +
 		`<path d="M7 2.5v9M2.5 7h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>` +
 		`</svg></span>` +
-		`<span class="text-xs font-medium">New deck</span>` +
-		`</button></li>`
+		`</button></div>` +
+		`<div class="dt-label"><span class="dt-name">New deck</span></div>` +
+		`</li>`
 	);
 }
 

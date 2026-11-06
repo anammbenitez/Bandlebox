@@ -1,4 +1,4 @@
-# Design system — Riftbound Deck Manager
+# Design system — BandleBox
 
 A local-first card catalog and deck builder. The interface is an **Operate**
 surface inside the Bandlewood: a desk at dusk, a warm lamp, cards fanned out,

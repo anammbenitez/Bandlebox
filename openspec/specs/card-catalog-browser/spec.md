@@ -43,23 +43,14 @@ The app SHALL display card images by lazy-loading them from OpenRift's media pat
 - **WHEN** the grid or a detail page loads, with or without image connectivity
 - **THEN** card data renders immediately and image requests are lazily issued per visible card, so browsing never waits on art
 
-### Requirement: Set index and set pages
-
-The app SHALL provide an index page listing all sets in the snapshot (slug, name, type, release dates), and one page per set listing its cards, navigable to card detail pages.
-
-#### Scenario: Navigating by set
-
-- **WHEN** the user opens the set index
-- **THEN** all sets from the snapshot are listed, and each set page links to the cards it contains, each linking onward to `/cards/{slug}`
-
 ### Requirement: Browsing is offline after a refresh
 
-The app SHALL serve all card content from the local snapshot when browsing. A network connection MUST NOT be required to render card data, sets, or filtering — only card art retrieval contacts OpenRift.
+The app SHALL serve all card content from the local snapshot when browsing. A network connection MUST NOT be required to render card data or filtering — only card art retrieval contacts OpenRift.
 
 #### Scenario: Offline browsing
 
 - **WHEN** the app is opened offline after a completed refresh
-- **THEN** all card data, detail pages, set pages, and filtering work; only card images may fail to load
+- **THEN** all card data, detail pages, and filtering work; only card images may fail to load
 
 ### Requirement: Windowed reveal on scroll
 
@@ -135,3 +126,12 @@ The card detail page SHALL render the selected printing's printed rules text, ef
 
 - **WHEN** a card has errata with corrected rules or effect text
 - **THEN** the corrected text is rendered the same way as the printed text
+
+### Requirement: Browse cards page description
+
+The card grid page SHALL present the short description "Catalog of all the cards in the game." beneath its title, replacing any longer explanatory text.
+
+#### Scenario: Reading the page intro
+
+- **WHEN** the Browse cards page opens
+- **THEN** its title is followed by exactly that description

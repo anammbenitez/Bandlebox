@@ -5,11 +5,11 @@
 @source "../scripts";
 
 /* ---------------------------------------------------------------------------
- * Palette: Bandlewood — forest ink, lantern gold, living green.
+ * Palette: Bandlewood — bark ink, lantern gold, living green.
  *
- * The room at dusk: deep green-black shadow, a warm lamp, wood and leaves
- * around the edges, the cards themselves the brightest thing on the table.
- * Tailwind's `slate` scale is retuned to forest ink and `amber` to lantern
+ * Bandle City at dusk: deep brown-black shadow, a warm lamp, branch frames and
+ * leaves around every panel, the cards themselves the brightest thing on the
+ * table. Tailwind's `slate` scale is retuned to bark ink and `amber` to lantern
  * light so every existing `slate-*` / `amber-*` class lands in this world.
  * The six domain hues and the printed keyword hues remain data, not palette.
  * ------------------------------------------------------------------------ */
@@ -17,16 +17,16 @@
 	--font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
 	--font-display: "Bricolage Grotesque", "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 
-	--color-slate-950: #080b07;
-	--color-slate-900: #0d120c;
-	--color-slate-800: #1a231b;
-	--color-slate-700: #2b3a2c;
-	--color-slate-600: #41543f;
-	--color-slate-500: #8a9a84;
-	--color-slate-400: #a7b5a0;
-	--color-slate-300: #cbd5c2;
-	--color-slate-200: #e0e7d8;
-	--color-slate-100: #eff3e8;
+	--color-slate-950: #0c0906;
+	--color-slate-900: #15100b;
+	--color-slate-800: #241b12;
+	--color-slate-700: #3b2d1d;
+	--color-slate-600: #574330;
+	--color-slate-500: #9a8c76;
+	--color-slate-400: #b6a98f;
+	--color-slate-300: #d3c8b1;
+	--color-slate-200: #e7ddc9;
+	--color-slate-100: #f6efe0;
 
 	--color-amber-300: #f7e0ad;
 	--color-amber-400: #e9c479;
@@ -39,7 +39,7 @@
 	--color-red-400: #de7568;
 	--color-red-500: #c25649;
 
-	/* Wood and foliage: only the bough frame and its highlights use these. */
+	/* Wood and foliage: the header branch, the frame rail and highlights use these. */
 	--color-bark-950: #150c05;
 	--color-bark-900: #22150a;
 	--color-bark-700: #4a3218;
@@ -65,29 +65,20 @@
 	html {
 		color-scheme: dark;
 		-webkit-text-size-adjust: 100%;
-
-		/* The bough's three values of light. Declared at the root so a lone
-		 * branch rail and a full frame are painted by the same sprite. */
-		--bough-bark-2: var(--color-bark-950);
-		--bough-bark-1: #63452a;
-		--bough-bark-lit: #8f6438;
-		--bough-rim: #c9a066;
-		--bough-leaf-1: var(--color-leaf-600);
-		--bough-leaf-2: var(--color-leaf-400);
-		--bough-leaf-vein: #2b4425;
-		--bough-bloom: var(--color-bloom);
 	}
 
 	body {
 		font-family: var(--font-sans);
 		font-synthesis-weight: none;
 		text-rendering: optimizeLegibility;
-		/* Lantern light from above falling into a clearing: a warm pool at the
-		 * top edge and a green canopy wash behind the chrome. No texture behind
+		/* Dusk: violet and teal glows at the top corners over a lantern-amber
+		 * horizon, fading to bark ink behind the working area. No texture behind
 		 * card art — the art is the brightest thing on the table. */
 		background:
-			radial-gradient(760px 300px at 16% -120px, color-mix(in oklab, var(--color-amber-400) 22%, transparent), transparent 72%),
-			radial-gradient(1100px 430px at 52% -150px, color-mix(in oklab, var(--color-leaf-500) 58%, transparent), transparent 70%),
+			radial-gradient(60% 440px at 10% -40px, rgb(122 72 196 / 0.5), transparent 72%),
+			radial-gradient(48% 400px at 88% -20px, rgb(36 150 140 / 0.38), transparent 70%),
+			radial-gradient(80% 280px at 50% 150px, rgb(244 164 84 / 0.3), transparent 74%),
+			linear-gradient(180deg, #1b1533 0, #2a1b1c 230px, var(--color-slate-950) 560px),
 			var(--color-slate-950);
 		background-attachment: fixed;
 	}
@@ -187,17 +178,80 @@
 		align-items: stretch;
 		gap: 1.5rem;
 		height: 3.25rem;
+		/* Phones centre the brand and links; sm and up tuck them to the left. */
+		justify-content: center;
+	}
+
+	@media (min-width: 640px) {
+		.site-nav {
+			justify-content: flex-start;
+		}
+	}
+
+	/* The nav spans the full window on every page, with the links tucked beside
+	 * the brand rather than centred. */
+	.site-nav.nav-wide .nav-brand {
+		margin-right: 0.5rem;
 	}
 
 	/* The canopy band: the one part of the chrome that carries the forest,
 	 * so the working surface below can stay quiet behind the cards. */
 	.site-header {
-		background: linear-gradient(
-			180deg,
-			color-mix(in oklab, var(--color-leaf-600) 38%, var(--color-slate-950)) 0%,
-			color-mix(in oklab, var(--color-slate-950) 94%, transparent) 100%
-		);
-		backdrop-filter: blur(10px);
+		background: linear-gradient(180deg, #2a1d11 0%, #1b120a 62%, #150e08 100%);
+		box-shadow: 0 10px 24px -12px rgb(0 0 0 / 0.8);
+	}
+
+	/* The nav hangs from a branch: the same painted strip the panels use,
+	 * repeated along the header's underside. It overhangs the header so the
+	 * bark below it is the first thing the page's frames echo. */
+	.site-header::after {
+		content: "";
+		position: absolute;
+		z-index: 1;
+		left: 0;
+		right: 0;
+		bottom: -0.875rem;
+		height: 2.25rem;
+		background: url("../assets/wood/edge_bottom_loop.png") repeat-x 0 0 / auto 100%;
+		filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.55)) brightness(0.92) saturate(0.95);
+		pointer-events: none;
+	}
+
+	/* Flowering twigs resting on that branch. Each is placed so its own twig sits
+	 * on the strip's branch line; they never touch the nav links. */
+	.header-sprig {
+		position: absolute;
+		z-index: 2;
+		background-repeat: no-repeat;
+		background-size: 100% 100%;
+		filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.5)) brightness(0.95);
+		pointer-events: none;
+	}
+
+	.header-sprig--a {
+		left: 46%;
+		bottom: -1.21rem;
+		width: 12rem;
+		aspect-ratio: 542 / 147;
+	}
+
+	.header-sprig--b {
+		right: 5%;
+		bottom: -1.18rem;
+		width: 10rem;
+		aspect-ratio: 497 / 120;
+	}
+
+	@media (max-width: 47.99rem) {
+		.header-sprig--a {
+			display: none;
+		}
+
+		.header-sprig--b {
+			right: 2%;
+			bottom: -0.9rem;
+			width: 7.5rem;
+		}
 	}
 
 	.nav-brand {
@@ -221,14 +275,29 @@
 		transition: color 140ms ease;
 	}
 
+	/* The brand's leaf sits in a lantern-ringed bark medallion. */
+	.nav-brand > svg {
+		box-sizing: border-box;
+		width: 2.25rem;
+		height: 2.25rem;
+		padding: 0.3125rem;
+		align-self: center;
+		border-radius: 999px;
+		background: radial-gradient(circle at 35% 30%, #4a3319, #1a1008 72%);
+		box-shadow:
+			0 0 0 1.5px var(--color-amber-500),
+			0 0 0 3.5px #1a1008,
+			0 0 14px -2px color-mix(in oklab, var(--color-amber-400) 40%, transparent);
+	}
+
 	.nav-link {
 		position: relative;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.375rem;
-		font-size: 0.8125rem;
+		font-size: 0.875rem;
 		font-weight: 500;
-		color: var(--color-slate-400);
+		color: var(--color-slate-300);
 		transition: color 140ms ease;
 	}
 
@@ -240,6 +309,18 @@
 		color: var(--color-amber-300);
 	}
 
+	/* the current page: a lantern-gold rule with a soft glow above the branch */
+	.nav-link[aria-current="page"]::after {
+		content: "";
+		position: absolute;
+		inset-inline: -0.25rem;
+		bottom: 0.5rem;
+		height: 2px;
+		border-radius: 2px;
+		background: var(--color-amber-400);
+		box-shadow: 0 0 10px 1px color-mix(in oklab, var(--color-amber-400) 55%, transparent);
+	}
+
 	/* The current page is marked by a lit leaf resting on the branch, not by
 	 * a rule: the nav's underside is already a branch. */
 	.nav-mark {
@@ -247,18 +328,6 @@
 		rotate: -14deg;
 		color: var(--color-amber-400);
 		filter: drop-shadow(0 0 5px color-mix(in oklab, var(--color-amber-400) 45%, transparent));
-	}
-
-	/* The deck manager runs edge to edge, so the nav's hanging sprig would sit
-	 * on the working area's own corner. The frames carry the foliage there. */
-	.is-wide .bough-hang {
-		display: none;
-	}
-
-	@media (max-width: 63.99rem) {
-		.bough-hang {
-			display: none;
-		}
 	}
 
 	/* --- page headers ----------------------------------------------------- */
@@ -374,9 +443,10 @@
 		gap: 0.375rem;
 		height: 2.375rem;
 		padding-inline: 0.875rem;
-		border: 1px solid var(--color-slate-700);
-		border-radius: 0.4375rem;
-		background: color-mix(in oklab, var(--color-slate-900) 88%, var(--color-bark-900));
+		border: 1px solid color-mix(in oklab, var(--color-bark-300) 42%, var(--color-slate-700));
+		border-radius: 0.5rem;
+		background: linear-gradient(180deg, #2d2013, #1b120a);
+		box-shadow: inset 0 1px 0 rgb(255 232 190 / 0.07), 0 1px 0 rgb(0 0 0 / 0.5);
 		font-size: 0.875rem;
 		font-weight: 500;
 		color: var(--color-slate-200);
@@ -389,13 +459,13 @@
 	}
 
 	.btn:hover {
-		border-color: var(--color-slate-600);
-		background: var(--color-slate-800);
+		border-color: color-mix(in oklab, var(--color-amber-400) 55%, var(--color-bark-300));
+		background: linear-gradient(180deg, #3a2a19, #231810);
 		color: var(--color-slate-100);
 	}
 
 	.btn:active {
-		background: var(--color-slate-900);
+		background: #170f08;
 	}
 
 	.btn:disabled,
@@ -460,9 +530,10 @@
 
 	.field {
 		height: 2.375rem;
-		border: 1px solid var(--color-slate-700);
-		border-radius: 0.4375rem;
-		background: color-mix(in oklab, var(--color-slate-950) 72%, var(--color-bark-900));
+		border: 1px solid color-mix(in oklab, var(--color-bark-300) 30%, var(--color-slate-700));
+		border-radius: 0.5rem;
+		background: #0f0a06;
+		box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.5);
 		padding-inline: 0.75rem;
 		font-size: 0.875rem;
 		color: var(--color-slate-100);
@@ -495,7 +566,7 @@
 	select.field {
 		appearance: none;
 		padding-right: 1.75rem;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23a7b5a0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23b6a98f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
 		background-repeat: no-repeat;
 		background-position: right 0.6rem center;
 	}
@@ -512,9 +583,10 @@
 		gap: 0.375rem;
 		height: 2rem;
 		padding-inline: 0.75rem;
-		border: 1px solid var(--color-slate-700);
+		border: 1px solid color-mix(in oklab, var(--color-bark-300) 34%, var(--color-slate-700));
 		border-radius: 999px;
-		background: transparent;
+		background: linear-gradient(180deg, #261a10, #170f09);
+		box-shadow: inset 0 1px 0 rgb(255 232 190 / 0.05);
 		font-size: 0.8125rem;
 		font-weight: 500;
 		color: var(--color-slate-400);
@@ -530,8 +602,9 @@
 	}
 
 	.pill[aria-pressed="true"] {
-		border-color: color-mix(in oklab, var(--color-amber-400) 62%, transparent);
-		background: color-mix(in oklab, var(--color-amber-400) 13%, transparent);
+		border-color: var(--color-amber-400);
+		background: linear-gradient(180deg, color-mix(in oklab, var(--color-amber-400) 24%, #2a1c0e), color-mix(in oklab, var(--color-amber-400) 10%, #170f09));
+		box-shadow: inset 0 1px 0 rgb(255 232 190 / 0.12), 0 0 12px -3px color-mix(in oklab, var(--color-amber-400) 55%, transparent);
 		color: var(--color-amber-300);
 	}
 
@@ -1071,13 +1144,13 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.75rem;
-		margin-inline: -1rem;
-		padding: 0.75rem 1rem;
-		background: var(--color-slate-950);
-		border-bottom: 1px solid color-mix(in oklab, var(--color-slate-700) 55%, transparent);
+		padding: 1.5rem 0 0.5rem;
+		position: relative;
+		z-index: 1;
 	}
 
 	.deck-title {
+		text-shadow: 0 2px 10px rgb(0 0 0 / 0.7);
 		font-family: var(--font-display);
 		font-size: 1.5rem;
 		font-weight: 600;
@@ -1088,7 +1161,8 @@
 	.deck-meta {
 		margin-top: 0.25rem;
 		font-size: 0.75rem;
-		color: var(--color-slate-500);
+		color: var(--color-slate-300);
+		text-shadow: 0 1px 6px rgb(0 0 0 / 0.8);
 		font-variant-numeric: tabular-nums;
 	}
 
@@ -1133,6 +1207,7 @@
 	   ledger pins to the top of the column so composition and the focused
 	   section stay in view while the deck scrolls under it. */
 	.sheet {
+		container-type: inline-size;
 		border-radius: 0.75rem;
 		background: color-mix(in oklab, var(--color-slate-900) 60%, transparent);
 		/* clip (not hidden) keeps the rounded frame without creating a scroll
@@ -1422,172 +1497,95 @@
 		vertical-align: -0.2em;
 	}
 
-	/* --- bough frame ------------------------------------------------------ */
+	/* --- frame ------------------------------------------------------------ */
 
-	/* Painted wood at the four corners, and nothing along the edges but the
-	 * billet each arm leaves behind. The pack is one 1536 × 1024 composition;
-	 * each corner keeps the crop and the canvas-relative place the painter gave
-	 * it, expressed in cqw against the frame's own width. An edge never carries
-	 * a joined run, a repeat, or a line — only the elbow, its first stretch, and
-	 * a thin stem that dissolves before the middle. */
-	.bough {
-		container-type: inline-size;
+	/* The working panels' border: a bark rail with a thin lantern hairline just
+	 * inside it, over a warm dark fill. Plain box model - no images, no
+	 * positioned pieces - so it reflows like any block. */
+	.frame {
+		--frame-pad: 0.875rem;
+		--frame-fill-top: #1b140d;
+		--frame-fill-bottom: #120d08;
 		position: relative;
-		isolation: isolate;
-		border-radius: 1.4cqw;
-		padding: 0;
-		background:
-			linear-gradient(180deg, color-mix(in oklab, var(--color-slate-900) 92%, #23301f) 0%, var(--color-slate-950) 78%);
+		border: 3px solid #4f3720;
+		border-radius: 1rem;
+		background: linear-gradient(180deg, var(--frame-fill-top), var(--frame-fill-bottom));
 		box-shadow:
-			inset 0 0 60px -30px #000,
-			inset 0 -40px 80px -60px #000,
-			0 28px 60px -34px #000;
+			inset 0 0 0 1px color-mix(in oklab, var(--color-amber-400) 22%, transparent),
+			inset 0 0 34px -10px #000,
+			0 0 0 1px #120b05,
+			0 18px 34px -22px #000;
 	}
 
-	/* Content is padded past the corner foliage. The frame pieces sit above
-	 * the slot and never take a pointer. */
-	.bough-body {
+	.frame--lit {
+		--frame-fill-top: #211910;
+		--frame-fill-bottom: #150f09;
+	}
+
+	.frame--quiet {
+		--frame-fill-top: #19130d;
+		--frame-fill-bottom: #100b07;
+	}
+
+	.frame-body {
 		position: relative;
-		z-index: 1;
 		display: flex;
 		flex: 1 1 auto;
 		flex-direction: column;
 		min-height: 0;
-		padding: 10.6cqw;
+		padding: var(--frame-pad);
 	}
 
-	.bough-piece {
-		position: absolute;
-		z-index: 2;
-		overflow: visible;
-		pointer-events: none;
-		background-repeat: no-repeat;
-		background-size: 100% 100%;
-		filter: brightness(0.9) saturate(0.92);
-		-webkit-mask-image: var(--corner-fade);
-		mask-image: var(--corner-fade);
-		-webkit-mask-repeat: no-repeat;
-		mask-repeat: no-repeat;
-	}
-
-	/* Each corner keeps its elbow at full strength and dissolves both arms
-	 * before the content line. The radius is in cqw, not a percentage of the
-	 * piece, so the wider bottom crops do not grow a longer visible arm. */
-	.bough-tl {
-		--corner-fade: radial-gradient(circle 12.76cqw at 0 0, #000 0 55%, rgb(0 0 0 / 0.8) 70%, transparent 100%);
-		top: 1.5cqw;
-		left: 0;
-		width: 17.78cqw;
-		height: 16.28cqw;
-	}
-
-	.bough-tr {
-		--corner-fade: radial-gradient(circle 12.76cqw at 100% 0, #000 0 55%, rgb(0 0 0 / 0.8) 70%, transparent 100%);
-		top: 2cqw;
-		right: 1.22cqw;
-		width: 16.54cqw;
-		height: 15.78cqw;
-	}
-
-	.bough-bl {
-		--corner-fade: radial-gradient(circle 11cqw at 0 100%, #000 0 55%, rgb(0 0 0 / 0.8) 70%, transparent 100%);
-		bottom: 1.56cqw;
-		left: 0;
-		width: 23.9cqw;
-		height: 15.88cqw;
-	}
-
-	.bough-br {
-		--corner-fade: radial-gradient(circle 11cqw at 100% 100%, #000 0 55%, rgb(0 0 0 / 0.8) 70%, transparent 100%);
-		bottom: 2.05cqw;
-		right: 0.33cqw;
-		width: 23.9cqw;
-		height: 15.39cqw;
-	}
-
-	/* The billet: a thin straight continuation of each elbow. It starts under
-	 * the painted arm, carries the branch a little further along the edge, and
-	 * dissolves before the midpoint. z-index 1 keeps it beneath the corner
-	 * paint, so the join where the arm fades is never visible. */
-	.bough-run {
-		position: absolute;
-		z-index: 1;
-		overflow: visible;
-		pointer-events: none;
-		-webkit-mask-repeat: no-repeat;
-		mask-repeat: no-repeat;
-	}
-
-	.bough-run--h {
-		width: 40cqw;
-		height: 1.25cqw;
-	}
-
-	.bough-run--v {
-		width: 1.25cqw;
-		height: 40cqw;
-	}
-
-	/* the dissolve runs toward the middle of the edge, never back onto the corner */
-	.bough-run--top-left,
-	.bough-run--bottom-left {
-		-webkit-mask-image: linear-gradient(90deg, #000 0 18%, rgb(0 0 0 / 0.85) 40%, rgb(0 0 0 / 0.3) 66%, transparent 90%);
-		mask-image: linear-gradient(90deg, #000 0 18%, rgb(0 0 0 / 0.85) 40%, rgb(0 0 0 / 0.3) 66%, transparent 90%);
-	}
-
-	.bough-run--top-right,
-	.bough-run--bottom-right {
-		-webkit-mask-image: linear-gradient(270deg, #000 0 18%, rgb(0 0 0 / 0.85) 40%, rgb(0 0 0 / 0.3) 66%, transparent 90%);
-		mask-image: linear-gradient(270deg, #000 0 18%, rgb(0 0 0 / 0.85) 40%, rgb(0 0 0 / 0.3) 66%, transparent 90%);
-	}
-
-	.bough-run--left-top,
-	.bough-run--right-top {
-		-webkit-mask-image: linear-gradient(180deg, #000 0 18%, rgb(0 0 0 / 0.85) 40%, rgb(0 0 0 / 0.3) 66%, transparent 90%);
-		mask-image: linear-gradient(180deg, #000 0 18%, rgb(0 0 0 / 0.85) 40%, rgb(0 0 0 / 0.3) 66%, transparent 90%);
-	}
-
-	.bough-run--left-bottom,
-	.bough-run--right-bottom {
-		-webkit-mask-image: linear-gradient(0deg, #000 0 18%, rgb(0 0 0 / 0.85) 40%, rgb(0 0 0 / 0.3) 66%, transparent 90%);
-		mask-image: linear-gradient(0deg, #000 0 18%, rgb(0 0 0 / 0.85) 40%, rgb(0 0 0 / 0.3) 66%, transparent 90%);
-	}
-
-	/* Each billet sits on the line its painted arm leaves the crop on, measured
-	 * from the corner's own canvas, so the two read as one branch. */
-	.bough-run--top-left { top: 4.54cqw; left: 10cqw; }
-	.bough-run--top-right { top: 4.18cqw; right: 10cqw; }
-	.bough-run--bottom-left { bottom: 3.94cqw; left: 10cqw; }
-	.bough-run--bottom-right { bottom: 3.99cqw; right: 10cqw; }
-	.bough-run--left-top { left: 4.99cqw; top: 10cqw; }
-	.bough-run--left-bottom { left: 4.8cqw; bottom: 10cqw; }
-	.bough-run--right-top { right: 4.15cqw; top: 10cqw; }
-	.bough-run--right-bottom { right: 4.58cqw; bottom: 10cqw; }
-
-	/* Lit: the deck sheet sits closer to the lamp. Quiet: the browser keeps the
-	 * wood but steps back from the cards. */
-	.bough--lit .bough-run {
-		filter: brightness(1.06) saturate(1.04);
-	}
-
-	.bough--quiet .bough-run {
-		filter: brightness(0.82) saturate(0.86);
-	}	.bough--lit .bough-piece {
-		filter: brightness(1.02) saturate(1.04);
-	}
-
-	.bough--quiet .bough-piece {
-		filter: brightness(0.86) saturate(0.88);
-	}
-
-	/* On phones the frame keeps its proportions — it is all fractions of the
-	 * panel's own width — and the controls give the width back. */
 	@media (max-width: 40rem) {
-		/* the pane switch lines up with the framed content beneath it */
-		.pane-switch {
-			padding-inline: 2.6rem;
+		.frame {
+			--frame-pad: 0.625rem;
+			border-radius: 0.75rem;
+		}
+	}
+
+	/* Both columns scroll inside their frames at lg+; a foot fade says so
+	 * without adding a control. */
+	@media (min-width: 64rem) {
+		.bd-frame .frame-body::after,
+		.deck-frame .frame-body::after {
+			content: "";
+			position: absolute;
+			z-index: 4;
+			left: var(--frame-pad);
+			right: var(--frame-pad);
+			bottom: var(--frame-pad);
+			height: 2.5rem;
+			background: linear-gradient(180deg, transparent, var(--frame-fill-bottom));
+			pointer-events: none;
+		}
+	}
+
+	/* At the narrow end of the desktop split the sheet's content box cannot
+	 * hold five full ledger labels at the 5.25rem floor. Shorten the labels and
+	 * lower the floor from the sheet's own width; the phone rules below stay
+	 * tighter still. */
+	@container (max-width: 27rem) {
+		.sheet-ledger {
+			grid-template-columns: repeat(5, minmax(4rem, 1fr));
 		}
 
+		.ledger-cell {
+			min-width: 4rem;
+			padding-inline: 0.375rem;
+		}
+
+		.ledger-name-full {
+			display: none;
+		}
+
+		.ledger-name-short {
+			display: inline;
+		}
+	}
+
+	/* On phones the frame shrinks as a whole and the controls give the width
+	 * back. */
+	@media (max-width: 40rem) {
 		/* five ledger cells cannot fit a phone at desk size; compress the row
 		   rather than making the deck's own summary scroll */
 		.sheet-ledger {
@@ -1621,68 +1619,6 @@
 		.ledger-target {
 			font-size: 0.6875rem;
 		}
-	}
-
-	/* Both columns scroll inside their frames at lg+; a foot fade says so
-	 * without adding a control, and the panel's lower edge closes the page. */
-	@media (min-width: 64rem) {
-		.bd-frame::before,
-		.deck-frame::before {
-			content: "";
-			position: absolute;
-			z-index: 4;
-			left: 10.6cqw;
-			right: 10.6cqw;
-			bottom: 10.6cqw;
-			height: 2.75rem;
-			background: linear-gradient(180deg, transparent, var(--color-slate-950));
-			pointer-events: none;
-		}
-	}
-
-	/* One definition per page; contributes no layout of its own. */
-	.bough-sprite {
-		position: absolute;
-		width: 0;
-		height: 0;
-		overflow: hidden;
-	}
-
-	/* A branch run that grows in from one end and dissolves — so a long edge
-	 * never reads as a manufactured plank. */
-	.bough-rail {
-		display: block;
-		width: 100%;
-		height: 1.75rem;
-		overflow: visible;
-		pointer-events: none;
-		color: var(--color-bark-500);
-	}
-
-	.rail-from-left {
-		--bough-bark-1: #4f3620;
-		--bough-bark-lit: #75502a;
-		--bough-rim: #96703f;
-		-webkit-mask-image: linear-gradient(90deg, #000 0%, #000 20%, transparent 42%);
-		mask-image: linear-gradient(90deg, #000 0%, #000 20%, transparent 42%);
-	}
-
-	.rail-from-right {
-		--bough-bark-1: #4f3620;
-		--bough-bark-lit: #75502a;
-		--bough-rim: #96703f;
-		-webkit-mask-image: linear-gradient(270deg, #000 0%, #000 20%, transparent 42%);
-		mask-image: linear-gradient(270deg, #000 0%, #000 20%, transparent 42%);
-	}
-
-	/* A sprig that hangs from a rail, sized and placed by its host. */
-	.bough-hang {
-		position: absolute;
-		pointer-events: none;
-		overflow: visible;
-		background-repeat: no-repeat;
-		background-size: 100% 100%;
-		filter: brightness(0.9) saturate(0.92);
 	}
 
 	/* --- utilities -------------------------------------------------------- */

@@ -7,7 +7,7 @@
 // `wide` opts the page out of the site max-width (user request: full-window
 // layout for the deck manager only).
 import Base from '../../layouts/Base.astro';
-import Bough from '../../components/Bough.astro';
+import Frame from '../../components/Frame.astro';
 import { SECTION_KEYS, SECTION_LABELS, sectionTarget } from '../../lib/deck';
 import { buildDeckRuleIndexes } from '../../lib/deck-rules';
 import { buildGridPayload, escapedJson } from '../../lib/grid-payload';
@@ -61,22 +61,19 @@ const domainPayload = escapedJson(
 		<a class="btn" data-variant="primary" href="/decks">Go to your decks</a>
 	</div>
 
-	<!-- viewer column width is user-adjustable via #deck-grip (spec: user-adjustable
-	     viewer width); min(…, 50vw) is a CSS-side clamp backing the JS drag bounds.
-	     The wider 520px default carries the field-zone layout (spec: deck viewer
-	     presents the field zones) → the main deck reads large without the grip. -->
+	<!-- The two working columns are equal on large screens (spec: deck manager
+	     desktop split is equal); each sits inside its own bark frame. -->
 	<div
 		id="deck-app"
 		data-view="cards"
-		class="mt-2 grid min-h-0 flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_12px_min(var(--deck-viewer-w,520px),50vw)] lg:gap-x-4 xl:[--deck-viewer-w:520px]"
+		class="mt-1 grid min-h-0 flex-1 gap-6 lg:grid-cols-2 lg:gap-x-2"
 	>
 		<!-- card browser -->
-		<!-- viewport fit (spec: two-column layout fits the screen): the bough
-		     frame fills its grid row and the browser scrolls inside it, so the
-		     wood never rides up over the cards. The deck page's shell is the
+		<!-- viewport fit (spec: two-column layout fits the screen): the frame
+		     fills its grid row and the browser scrolls inside it. The deck page's shell is the
 		     viewport: the page itself never scrolls at any width, only this
 		     column does. -->
-		<Bough tone="quiet" class="bd-frame min-h-0 min-w-0 flex flex-col">
+		<Frame tone="quiet" class="bd-frame min-h-0 min-w-0 flex flex-col">
 		<section
 			id="deck-browser"
 			aria-label="Card browser"
@@ -119,7 +116,7 @@ const domainPayload = escapedJson(
 			</div>
 			<!-- container-driven card grid (spec: card impressions size with their
 			     container): auto-fill recomputes columns from the actual browser
-			     column width — the viewer drag or a window resize reflows it.
+			     column width — a window resize reflows it.
 			     9rem, not the catalog's 10.5rem: the frame's rails are real width,
 			     and 10.5 left one giant tile at 1024 and two at 1280. -->
 			<ul id="bd-list" class="mt-2 grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3"></ul>
@@ -127,11 +124,7 @@ const domainPayload = escapedJson(
 			<p id="bd-empty" hidden class="empty-state mt-4">No cards match the filters.</p>
 			<p id="bd-hint" class="mt-2 text-[11px] text-slate-500">Added cards enter the focused section. Copy counts come from the deck panel.</p>
 		</section>
-		</Bough>
-
-		<!-- resize grip: sits in its own 12px grid column; only shown at lg+
-		     where the browser and viewer share the row -->
-		<div id="deck-grip" class="hidden lg:block" aria-hidden="true"></div>
+		</Frame>
 
 		<!-- deck sections + checklist -->
 		<aside
@@ -155,7 +148,7 @@ const domainPayload = escapedJson(
 			     of the column (five sections, their counts and targets, the focused
 			     one underlined), then hairline-divided sections, then legality at
 			     the foot. A ledger cell focuses a section exactly like its header. -->
-			<Bough tone="lit" class="deck-frame min-h-0 flex flex-1 flex-col">
+			<Frame tone="lit" class="deck-frame min-h-0 flex flex-1 flex-col">
 			<div class="sheet scroll-column min-h-0 flex-1 overflow-y-auto overscroll-contain">
 				<div id="deck-ledger" class="sheet-ledger" role="group" aria-label="Deck sections">
 					{SECTION_KEYS.map((key) => {
@@ -237,7 +230,7 @@ const domainPayload = escapedJson(
 					<ul id="deck-checklist" class="check-list px-3 pb-3.5"></ul>
 				</section>
 			</div>
-			</Bough>
+			</Frame>
 		</aside>
 	</div>
 </Base>
@@ -260,7 +253,7 @@ const domainPayload = escapedJson(
 		min-height: 0;
 		overflow: hidden;
 	}
-	/* one row: whichever panes are visible share the full working height */
+	/* one row: whichever panes are visible share the full working height. */
 	#deck-app {
 		grid-template-rows: minmax(0, 1fr);
 	}
@@ -279,26 +272,8 @@ const domainPayload = escapedJson(
 			display: none;
 		}
 		#deck-app[data-view='deck'] #deck-browser,
-		#deck-app[data-view='deck'] .bd-frame,
-		#deck-app[data-view='deck'] #deck-grip {
+		#deck-app[data-view='deck'] .bd-frame {
 			display: none;
-		}
-	}
-	/* In a very short window (landscape phone, half-height desktop window) the
-	 * width-based corner padding is taller than the working area itself and
-	 * would leave the panes invisible. Drop the painted corners — they cannot
-	 * fit the aspect anyway — and tighten the frame so the panes keep a
-	 * usable, scrollable height. */
-	@media (max-height: 32rem) {
-		body.app-shell .bd-frame .bough-piece,
-		body.app-shell .deck-frame .bough-piece,
-		body.app-shell .bd-frame::before,
-		body.app-shell .deck-frame::before {
-			display: none;
-		}
-		body.app-shell .bd-frame .bough-body,
-		body.app-shell .deck-frame .bough-body {
-			padding: 0.875rem 1.125rem;
 		}
 	}
 	/* Copied-artwork battlefield thumbs sit sideways inside small boxes.
@@ -323,31 +298,6 @@ const domainPayload = escapedJson(
 		left: 50%;
 		top: 50%;
 		transform: translate(-50%, -50%) rotate(90deg);
-	}
-	/* deck viewer resize grip (spec: user-adjustable viewer width): a slim
-	 * divider between the browser and viewer columns; the whole 12px grid
-	 * column is the drag hit area. Hidden below lg with the stacked layout;
-	 * capped to the viewport at lg+ with the confined columns. */	#deck-grip {
-		position: relative;
-		cursor: col-resize;
-		touch-action: none;
-		user-select: none;
-	}
-	#deck-grip::before {
-		content: '';
-		position: absolute;
-		top: 4px;
-		bottom: 4px;
-		left: 50%;
-		width: 2px;
-		border-radius: 1px;
-		transform: translateX(-50%);
-		background: rgb(40 50 61 / 0.9); /* slate-700 */
-	}
-	#deck-grip:hover::before,
-	#deck-grip[data-dragging]::before {
-		width: 3px;
-		background: color-mix(in oklab, #e6c27c 80%, transparent);
 	}
 	/* drag hover + refusal flashes on the drop-target sections (and the
 	 * champion zone, which is a vetted drop target inside the Legend section) */

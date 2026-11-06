@@ -1,10 +1,6 @@
 ---
 import '../styles/global.css';
-import BoughSprite from '../components/BoughSprite.astro';
-import { getImage } from 'astro:assets';
-import sprigHang from '../assets/wood/sprig_vertical_left.png';
-
-const hang = (await getImage({ src: sprigHang, width: sprigHang.width, format: 'webp', quality: 88 })).src;
+import SiteHeader from '../components/SiteHeader.astro';
 
 interface Props {
 	title?: string;
@@ -17,13 +13,6 @@ interface Props {
 }
 
 const { title = 'Riftbound Deck Manager', description = 'Personal, offline-first browser for every available Riftbound card.', wide = false, appShell = false } = Astro.props;
-
-const nav = [
-	{ href: '/', label: 'Browse cards', match: (p: string) => p === '/' },
-	{ href: '/sets', label: 'Sets', match: (p: string) => p.startsWith('/sets') },
-	{ href: '/decks', label: 'Decks', match: (p: string) => p.startsWith('/decks') },
-];
-const currentPath = Astro.url.pathname;
 ---
 
 <!doctype html>
@@ -39,44 +28,7 @@ const currentPath = Astro.url.pathname;
 	</head>
 	<body class:list={['flex min-h-screen flex-col text-slate-100 antialiased', wide && 'is-wide', appShell && 'app-shell']}>
 		<a class="skip-link" href="#main">Skip to content</a>
-		<!-- App-wide nav, fixed in place on scroll (spec: main navigation stays
-		     fixed): sticky keeps it in flow, so no body offset math is needed.
-		     Its underside is the first branch of the frame the whole app sits in. -->
-		<header class="site-header sticky top-0 z-40 pb-1">
-			<nav id="site-nav" class="site-nav mx-auto max-w-6xl gap-4 px-4 sm:gap-6">
-				<a href="/" class="nav-brand" aria-label="Riftbound Deck Manager — home">
-					<svg class="text-amber-400" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
-						<path d="M4.2 22.6C5.2 16 9 10.8 15.6 7.8" stroke="#6d4a26" stroke-width="2.2" stroke-linecap="round" />
-						<path d="M15.4 15.2C12.6 10.6 12.9 5.9 16.1 1.8c4.1 2 6.3 6 5.5 10.9-2.4 1.9-4.5 2.7-6.2 2.5Z" fill="currentColor" />
-						<path d="M17.2 13.6c1.5-3.5 2.5-6.4 3.2-9.1" stroke="#2b4425" stroke-width="1" stroke-linecap="round" />
-						<path d="M11.2 18.6C7.4 18.4 4.2 16.2 2.4 12.2c3.1-1.8 6.4-1.6 9.5 0.8 0 2.2-0.2 4-0.7 5.6Z" fill="currentColor" fill-opacity="0.68" />
-						<path d="M3.6 21.4c3.4-2.6 6.4-5.2 9.2-7.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity=".55" />
-					</svg>
-					<span>Riftbound</span>
-					<span class="nav-brand-sub hidden sm:inline">Deck Manager</span>
-				</a>
-				{nav.map((n) => {
-					const current = n.match(currentPath);
-					return (
-						<a class="nav-link" href={n.href} aria-current={current ? 'page' : undefined}>
-							{current && (
-								<span class="nav-mark" aria-hidden="true">
-									<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-										<path d="M1.2 7.2C3 2.6 6.6 0.9 12.9 1.5c0.5 5.3-2 8.7-7 9.3C3.9 9.9 2.2 8.7 1.2 7.2Z" fill="currentColor" />
-										<path d="M2 7.4C5.2 6.7 8.8 6.5 12.2 6.6" stroke="var(--color-bark-950)" stroke-width="0.8" fill="none" stroke-linecap="round" />
-									</svg>
-								</span>
-							)}
-							{n.label}
-						</a>
-					);
-				})}
-			</nav>
-			<svg class="bough-rail rail-from-left absolute inset-x-0 -bottom-2 h-7 opacity-80" viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true">
-				<use href="#bough-edge-h" />
-			</svg>
-			<span class="bough-hang left-1 top-0 h-[7.5rem] w-[3.06rem] opacity-90" style={`background-image:url(${hang})`} aria-hidden="true"></span>
-		</header>
+		<SiteHeader />
 		<main id="main" tabindex="-1" class={`mx-auto w-full flex-1 px-4 focus:outline-none ${wide ? 'mx-0 pb-6 pt-0' : 'max-w-6xl pb-10 pt-9'}`}>
 			<slot />
 		</main>
@@ -87,10 +39,5 @@ const currentPath = Astro.url.pathname;
 				<span class="colophon-note">Card images are requested from OpenRift when needed and never mirrored locally; card symbols are cached locally for offline reading.</span>
 			</div>
 		</footer>
-		<BoughSprite />
-
-	<!-- impeccable-live-start -->
-<script is:inline src="http://localhost:8400/live.js?token=06e86bbe-dea3-44a6-91f9-98d3a69ad46c"></script>
-<!-- impeccable-live-end -->
-</body>
+	</body>
 </html>

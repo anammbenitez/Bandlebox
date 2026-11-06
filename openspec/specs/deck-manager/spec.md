@@ -90,11 +90,11 @@ The deck manager SHALL offer a share action that produces a complete-deck URL an
 
 ### Requirement: Decks reachable from world navigation
 
-The site's persistent navigation SHALL expose a Decks entry alongside the existing Cards and Sets destinations, serving as the home for the deck list and deck manager entry points.
+The site's persistent navigation SHALL expose a Decks entry as its first destination, followed by Browse cards, serving as the home for the deck list and deck manager entry points.
 
 #### Scenario: Navigating to the deck system
 
-- **WHEN** a user follows the Decks navigation entry from a card or set page
+- **WHEN** a user follows the Decks navigation entry from a card page
 - **THEN** they reach the list of their saved decks and can create or open a deck from there
 
 ### Requirement: Cards can be dragged into deck sections
@@ -181,29 +181,29 @@ The legality checker and the Domain filter SHALL treat a card whose Domain set c
 - **WHEN** a neutral-domain card sits in any section of a deck whose Legend's colors do not include it
 - **THEN** the domain rule passes it and never lists it among off-color failures
 
-### Requirement: Deck viewer width is user-adjustable
+### Requirement: Deck manager desktop split is equal
 
-On the deck manager's two-column layout (large screens), the deck viewer panel's width SHALL be adjustable by dragging a grip between the card browser and the deck viewer. The drag SHALL resize the viewer within defined minimum and maximum bounds, the browser column SHALL absorb the remaining width, and the chosen width SHALL persist across visits in local browser storage until changed or unavailable.
+On large screens, the deck manager SHALL lay the card browser and deck viewer out as equal-width columns, each held in its own bark frame. The split SHALL be fixed: no grip, handle, or drag interaction SHALL resize either column, and no stored width preference SHALL alter the split. Both panels SHALL still fill the working height and scroll their own contents.
 
-#### Scenario: Dragging the grip resizes the viewer
+#### Scenario: Equal halves at desktop width
 
-- **WHEN** a user drags the grip between the card browser and the deck viewer
-- **THEN** the viewer's width follows the pointer within the allowed bounds, the browser column takes the remaining width, and the grip stays between the columns
+- **WHEN** the deck manager opens at a large-screen width
+- **THEN** the card browser and the deck viewer occupy equal widths and neither column can be resized by dragging
 
-#### Scenario: Dragging clamps at the bounds
+#### Scenario: Window resize keeps parity
 
-- **WHEN** a user drags the grip past the minimum or maximum viewer width
-- **THEN** the viewer stops at that bound and does not collapse, overflow the window, or stretch past it
+- **WHEN** the desktop window is widened or narrowed
+- **THEN** both panels grow or shrink together and remain the same width as each other
 
-#### Scenario: Chosen width survives a reload
+#### Scenario: No resize affordance
 
-- **WHEN** a user resizes the viewer and later reloads the deck manager on the same large-screen layout
-- **THEN** the viewer opens at the width they last chose
+- **WHEN** a pointer moves between the card browser and the deck viewer
+- **THEN** no resize grip appears, the cursor stays in its default state, and no drag behavior starts
 
-#### Scenario: No grip on smaller viewports
+#### Scenario: Stale width preference is ignored
 
-- **WHEN** the deck manager is viewed below the large-screen breakpoint, where the card browser and deck viewer stack full-width
-- **THEN** no grip is rendered and the stacked layout behaves as before
+- **WHEN** a viewer-width value from an earlier visit exists in local browser storage
+- **THEN** the deck manager still renders the equal split and never applies the stored width
 
 ### Requirement: Two-column layout fits the screen
 
@@ -229,24 +229,24 @@ On the deck manager's two-column layout (large screens), the card browser and th
 - **WHEN** the deck manager is viewed below the large-screen breakpoint
 - **THEN** the layout stacks as before and the page scrolls through both parts normally
 
-### Requirement: Deck viewer contents respond to the chosen width
+### Requirement: Deck viewer contents reflow with the panel width
 
-The deck viewer's contents SHALL reflow to the panel's actual width rather than a fixed column count: each section's card rows SHALL present more cards per row when the viewer is widened and fewer when narrowed, and no deck viewer content SHALL overflow or be cut off at any width within the allowed bounds.
+The deck viewer's contents SHALL reflow to the panel's actual width rather than a fixed column count: each section's card rows SHALL present more cards per row when the viewer's equal column is wider and fewer when it is narrower, and no deck viewer content SHALL overflow or be cut off at any desktop window width.
 
-#### Scenario: Widening shows more cards per row
+#### Scenario: Wider window shows more cards per row
 
-- **WHEN** a user widens the deck viewer so a section's card rows have room for more thumbnails
-- **THEN** the rows show more cards per row without changing card or copy behavior
+- **WHEN** the desktop window widens so the equal viewer column has room for more thumbnails
+- **THEN** the section rows show more cards per row without changing card or copy behavior
 
-#### Scenario: Narrowing keeps rows usable
+#### Scenario: Narrower window keeps rows usable
 
-- **WHEN** a user narrows the deck viewer toward the minimum width
-- **THEN** each section's card rows reflow to fewer cards per row while thumbnails, copy counts, and controls stay usable, and nothing overflows or is clipped
+- **WHEN** the desktop window narrows so the viewer column approaches the stacked breakpoint
+- **THEN** the section rows reflow to fewer cards per row while thumbnails, copy counts, and controls stay usable, and nothing overflows or is clipped
 
-#### Scenario: Missing stored width falls back gracefully
+#### Scenario: Stacked viewer still reflows
 
-- **WHEN** no stored width is available (first visit, or browser storage is unavailable)
-- **THEN** the viewer uses the current default width and the page works as before
+- **WHEN** the layout stacks below the large-screen breakpoint and the viewer becomes a full-width pane
+- **THEN** its section rows still size from the pane's actual width without overflow
 
 ### Requirement: Editor chrome stays visible on scroll
 
@@ -264,11 +264,11 @@ On the deck editor page, the deck's name/meta/actions bar SHALL stay within view
 
 ### Requirement: Card impressions size with their container
 
-The deck editor's browsed-card grid SHALL lay out from its container's actual width rather than fixed breakpoints: the column count SHALL reflow as the container's width changes (window resizing, or the deck viewer drag changing the browser column), and each card impression SHALL not shrink below a minimum size whose printed name and labels remain comfortably readable.
+The deck editor's browsed-card grid SHALL lay out from its container's actual width rather than fixed breakpoints: the column count SHALL reflow as the container's width changes with the window, and each card impression SHALL not shrink below a minimum size whose printed name and labels remain comfortably readable.
 
 #### Scenario: More width, more columns
 
-- **WHEN** the browser column gets wider (window grows or the deck viewer is dragged narrower)
+- **WHEN** the desktop window widens so the browser's equal column gets wider
 - **THEN** the card grid reflows to more columns of at least the minimum comfortable size
 
 #### Scenario: Narrow width respects the minimum size
@@ -302,7 +302,7 @@ The deck viewer SHALL provide a Champion zone directly to the right of the Legen
 
 ### Requirement: Deck viewer presents the field zones
 
-At desktop sizes, the deck viewer SHALL present the deck zones in a field-like layout within its panel: the Legend and the Champion zone side by side at the top, a horizontal row for Battlefields, and a main-deck grid of roughly five cards per row on a standard desktop PC that reflows with the panel width toward a comfortable minimum instead of many tiny columns. The viewer's default width SHALL be wide enough for this layout before the user resizes it.
+At desktop sizes, the deck viewer SHALL present the deck zones in a field-like layout within its panel: the Legend and the Champion zone side by side at the top, a horizontal row for Battlefields, and a main-deck grid of comfortably sized cards that reflows with the panel width instead of many tiny columns. The viewer's equal half of the desktop workspace SHALL be wide enough for this layout.
 
 #### Scenario: Legend and Champion share the top row
 
@@ -316,34 +316,28 @@ At desktop sizes, the deck viewer SHALL present the deck zones in a field-like l
 
 #### Scenario: Main deck reads large
 
-- **WHEN** a deck with a full main deck opens on a standard desktop PC at the viewer's default width
-- **THEN** the main-deck cards render noticeably larger than before, around five per row, and keep this comfortable size while the panel is narrowed until the minimum size is reached
+- **WHEN** a deck with a full main deck opens on a standard desktop PC
+- **THEN** the main-deck cards render at a comfortable size with several per row, and keep this size as the window narrows toward the stacked breakpoint
 
-### Requirement: Painted bough is a corner accent
+### Requirement: Panels use a plain bark frame
 
-The deck manager's painted bough frame SHALL appear only at the four corners of the card browser and deck viewer panels. Each corner SHALL keep its painted elbow at full strength and fade its arms smoothly to transparent before the midpoint of the adjacent edge, so the middle of every top, bottom, and side edge is bare. No continuous edge run, repeating vine, seeded cutting, or full inner border SHALL be rendered.
+The deck manager's card browser and deck viewer panels SHALL each be enclosed by a plain bordered frame — a bark-colored rail with a thin inner hairline over a warm dark fill — built from ordinary box styling with no positioned decorative pieces. Painted woodland art SHALL appear only on the site header. The frame SHALL reflow with its panel at every width, with no geometry that depends on breakpoint-specific constants.
 
-#### Scenario: Corner-only at desktop width
+#### Scenario: Both panels are framed
 
-- **WHEN** the deck manager renders its two-column layout at a large-screen width
-- **THEN** painted wood appears only at the four corners of each panel, and the middle of the top, bottom, and side edges is bare
+- **WHEN** the deck manager renders at any width
+- **THEN** the card browser and the deck viewer are each enclosed by the bark frame on all four sides
 
-#### Scenario: Each arm fades before the edge midpoint
+#### Scenario: Frame never covers working content
 
-- **WHEN** a corner's painted arm runs toward the middle of its edge
-- **THEN** it fades smoothly to transparent before the edge's midpoint, with no hard cut end and no repeated vine continuing the line
+- **WHEN** filters, card impressions, the ledger, sections, or controls render near a frame edge
+- **THEN** the frame's padding keeps them clear of the border, and the frame takes no pointer input
 
-#### Scenario: Tall panels do not grow a side border
+### Requirement: Decks page description
 
-- **WHEN** a panel is taller than its painted corners, as when the deck viewer holds a full deck or the browser fills the screen
-- **THEN** the corners stay at the top and bottom, and the middle of each side stays bare rather than repeating a vine down the panel
+The deck library page SHALL present the description "Decks live in this browser locally and save themselves as you build, be creative!" beneath its title.
 
-#### Scenario: Stacked layout keeps the corner treatment
+#### Scenario: Reading the page intro
 
-- **WHEN** the deck manager stacks the browser and deck viewer below the large-screen breakpoint
-- **THEN** each panel still shows only its four fading corners, with no continuous top run or canopy drawn in place of the frame
-
-#### Scenario: The frame never covers working content
-
-- **WHEN** the browser filters, card impressions, deck ledger, sections, or controls render near a corner
-- **THEN** no painted wood covers them or takes their pointer input, and the panel's content inset keeps the working area clear
+- **WHEN** the deck library opens
+- **THEN** its title is followed by exactly that description

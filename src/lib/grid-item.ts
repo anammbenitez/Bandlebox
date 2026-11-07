@@ -6,8 +6,11 @@
 // The markup reproduces the original static list exactly, so SSR and
 // revealed items are indistinguishable.
 
+import { imgAttrs } from './card-image.ts';
+
 export interface GridArt {
-	url: string;
+	/** OpenRift image id; the tile derives its URL via card-image.ts. */
+	imageId: string;
 	rotate: boolean;
 	setSlug: string;
 }
@@ -53,9 +56,11 @@ export function gridItemHtml(item: GridItemData): string {
 	const alt = setBadge
 		? `${item.name} card art (${setBadge})`
 		: `${item.name} card art`;
-	const img = art
-		? `<img src="${esc(art.url)}" alt="${esc(alt)}" loading="lazy" width="${art.rotate ? 336 : 240}" height="${art.rotate ? 240 : 336}" class="${art.rotate ? 'absolute left-1/2 top-1/2 w-[140%] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90' : 'absolute inset-0 h-full w-full object-cover'}" onerror="this.onerror=null;this.remove()">`
-		: '';
+	const attrs = art ? imgAttrs(art.imageId, 'tile', { rotate: art.rotate }) : null;
+	const img =
+		art && attrs
+			? `<img src="${esc(attrs.src)}" alt="${esc(alt)}" loading="lazy" width="${attrs.width}" height="${attrs.height}" class="${art.rotate ? 'absolute left-1/2 top-1/2 w-[140%] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90' : 'absolute inset-0 h-full w-full object-cover'}" onerror="${esc(attrs.onerror)}">`
+			: '';
 	return (
 		`<li data-slug="${esc(item.slug)}">` +
 		`<a href="/cards/${esc(item.slug)}" class="card-tile group" title="${esc(item.name)}">` +

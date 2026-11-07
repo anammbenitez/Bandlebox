@@ -177,12 +177,6 @@ export const snapshot = snapshotFile as unknown as Snapshot;
 /** cardId -> index card, for resolving embedded references like side2.cardId. */
 export const cardByUuid = new Map<string, IndexCard>(index.cards.map((c) => [c.cardId, c]));
 
-export const OPENRIFT_SITE = 'https://openrift.app';
-
-export function imgUrl(imageId: string, size: '240w' | '400w' | 'full' = '240w'): string {
-	return `${OPENRIFT_SITE}/media/cards/${imageId}-${size}.webp`;
-}
-
 /** The set's release relevant to this English-only app: EN first, then any dated release. */
 export function setPrimaryRelease(set: IndexSet): SetRelease | null {
 	const lang = index.meta.langs;

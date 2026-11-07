@@ -8,7 +8,8 @@
 // shared deck, opened as view+copy (design.md non-goal: no in-place editing
 // of shared decks). Anything else shows the hint to create a deck first.
 
-import { GRID_STEP } from '../lib/grid-item';
+import { imgAttrs } from '../lib/card-image';
+import { GRID_STEP, type GridArt } from '../lib/grid-item';
 import {
 	DECK_RULES,
 	qtyOf,
@@ -26,11 +27,6 @@ import { decodeDeck, encodeDeck, hashToPayload, isSharePayload } from '../lib/de
 
 // --- payload programs -------------------------------------------------------
 
-interface GridArt {
-	url: string;
-	rotate: boolean;
-	setSlug: string;
-}
 interface GridEntry {
 	slug: string;
 	name: string;
@@ -363,13 +359,17 @@ const ICON_MINUS =
 const ICON_PLUS =
 	'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 2.5v7M2.5 6h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
 
+/** Every card face in the manager is a `tile`-role image (400w, degrading to
+ *  240w, then removed). `extra` carries the per-face attributes. */
+function faceImgHtml(art: GridArt, extra: string): string {
+	const a = imgAttrs(art.imageId, 'tile', { rotate: art.rotate });
+	return `<img ${extra} src="${esc(a.src)}" alt="" loading="lazy" onerror="${esc(a.onerror)}">`;
+}
+
 function thumbHtml(slug: string): string {
 	const entry = bySlug.get(slug);
 	if (!entry?.art) return '<span class="absolute inset-0 grid place-items-center text-[10px] text-slate-500">no art</span>';
-	if (entry.art.rotate) {
-		return `<img data-rotate src="${esc(entry.art.url)}" alt="" loading="lazy" onerror="this.remove()">`;
-	}
-	return `<img src="${esc(entry.art.url)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="this.remove()">`;
+	return faceImgHtml(entry.art, entry.art.rotate ? 'data-rotate' : 'class="h-full w-full object-cover"');
 }
 
 /** The Legend section shows its single card as a big face (like the browser
@@ -394,7 +394,7 @@ function rowHtml(section: SectionKey, slug: string, qty: number): string {
 		// landscape card, raw art cropped to the wide box — no rotated crops
 		const entry = bySlug.get(slug);
 		const art = entry?.art
-			? `<img src="${esc(entry.art.url)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="this.remove()">`
+			? faceImgHtml(entry.art, 'class="h-full w-full object-cover"')
 			: `<span class="absolute inset-0 grid place-items-center text-[10px] text-slate-500">no art</span>`;
 		return (
 			`<li data-slug="${esc(slug)}" title="${esc(name)}"` +

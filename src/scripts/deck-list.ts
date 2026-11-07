@@ -3,6 +3,7 @@
 // modal (Legend + name). State changes still go exclusively through
 // deck-store so the manager page and this grid never disagree.
 
+import { imgAttrs } from '../lib/card-image';
 import { DECK_RULES, sectionTotal, type Deck } from '../lib/deck';
 import { validate, type DeckRuleIndexes } from '../lib/deck-rules';
 import { addDeck, listDecks, removeDeck, renameDeck, takeStorageProblem } from '../lib/deck-store';
@@ -10,7 +11,8 @@ import { addDeck, listDecks, removeDeck, renameDeck, takeStorageProblem } from '
 interface LegendEntry {
 	slug: string;
 	name: string;
-	url: string | null;
+	/** OpenRift image id; covers use the `tile` role, the picker the `thumb` role. */
+	imageId: string | null;
 	rotate: boolean;
 }
 
@@ -60,9 +62,10 @@ const interactState = new Map<string, 'confirm'>();
 function coverHtml(deck: Deck): string {
 	const legendSlug = deck.legend[0]?.card;
 	const legend = legendBySlug.get(legendSlug ?? '');
-	return legend?.url
-		? `<img src="${esc(legend.url)}" alt="Legend art for ${esc(legend.name)}" loading="lazy"` +
-				` class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" onerror="this.remove()">`
+	const art = legend?.imageId ? imgAttrs(legend.imageId, 'tile') : null;
+	return legend && art
+		? `<img src="${esc(art.src)}" alt="Legend art for ${esc(legend.name)}" loading="lazy"` +
+				` class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" onerror="${esc(art.onerror)}">`
 		: '<span class="absolute inset-0 grid place-items-center px-2 text-center text-[11px] text-slate-500">no legend chosen</span>';
 }
 
@@ -156,6 +159,12 @@ function legendMatches(entry: LegendEntry, q: string): boolean {
 	return !q || entry.name.toLowerCase().includes(q) || entry.slug.includes(q);
 }
 
+/** Picker thumbnails are small, so they take the `thumb` role (240w). */
+function pickerImgHtml(imageId: string): string {
+	const art = imgAttrs(imageId, 'thumb');
+	return `<img src="${esc(art.src)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="${esc(art.onerror)}">`;
+}
+
 function renderLegendList(): void {
 	const q = legendSearchEl.value.trim().toLowerCase();
 	const found = legends.filter((entry) => legendMatches(entry, q));
@@ -167,8 +176,8 @@ function renderLegendList(): void {
 						`<li>` +
 						`<button type="button" data-legend-pick="${esc(entry.slug)}" aria-pressed="${selectedLegend?.slug === entry.slug}"` +
 						` class="legend-pick">` +
-						(entry.url
-							? `<img src="${esc(entry.url)}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="this.remove()">`
+						(entry.imageId
+							? pickerImgHtml(entry.imageId)
 							: `<span class="grid h-full place-items-center text-slate-600">—</span>`) +
 						`<span class="legend-pick-label truncate">${esc(entry.name)}</span>` +
 						`</button></li>`,

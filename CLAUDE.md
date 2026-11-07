@@ -13,6 +13,7 @@ Riftbound Deck Manager is a personal, offline-first Astro site (static output, T
 - Verification scripts (plain Node, which strips TS types and imports `src/lib/*.ts` directly):
   - `node scripts/verify-deck-core.mjs` — deck model, store (incl. storage-failure paths), legality rules, share encode/decode.
   - `node scripts/verify-card-text.mjs` — card-text tokenizer/renderer; sweeps the real snapshot if `data/catalog.json` exists.
+  - `node scripts/verify-card-image.mjs` — card-image module: URL scheme, per-role variant chains, dimensions, the inline `onerror` fallback, and the markup built on it.
   Each runs as a whole (no per-case filter); add new assertions to the relevant script.
 - UI check: `.opencode/skills/impeccable/scripts/impeccable.cmd detect <path>` (or `impeccable` under `sh`). `AGENTS.md` requires re-running it on changed UI before calling UI work done.
 
@@ -30,6 +31,7 @@ Riftbound Deck Manager is a personal, offline-first Astro site (static output, T
 - `deck-store.ts` — all decks in one versioned `localStorage` entry; falls back to memory and surfaces a one-shot warning when storage fails.
 - `deck-share.ts` — stateless share links: deck encoded into the URL hash.
 - `card-text.ts` / `keyword-styles.ts` / `glyphs.ts` — tokenize card text into keyword chips and game-glyph images.
+- `card-image.ts` — the one place that decides how card art is requested from OpenRift: URL scheme, which variant each surface role uses (`hero` = `full`, `tile` = `400w`, `thumb` = `240w`), the degrade-then-remove fallback, and dimensions. Surfaces call `imgAttrs(imageId, role)`; never hard-code a size or an `onerror`. Payloads carry the `imageId`, not a URL.
 - `grid-item.ts` — the grid card HTML shared by server render and client infinite scroll (`GRID_STEP` window).
 
 Routes: `/` (filterable grid), `/cards/[slug]`, `/decks` (library), `/decks/build` (builder; deck selected client-side).

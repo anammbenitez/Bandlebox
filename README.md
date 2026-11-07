@@ -1,4 +1,4 @@
-# Riftbound Deck Manager
+# BandleBox
 
 A personal, local web app for browsing every available Riftbound trading card, offline-first.
 

@@ -266,15 +266,6 @@
 		white-space: nowrap;
 	}
 
-	.nav-brand:hover .nav-brand-sub {
-		color: var(--color-amber-300);
-	}
-
-	.nav-brand-sub {
-		color: var(--color-slate-400);
-		transition: color 140ms ease;
-	}
-
 	/* The brand's leaf sits in a lantern-ringed bark medallion. */
 	.nav-brand > svg {
 		box-sizing: border-box;
@@ -325,9 +316,15 @@
 	 * a rule: the nav's underside is already a branch. */
 	.nav-mark {
 		display: inline-flex;
-		rotate: -14deg;
+		align-items: center;
+		line-height: 0;
+		rotate: -6deg;
 		color: var(--color-amber-400);
-		filter: drop-shadow(0 0 5px color-mix(in oklab, var(--color-amber-400) 45%, transparent));
+		filter: drop-shadow(0 0 3px color-mix(in oklab, var(--color-amber-400) 18%, transparent));
+	}
+
+	.nav-mark > svg {
+		display: block;
 	}
 
 	/* --- page headers ----------------------------------------------------- */

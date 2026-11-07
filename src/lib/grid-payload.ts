@@ -3,14 +3,10 @@
 // more card facts than the browser shows, so both pages ship byte-identical
 // shapes from one place — no divergent payloads to keep in step.
 
-import { cardSearchText, imgUrl, index, isBattlefield, representativePrinting } from './catalog';
-import { GRID_STEP, gridItemHtml, type GridItemData } from './grid-item';
+import { cardSearchText, index, isBattlefield, representativePrinting } from './catalog';
+import { GRID_STEP, gridItemHtml, type GridArt, type GridItemData } from './grid-item';
 
-export interface GridArt {
-	url: string;
-	rotate: boolean;
-	setSlug: string;
-}
+export type { GridArt };
 
 export interface GridEntry extends GridItemData {
 	types: string[];
@@ -38,7 +34,7 @@ export function buildGridPayload(): GridEntry[] {
 			meta: `${rep?.rarity ?? '—'} · ${card.types.join(' / ')}`,
 			art: imageId
 				? {
-						url: imgUrl(imageId, '240w'),
+						imageId,
 						rotate: isBattlefield(card),
 						setSlug: rep?.setSlug ?? '',
 					}

@@ -46,7 +46,7 @@ Undecided:
 
 ## Brand Commitments
 
-- The product name, "Riftbound Deck Manager", is fixed.
+- The product name, "BandleBox", is fixed.
 - Third-party ownership is non-negotiable: catalog data and images belong to OpenRift / Riot Games, attributed in the interface, with card names linking back. No wording may imply endorsement or official status.
 
 ## Evidence on Hand

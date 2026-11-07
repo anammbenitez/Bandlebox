@@ -131,6 +131,17 @@ All in `src/styles/global.css` under `@layer components`.
   underline, gold label) and stays pinned while the sheet scrolls under it.
 - **Card tiles** — `.card-tile` (catalog) and `.face` (art-only browser and deck
   rows) with `.face-bar` stepper controls and `.count-chip` copy counts.
+- **Card peek** — `.card-peek`, one `role="tooltip"` element (`#card-peek`) that
+  `src/scripts/card-peek.ts` fills and places beside a card face once the pointer
+  has rested on it. Read-only: no backdrop, no focus capture, `pointer-events:
+  none`, so a click or drag always reaches the card. A `.dialog`-toned surface
+  (slate over bark, bark hairline), the display face for the name, the micro-label
+  voice for the type line and stat names, the existing `.kw` / glyph rules for
+  card text. Domain dots are data (`--dot` from `DOMAIN_COLORS`); the "in this
+  deck" lines use the legality language — emerald dot for fits, red for a rule
+  problem, quiet slate for information. It appears only when the user is still
+  (no click, drag, scroll or key; see the `card-peek` spec) and never over the
+  face it describes.
 - **Legality** — `.verdict` (`data-legal`) and `.check-item[data-status]` with
   drawn check / cross / pending icons.
 - **Empty states** — `.empty-state` is a leaf-green dashed tray and always names
@@ -141,7 +152,8 @@ All in `src/styles/global.css` under `@layer components`.
 Every control has default, hover, focus-visible, active, disabled and, where
 relevant, error. Focus is one language: 2px gold outline, 2px offset. Hover
 motion is 140–180ms; the only entrance/emphasis motion is a 3px tile lift and a
-gold rim. `prefers-reduced-motion` collapses all of it.
+gold rim, plus the card peek's 140ms fade with the same 3px lift.
+`prefers-reduced-motion` collapses all of it.
 
 Browser surfaces are themed: selection is a gold wash, scrollbars are thin
 ink-on-ink, carets are gold, numerals are tabular, and the skip link is the

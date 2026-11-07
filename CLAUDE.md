@@ -14,6 +14,7 @@ Riftbound Deck Manager is a personal, offline-first Astro site (static output, T
   - `node scripts/verify-deck-core.mjs` — deck model, store (incl. storage-failure paths), legality rules, share encode/decode.
   - `node scripts/verify-card-text.mjs` — card-text tokenizer/renderer; sweeps the real snapshot if `data/catalog.json` exists.
   - `node scripts/verify-card-image.mjs` — card-image module: URL scheme, per-role variant chains, dimensions, the inline `onerror` fallback, and the markup built on it.
+  - `node scripts/verify-card-peek.mjs` — hover card: the dwell/stillness state machine (`hover-intent.ts`, driven on a fake clock) and the deck-fit facts (`deck-fit.ts`) against the real snapshot.
   Each runs as a whole (no per-case filter); add new assertions to the relevant script.
 - UI check: `.opencode/skills/impeccable/scripts/impeccable.cmd detect <path>` (or `impeccable` under `sh`). `AGENTS.md` requires re-running it on changed UI before calling UI work done.
 
@@ -28,13 +29,16 @@ Riftbound Deck Manager is a personal, offline-first Astro site (static output, T
 **Pure modules in `src/lib/` must stay free of data imports and DOM/Vite-only APIs** so they run both in the browser and under the Node verify scripts. Keep explicit `.ts` extensions on relative imports in these modules (Node type-stripping needs them). Key ones:
 - `deck.ts` — deck model, `DECK_RULES` (constructed limits), section keys/targets.
 - `deck-rules.ts` — `validate(deck, indexes)` → per-rule pass/fail/pending report. Indexes come from `buildDeckRuleIndexes(snapshot, index)`, built in page front matter and passed in.
+- `deck-fit.ts` — `deckFit(slug, deck, indexes)`: one card's color / champion-tag / copies / ban facts for the open deck, built on `deck-rules.ts`'s `domainVerdict` and `legendChampionTag` so the hover card and the checklist cannot disagree.
+- `hover-intent.ts` — the card hover's dwell and stillness rule as a DOM-free state machine (injected timers; targets are `zone:slug` keys, since faces are re-rendered under a resting pointer). Judges movement by coordinates, never event type.
+- `card-stats.ts` — a card's Might / Energy / Power with the symbol each carries in card text; shared by the detail page and the hover card.
 - `deck-store.ts` — all decks in one versioned `localStorage` entry; falls back to memory and surfaces a one-shot warning when storage fails.
 - `deck-share.ts` — stateless share links: deck encoded into the URL hash.
 - `card-text.ts` / `keyword-styles.ts` / `glyphs.ts` — tokenize card text into keyword chips and game-glyph images.
 - `card-image.ts` — the one place that decides how card art is requested from OpenRift: URL scheme, which variant each surface role uses (`hero` = `full`, `tile` = `400w`, `thumb` = `240w`), the degrade-then-remove fallback, and dimensions. Surfaces call `imgAttrs(imageId, role)`; never hard-code a size or an `onerror`. Payloads carry the `imageId`, not a URL.
 - `grid-item.ts` — the grid card HTML shared by server render and client infinite scroll (`GRID_STEP` window).
 
-Routes: `/` (filterable grid), `/cards/[slug]`, `/decks` (library), `/decks/build` (builder; deck selected client-side).
+Routes: `/` (filterable grid), `/cards/[slug]`, `/decks` (library), `/decks/build` (builder; deck selected client-side), `/peek/[slug].json` (static endpoint, one per card: `{ html }` with the hover card's deck-independent facts, rendered by `peek-facts.ts`; fetched lazily once a dwell completes. The deck-aware lines are computed in the browser, so these never go stale).
 
 ## Workflow: OpenSpec
 

@@ -24,6 +24,7 @@ import {
 import { adoptDeck, getDeck, saveDeck, takeStorageProblem } from '../lib/deck-store';
 import { buildDeckRuleIndexes, isLegalEverywhere, validate, type DeckRuleIndexes, type LegalityReport } from '../lib/deck-rules';
 import { decodeDeck, encodeDeck, hashToPayload, isSharePayload } from '../lib/deck-share';
+import { initCardPeek } from './card-peek';
 
 // --- payload programs -------------------------------------------------------
 
@@ -106,6 +107,16 @@ const DOMAIN_COLORS: Record<string, string> = {
 	body: '#f97316',
 	order: '#eab308',
 };
+
+// The hover card on every card face (spec: card-peek). It reads the live deck
+// for its "in this deck" lines and must be told when the deck is rebuilt.
+const peek = initCardPeek({
+	root: appEl,
+	getDeck: () => deck,
+	idx,
+	domainColors: DOMAIN_COLORS,
+	domainLabel: (slug) => domains.find((d) => d.slug === slug)?.label ?? slug,
+});
 
 const copyLimit = (slug: string): number => idx.cards[slug]?.maxCopiesOverride ?? DECK_RULES.maxCopies;
 
@@ -232,6 +243,7 @@ function renderUnknownWarning(): void {
 
 function mutate(fn: (d: Deck) => void): void {
 	if (!deck || shared) return;
+	peek.closeForDeckChange(); // the faces are about to be rebuilt; never show stale counts
 	fn(deck);
 	// the champion pick tracks its pick's main-deck copies (spec: champion
 	// copies are main-deck copies) and the Legend's tag: clear it when its
@@ -397,8 +409,9 @@ function rowHtml(section: SectionKey, slug: string, qty: number): string {
 			? faceImgHtml(entry.art, 'class="h-full w-full object-cover"')
 			: `<span class="absolute inset-0 grid place-items-center text-[10px] text-slate-500">no art</span>`;
 		return (
-			`<li data-slug="${esc(slug)}" title="${esc(name)}"` +
+			`<li data-slug="${esc(slug)}"` +
 			` class="face relative aspect-[7/5] min-w-[9rem] flex-1 basis-[calc(33.333%-0.375rem)]">` +
+			`<span class="sr-only">${esc(name)}</span>` +
 			`<span class="absolute inset-0">${art}</span>` +
 			(shared
 				? `<div class="face-bar justify-center"><span class="count-chip">${esc(SHORT[section])} ${qty}</span></div>`
@@ -414,8 +427,9 @@ function rowHtml(section: SectionKey, slug: string, qty: number): string {
 	// auto-fill track — badge chip with the section-committed copies, minus/plus
 	// overlaid — smaller than the Legend
 	return (
-		`<li data-slug="${esc(slug)}" title="${esc(name)} — ${qty} in the deck"` +
+		`<li data-slug="${esc(slug)}"` +
 		` class="face relative aspect-[5/7]">` +
+		`<span class="sr-only">${esc(name)}</span>` +
 		(shared
 			? `<span class="absolute inset-0">${thumbHtml(slug)}</span>`
 			: `<span class="absolute inset-0 cursor-pointer">${thumbHtml(slug)}</span>`) +
@@ -725,7 +739,6 @@ function entryHtml(entry: GridEntry): string {
 	return (
 		`<li data-slug="${esc(entry.slug)}"` +
 		(shared ? '' : ' draggable="true"') +
-		` title="${esc(entry.name)} — ${esc(entry.meta)}"` +
 		` class="face group relative aspect-[5/7] cursor-pointer hover:border-amber-400/50"` +
 		`<a href="/cards/${esc(entry.slug)}" aria-label="${esc(entry.name)}" class="absolute inset-0">${thumbHtml(entry.slug)}</a>` +
 		`<div class="face-bar">${chipControls}</div>` +

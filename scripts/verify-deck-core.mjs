@@ -479,4 +479,44 @@ const CHAMPION = CHAMPION_SLUG;
 	assert.equal(deck.champion, 'ghost-champion-xyz', 'stale pick is carried, not dropped');
 }
 
+/* --- shared domain / champion-tag decisions (card peek reads the same ones) -- */
+
+{
+	const info = (domains, extra = {}) => ({
+		types: ['unit'],
+		superTypes: [],
+		domains,
+		tags: [],
+		maxCopiesOverride: null,
+		banned: false,
+		...extra,
+	});
+	const legendColors = ['calm', 'mind'];
+
+	assert.equal(rulesMod.domainVerdict(info(['calm']), legendColors), 'fits', 'one matching color fits');
+	assert.equal(rulesMod.domainVerdict(info(['calm', 'mind']), legendColors), 'fits', 'both colors fit');
+	assert.equal(rulesMod.domainVerdict(info(['fury']), legendColors), 'off', 'a foreign color is off');
+	assert.equal(rulesMod.domainVerdict(info(['calm', 'fury']), legendColors), 'off', 'any foreign domain makes it off');
+	assert.equal(rulesMod.domainVerdict(info(['neutral']), legendColors), 'fits', 'neutral fits every Legend');
+	assert.equal(rulesMod.domainVerdict(info(['neutral']), []), 'fits', 'neutral fits even an empty color set');
+	assert.equal(rulesMod.domainVerdict(info([]), legendColors), 'unclassified', 'no domain data is unclassified');
+	assert.equal(
+		rulesMod.domainVerdict(info(['calm']), new Set(legendColors)),
+		rulesMod.domainVerdict(info(['calm']), legendColors),
+		'a Set and an array of colors give the same answer',
+	);
+	// real data: the fixture champion (calm) sits inside the fixture Legend's colors
+	assert.equal(rulesMod.domainVerdict(idx.cards[CHAMPION_SLUG], idx.cards[LEGEND_SLUG].domains), 'fits');
+
+	const legend = (tags) => info([], { types: ['legend'], tags });
+	assert.equal(rulesMod.legendChampionTag(legend(['Zzz', 'Ahri']), ['Ahri']), 'Ahri', 'first tag that appears on a champion');
+	assert.equal(rulesMod.legendChampionTag(legend(['Mystery', 'Other']), []), 'Mystery', 'falls back to the first tag');
+	assert.equal(rulesMod.legendChampionTag(legend([]), ['Ahri']), undefined, 'no tags, no champion tag');
+	assert.equal(rulesMod.legendChampionTag(undefined, ['Ahri']), undefined, 'no Legend, no champion tag');
+	assert.ok(
+		idx.cards[CHAMPION_SLUG].tags.includes(rulesMod.legendChampionTag(idx.cards[LEGEND_SLUG], idx.championTags)),
+		'the fixture Legend resolves to a tag its champion carries',
+	);
+}
+
 console.log('VERIFY OK: deck-core');

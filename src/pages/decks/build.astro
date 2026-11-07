@@ -47,6 +47,15 @@ const domainPayload = escapedJson(
 	     carries the same message to screen readers -->
 	<p id="deck-live" class="sr-only" role="status" aria-live="polite"></p>
 
+	<!-- Card peek (spec: card-peek): the hover card for card faces. It is a
+	     read-only tooltip: no backdrop, no focus capture, no pointer input, so a
+	     click or drag always reaches the card underneath. src/scripts/card-peek.ts
+	     fills and places it. -->
+	<div id="card-peek" class="card-peek" role="tooltip" hidden>
+		<div class="peek-facts"></div>
+		<ul class="peek-fit" aria-label="In this deck"></ul>
+	</div>
+
 	<div id="deck-storage-warning" hidden class="callout mt-4" data-tone="warning">
 		Decks are not being saved this visit — browser storage is unavailable or full. Keep this window open, or try again in a normal browser window.
 	</div>

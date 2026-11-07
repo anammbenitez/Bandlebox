@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import CardText from '../../components/CardText.astro';
 import { imgAttrs } from '../../lib/card-image';
+import { cardStats } from '../../lib/card-stats';
 import { renderCardTextHtml, renderKeywordHtml } from '../../lib/card-text';
 import { glyphUrl } from '../../lib/glyphs';
 import { keywordChipStyle } from '../../lib/keyword-styles';
@@ -55,18 +56,9 @@ const shownImageId = primaryIndex?.imageIds[0];
  *  screens), degrading to 400w / 240w, then to the placeholder. */
 const hero = shownImageId ? imgAttrs(shownImageId, 'hero', { rotate: rotateArt }) : null;
 
-/** Detail stats: each figure carries the same symbol it has inside card text. */
-const RUNE_DOMAINS = ['fury', 'calm', 'mind', 'body', 'chaos', 'order'];
-const powerDomain = (cardRecord.domains ?? []).find((d) => RUNE_DOMAINS.includes(d));
-const stats = [
-	cardRecord.might != null
-		? { label: 'Might', value: cardRecord.might, note: cardRecord.mightBonus != null ? `+${cardRecord.mightBonus}` : null, kind: 'might' as const, symbol: ':rb_might:' }
-		: null,
-	cardRecord.energy != null ? { label: 'Energy', value: cardRecord.energy, note: null, kind: 'energy' as const, symbol: `:rb_energy_${cardRecord.energy}:` } : null,
-	cardRecord.power != null
-		? { label: 'Power', value: cardRecord.power, note: null, kind: 'power' as const, symbol: powerDomain ? `:rb_rune_${powerDomain}:` : null }
-		: null,
-].filter((s): s is { label: string; value: number; note: string | null; kind: 'might' | 'energy' | 'power'; symbol: string | null } => s !== null);
+/** Detail stats: each figure carries the same symbol it has inside card text
+ *  (derived in card-stats.ts, shared with the deck manager's card peek). */
+const stats = cardStats(cardRecord);
 
 const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 ---

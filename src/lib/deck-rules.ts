@@ -13,7 +13,7 @@ import {
 	sectionTotal,
 } from './deck.ts';
 
-interface CardInfo {
+export interface CardInfo {
 	types: string[];
 	superTypes: string[];
 	domains: string[];
@@ -104,6 +104,26 @@ export function isLegalEverywhere(info: CardInfo | undefined): boolean {
 	return info.domains.includes('neutral');
 }
 
+/** How a card sits against a Legend's rune colors (spec: deck-legality domain
+ *  identity). `unclassified` = no domain data at all, which still fails the rule;
+ *  `fits` includes neutral-domain cards; `off` = some domain is outside the Legend's.
+ *  The legality checklist and the card peek both read this one decision. */
+export type DomainVerdict = 'fits' | 'off' | 'unclassified';
+
+export function domainVerdict(info: CardInfo, legendDomains: ReadonlySet<string> | readonly string[]): DomainVerdict {
+	if (info.domains.length === 0) return 'unclassified';
+	if (isLegalEverywhere(info)) return 'fits';
+	const allowed = legendDomains instanceof Set ? legendDomains : new Set(legendDomains);
+	return info.domains.some((d) => !allowed.has(d)) ? 'off' : 'fits';
+}
+
+/** The Legend's champion tag: its first tag that appears on a champion unit anywhere
+ *  in the snapshot, else its first tag. A champion unit must carry this tag. */
+export function legendChampionTag(legendInfo: CardInfo | undefined, championTags: readonly string[]): string | undefined {
+	const known = new Set(championTags);
+	return legendInfo?.tags?.find((tag) => known.has(tag)) ?? legendInfo?.tags?.[0];
+}
+
 const CARD_SECTIONS: SectionKey[] = ['main', 'rune', 'side'];
 
 export function validate(deck: Deck, idx: DeckRuleIndexes): LegalityReport {
@@ -112,8 +132,7 @@ export function validate(deck: Deck, idx: DeckRuleIndexes): LegalityReport {
 
 	const legendInfo = deck.legend.length ? infoOf(deck.legend[0].card) : undefined;
 	const legendDomains = new Set(legendInfo?.domains ?? []);
-	const championTagSet = new Set(idx.championTags);
-	const legendTag = legendInfo?.tags?.find((tag) => championTagSet.has(tag)) ?? legendInfo?.tags?.[0];
+	const legendTag = legendChampionTag(legendInfo, idx.championTags);
 
 	const rules: RuleResult[] = [];
 
@@ -215,13 +234,12 @@ export function validate(deck: Deck, idx: DeckRuleIndexes): LegalityReport {
 			for (const [slug] of slugCount(deck[section])) {
 				const info = infoOf(slug);
 				if (!info) continue; // unknown cards fail the known-cards rule below
-				if (info.domains.length === 0) {
+				const verdict = domainVerdict(info, legendDomains); // neutral domain: legal in every deck
+				if (verdict === 'unclassified') {
 					domainFailures.push(`${nameOf(slug)} (no domain data — unclassifiable)`);
 					continue;
 				}
-				if (isLegalEverywhere(info)) continue; // neutral domain: legal in every deck
-				const illegal = info.domains.some((d) => !legendDomains.has(d));
-				if (illegal) domainFailures.push(nameOf(slug));
+				if (verdict === 'off') domainFailures.push(nameOf(slug));
 			}
 		}
 		rules.push({

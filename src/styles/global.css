@@ -1494,6 +1494,187 @@
 		vertical-align: -0.2em;
 	}
 
+	/* --- card peek -------------------------------------------------------- */
+
+	/* The deck manager's hover card (spec: card-peek). A read-only tooltip beside a
+	 * card face: it takes no pointer input, so clicks and drags pass through it,
+	 * and sits below dialogs (z 50). Tokens only; domain dots are data and arrive
+	 * from the script as --dot. */
+	.card-peek {
+		position: fixed;
+		top: 0;
+		left: 0;
+		z-index: 40;
+		width: min(20rem, calc(100vw - 1rem));
+		max-height: calc(100dvh - 1rem);
+		overflow: hidden;
+		padding: 0.75rem 0.875rem;
+		pointer-events: none;
+		border: 1px solid color-mix(in oklab, var(--color-bark-300) 45%, var(--color-slate-700));
+		border-radius: 0.75rem;
+		background: color-mix(in oklab, var(--color-slate-900) 94%, var(--color-bark-900));
+		box-shadow:
+			0 1px 0 rgb(255 255 255 / 0.04) inset,
+			0 18px 40px -18px rgb(0 0 0 / 0.9);
+		color: var(--color-slate-200);
+		font-size: 0.875rem;
+		line-height: 1.45;
+		opacity: 0;
+		transform: translateY(3px);
+		transition:
+			opacity 140ms ease,
+			transform 140ms ease;
+	}
+
+	.card-peek[data-open="true"] {
+		opacity: 1;
+		transform: none;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.card-peek {
+			transform: none;
+			transition: none;
+		}
+	}
+
+	.peek-facts {
+		display: grid;
+		gap: 0.625rem;
+	}
+
+	.peek-name {
+		font-family: var(--font-display);
+		font-size: 1rem;
+		font-weight: 600;
+		line-height: 1.25;
+		color: var(--color-slate-100);
+		text-wrap: balance;
+	}
+
+	.peek-types {
+		margin-top: 0.125rem;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+		color: var(--color-slate-400);
+	}
+
+	.peek-domains {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem 0.75rem;
+		margin-top: 0.375rem;
+		font-size: 0.75rem;
+		color: var(--color-slate-300);
+	}
+
+	.peek-domains li {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.peek-domains li::before {
+		content: "";
+		width: 0.4375rem;
+		height: 0.4375rem;
+		border-radius: 999px;
+		background: var(--dot, var(--color-slate-500));
+	}
+
+	.peek-stats {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.25rem;
+		border-block: 1px solid var(--color-slate-800);
+		padding-block: 0.5rem;
+	}
+
+	.peek-stats dt {
+		font-size: 0.625rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-slate-500);
+	}
+
+	.peek-stats dd {
+		margin-top: 0.125rem;
+		font-size: 1.125rem;
+		font-weight: 600;
+		line-height: 1;
+		color: var(--color-slate-100);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.peek-stat-value {
+		margin-left: 0.25rem;
+	}
+
+	.peek-stat-note {
+		margin-left: 0.25rem;
+		font-size: 0.75rem;
+		font-weight: 400;
+		color: var(--color-slate-400);
+	}
+
+	.peek-keywords {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.peek-text p + p {
+		margin-top: 0.5rem;
+	}
+
+	/* "In this deck": a status dot per line, the same good / bad / quiet language
+	 * as the legality checklist. Empty until the script fills it. */
+	.peek-fit {
+		display: grid;
+		gap: 0.375rem;
+		margin-top: 0.625rem;
+		border-top: 1px solid var(--color-slate-800);
+		padding-top: 0.625rem;
+		font-size: 0.8125rem;
+		line-height: 1.4;
+	}
+
+	.peek-fit:empty {
+		display: none;
+	}
+
+	.peek-fit li {
+		display: grid;
+		grid-template-columns: 0.4375rem 1fr;
+		align-items: baseline;
+		gap: 0.5rem;
+		color: var(--color-slate-300);
+	}
+
+	.peek-fit li::before {
+		content: "";
+		width: 0.4375rem;
+		height: 0.4375rem;
+		border-radius: 999px;
+		background: var(--color-slate-500);
+	}
+
+	.peek-fit li[data-tone="good"]::before {
+		background: var(--color-emerald-400);
+	}
+
+	.peek-fit li[data-tone="bad"] {
+		color: var(--color-red-300);
+	}
+
+	.peek-fit li[data-tone="bad"]::before {
+		background: var(--color-red-400);
+	}
+
 	/* --- frame ------------------------------------------------------------ */
 
 	/* The working panels' border: a bark rail with a thin lantern hairline just

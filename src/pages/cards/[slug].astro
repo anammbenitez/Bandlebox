@@ -80,19 +80,23 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 
 	<article class="mt-3 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
 		<div class="lg:sticky lg:top-20 lg:self-start">
-			<div class={`relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} mx-auto w-full max-w-[15rem] overflow-hidden rounded-lg border border-slate-800 bg-slate-900 shadow-xl shadow-black/40 sm:max-w-[17rem] lg:mx-0 lg:max-w-none`}>
-				<div class="absolute inset-0 flex items-center justify-center text-xs text-slate-500">no art</div>
-				{hero && (
-					<img
-						src={hero.src}
-						alt={`${card.name} card art${primaryIndex?.setSlug ? ` (${primaryIndex.setSlug})` : ''}`}
-						fetchpriority="high"
-						width={hero.width}
-						height={hero.height}
-						class="absolute inset-0 h-full w-full object-cover"
-						onerror={hero.onerror}
-					/>
-				)}
+			<!-- The stage is the card's own box and never moves; the face inside it leans
+			     away from the mouse (src/scripts/card-tilt.ts, "card tilt" in global.css). -->
+			<div data-tilt="large" class="mx-auto w-full max-w-[15rem] sm:max-w-[17rem] lg:mx-0 lg:max-w-none">
+				<div data-tilt-face class={`relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-900 shadow-xl shadow-black/40`}>
+					<div class="absolute inset-0 flex items-center justify-center text-xs text-slate-500">no art</div>
+					{hero && (
+						<img
+							src={hero.src}
+							alt={`${card.name} card art${primaryIndex?.setSlug ? ` (${primaryIndex.setSlug})` : ''}`}
+							fetchpriority="high"
+							width={hero.width}
+							height={hero.height}
+							class="absolute inset-0 h-full w-full object-cover"
+							onerror={hero.onerror}
+						/>
+					)}
+				</div>
 			</div>
 			{
 				primaryPrint?.publicCode && (
@@ -284,6 +288,7 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 
 <script>
 	import { cameFromBuilder, returnTarget } from '../../lib/deck-return';
+	import '../../scripts/card-tilt';
 
 	// Coming from the deck manager: the back link returns to that deck.
 	const link = document.getElementById('back-link') as HTMLAnchorElement | null;

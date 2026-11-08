@@ -144,6 +144,19 @@ All in `src/styles/global.css` under `@layer components`.
   underline, gold label) and stays pinned while the sheet scrolls under it.
 - **Card tiles** — `.card-tile` (catalog) and `.face` (art-only browser and deck
   rows) with `.face-bar` stepper controls and `.count-chip` copy counts.
+- **Card tilt** — the card art on the catalog grid (`.card-tile-art`), a deck tile
+  (`.dt-face`) and the card page's own art leans away from the mouse like an upright
+  card pressed with a fingertip: the edge nearest the pointer goes back, the far
+  edge comes forward, and the card sinks a little. It is marked in the markup with
+  `data-tilt` (the stage, which never moves, so the card cannot flicker as it leans
+  away from the pointer) around `data-tilt-face` (the art that does). The script
+  (`src/scripts/card-tilt.ts`) only publishes the pointer's place as unitless
+  `--tilt-x` / `--tilt-y` / `--tilt-p`, smoothed per frame (≈90ms follow, ≈150ms
+  release, frame-rate independent); the angle, depth and perspective are tokens
+  in `global.css` under "card tilt" (9° / −9px / 720px on a tile, 6° / −14px /
+  1300px on the card page's large art, `data-tilt="large"`). The transform exists
+  only while a card is moving. The deck manager's own faces, the printing
+  thumbnails and the New-deck tile do not tilt.
 - **Card peek** — `.card-peek`, one `role="group"` element (`#card-peek`) that
   `src/scripts/card-peek.ts` fills and places beside a card face once the pointer
   has rested on it. Non-modal: no backdrop, no focus capture. It is click-through
@@ -183,9 +196,10 @@ All in `src/styles/global.css` under `@layer components`.
 
 Every control has default, hover, focus-visible, active, disabled and, where
 relevant, error. Focus is one language: 2px gold outline, 2px offset. Hover
-motion is 140–180ms; the only entrance/emphasis motion is a 3px tile lift and a
-gold rim, plus the card peek's 140ms fade with the same 3px lift.
-`prefers-reduced-motion` collapses all of it.
+motion is 140–180ms; the emphasis motion is a gold rim and, on card art, the
+tilt toward the pointer (a card is pressed back, never lifted), plus the card
+peek's 140ms fade with a 3px lift. Touch never tilts a card, and
+`prefers-reduced-motion` collapses all of it (the rim stays).
 
 Browser surfaces are themed: selection is a gold wash, scrollbars are thin
 ink-on-ink, carets are gold, numerals are tabular, and the skip link is the

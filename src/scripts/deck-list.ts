@@ -65,7 +65,7 @@ function coverHtml(deck: Deck): string {
 	const art = legend?.imageId ? imgAttrs(legend.imageId, 'tile') : null;
 	return legend && art
 		? `<img src="${esc(art.src)}" alt="Legend art for ${esc(legend.name)}" loading="lazy"` +
-				` class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" onerror="${esc(art.onerror)}">`
+				` class="h-full w-full object-cover" onerror="${esc(art.onerror)}">`
 		: '<span class="absolute inset-0 grid place-items-center px-2 text-center text-[11px] text-slate-500">no legend chosen</span>';
 }
 
@@ -80,10 +80,10 @@ function deckTileHtml(deck: Deck, confirming: boolean): string {
 				<button type="button" data-deck-delete class="tile-action">Delete</button>
 			</span>`;
 	return (
-		`<li data-id="${esc(deck.id)}" data-tile class="dt-item group" title="${esc(deck.name)} · updated ${esc(new Date(deck.updatedAt).toLocaleDateString())}">` +
+		`<li data-id="${esc(deck.id)}" data-tile class="dt-item group" data-tilt title="${esc(deck.name)} · updated ${esc(new Date(deck.updatedAt).toLocaleDateString())}">` +
 		badgeHtml(deck) +
 		actions +
-		`<a href="/decks/build#d/${esc(deck.id)}" aria-label="Open ${esc(deck.name)}" class="dt-face">${coverHtml(deck)}</a>` +
+		`<a href="/decks/build#d/${esc(deck.id)}" aria-label="Open ${esc(deck.name)}" class="dt-face" data-tilt-face>${coverHtml(deck)}</a>` +
 		`<div class="dt-label">` +
 		`<span class="dt-name">${esc(deck.name)}</span>` +
 		`<span class="dt-counts tnum">${esc(cardCount(deck))}</span>` +

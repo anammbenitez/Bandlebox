@@ -63,8 +63,8 @@ export function gridItemHtml(item: GridItemData): string {
 			: '';
 	return (
 		`<li data-slug="${esc(item.slug)}">` +
-		`<a href="/cards/${esc(item.slug)}" class="card-tile group" title="${esc(item.name)}">` +
-		`<div class="card-tile-art">` +
+		`<a href="/cards/${esc(item.slug)}" class="card-tile group" data-tilt title="${esc(item.name)}">` +
+		`<div class="card-tile-art" data-tilt-face>` +
 		`<div class="absolute inset-0 flex items-center justify-center text-xs text-slate-500">no art</div>` +
 		img +
 		`</div>` +

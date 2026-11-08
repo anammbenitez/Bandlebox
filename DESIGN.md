@@ -36,8 +36,9 @@ token, never a raw hex.
 | `bloom` | `#a9cbe8` | the sprig blossom's blue — the only cool colour |
 
 The six Riftbound domains keep their fixed hues (`deck-builder.ts`
-`DOMAIN_COLORS`). They appear only as data: a dot in the domain chip and beside
-the rune-ratio count. Keyword labels (`src/lib/keyword-styles.ts`) follow the
+`DOMAIN_COLORS`). They appear only as data: a dot beside the rune-ratio count
+(the domain filter chips wear OpenRift's emblems instead, which carry their own
+colors). Keyword labels (`src/lib/keyword-styles.ts`) follow the
 same rule. Game symbols render as their own artwork. Nothing decorative borrows
 a domain or keyword hue, and nothing decorative uses `bloom` except a blossom
 inside a sprig.
@@ -152,10 +153,22 @@ All in `src/styles/global.css` under `@layer components`.
   meta line for 1.6s, then the counts return. The **Rename** button stays and only
   moves focus into the field. These cues live in the existing meta line, so the
   bar never grows. A shared deck shows the plain `.deck-name-text` and no Rename.
-- **Pills / chips** — `.pill` with `aria-pressed` carrying the selected state;
-  `.dot` inside a pill is the domain colour. A pill is the default button's plate cut
-  to a chip (same walnut fill and lamp-lit top, quieter at rest); when on it is lit
-  sap, exactly as a pressed toggle button is, with no glow halo.
+- **Pills / chips** — `.pill` with `aria-pressed` carrying the selected state. A pill
+  is the default button's plate cut to a chip (same walnut fill and lamp-lit top,
+  quieter at rest); when on it is lit sap, exactly as a pressed toggle button is, with
+  no glow halo. **Domain chips** are the domain's emblem alone (`.pill-emblem`, 22px,
+  `data-emblem` on the pill, the alt text and `title` naming it): both states keep the
+  emblem's own colour, so a player who does not know the emblems by shape yet can
+  still tell the domains apart by hue; opacity alone says on or off. Selected is fully
+  opaque and a touch more vivid (saturation 1.2), not selected is dimmed hard (40%),
+  and hovering a not-selected chip previews it coming on (75%). The row is read at a
+  glance and not only by the plate. The dark emblems are brightness-lifted
+  (`--emblem-lift`, 1.3; Chaos 1.7) so a selected emblem holds 3:1 or better against
+  the on and hover plates; a not-selected one stays readable but quiet (about 1.7:1
+  at the lowest, Mind, up to 3:1 for Order). A domain with no emblem cached prints its
+  name as a plain text pill. Colorless is not
+  a filter: it has no chip, and a Colorless card is never hidden by a chip set (as a
+  Neutral card is not).
 - **Panels / sections** — `.panel` + `.panel-head`; section names in the
   display face.
 - **Deck sheet** — `.sheet` frames the viewer. `.sheet-ledger` holds five
@@ -224,9 +237,9 @@ All in `src/styles/global.css` under `@layer components`.
   put every line in the same place and only the description (last) can be
   absent. The width is set so the longest card name and its corner emblems still hold one line. A domain is its
   emblem alone (28px, OpenRift's own artwork, which carries its own colors),
-  named by its alt text; no hue of the interface stands for a domain here, so the dots in the
-  filter chips and rune counters are the only domain dots left in the deck
-  manager. The description is the printed text only; keywords show as the
+  named by its alt text; no hue of the interface stands for a domain here (the filter chips
+  use the same emblems), so the rune counters' dots are the only domain dots left in the
+  deck manager. The description is the printed text only; keywords show as the
   `.kw` labels the text prints, never as a row of their own. A banned card
   carries a small red-outlined "Banned in Constructed" marker beside its type
   line; nothing else about the deck (colors vs the Legend, copies held, limits)

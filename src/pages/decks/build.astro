@@ -12,11 +12,17 @@ import { SECTION_KEYS, SECTION_LABELS, sectionTarget } from '../../lib/deck';
 import { buildDeckRuleIndexes } from '../../lib/deck-rules';
 import { buildGridPayload, escapedJson } from '../../lib/grid-payload';
 import { index, snapshot } from '../../lib/catalog';
+import { glyphUrl } from '../../lib/glyphs';
 
 const ruleIndexes = escapedJson(buildDeckRuleIndexes(snapshot, index));
 const cardPayload = escapedJson(buildGridPayload());
+// Each domain carries OpenRift's emblem when the refresh cached one (the filter
+// chips are the emblem alone); a domain without one is printed as its name.
 const domainPayload = escapedJson(
-	(snapshot.enums?.domains ?? []) as Array<{ slug: string; label?: string }>,
+	((snapshot.enums?.domains ?? []) as Array<{ slug: string; label?: string }>).map((domain) => ({
+		...domain,
+		icon: glyphUrl(`domain_${domain.slug}`) ?? null,
+	})),
 );
 ---
 

@@ -43,6 +43,8 @@ interface GridEntry {
 interface DomainEntry {
 	slug: string;
 	label?: string;
+	/** OpenRift's emblem for the domain, or null when the refresh did not cache one. */
+	icon?: string | null;
 }
 
 const readJson = <T,>(id: string): T => JSON.parse(document.getElementById(id)?.textContent ?? 'null') as T;
@@ -99,6 +101,11 @@ let deck: Deck | null = null;
 let shared = false;
 let activeSection: SectionKey = 'main';
 const selectedDomains = new Set<string>();
+
+/** Domains that are not something to filter by: a Colorless card has no color
+ *  to match, so it has no chip and a chip set never hides it (the way a Neutral
+ *  card is never hidden either). */
+const NOT_A_FILTER: ReadonlySet<string> = new Set(['colorless']);
 
 /** Riftbound domain palette (fury red, chaos purple, mind blue, calm green,
  *  body orange, order yellow) — the rune ratio inputs carry their color as
@@ -213,7 +220,7 @@ function bootDeck(): void {
 	renderHint();
 	// domain chips seed from the Legend's colors (once per opened deck)
 	selectedDomains.clear();
-	for (const domain of legendDomains() ?? []) selectedDomains.add(domain);
+	for (const domain of legendDomains() ?? []) if (!NOT_A_FILTER.has(domain)) selectedDomains.add(domain);
 	renderUnknownWarning();
 	seedDefaultRunes();
 	renderDomains();
@@ -704,7 +711,7 @@ const matches = (entry: GridEntry, f: ReturnType<typeof readFilters>) => {
 		const info = idx.cards[entry.slug];
 		if (!info) return false; // unknown cards fail the checker anyway
 		// neutral-domain (generic) cards stay visible under any chip set
-		if (!isLegalEverywhere(info) && !info.domains.every((d) => selectedDomains.has(d))) return false;
+		if (!isLegalEverywhere(info) && !info.domains.every((d) => NOT_A_FILTER.has(d) || selectedDomains.has(d))) return false;
 	}
 	return true;
 };
@@ -864,19 +871,23 @@ pillsEl.addEventListener('click', (event) => {
 /* --- domain chips: legend colors preselected (spec: domain filter) --- */
 
 function renderDomains(): void {
-	if (domains.length === 0) {
+	const filterable = domains.filter((d) => !NOT_A_FILTER.has(d.slug));
+	if (filterable.length === 0) {
 		domainsEl.hidden = true;
 		return;
 	}
+	// A chip is the domain's emblem alone (its alt text names it); a domain with
+	// no emblem cached is printed as its name instead.
 	domainsEl.innerHTML =
 		`<span class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">Domains</span>` +
-		domains
+		filterable
 			.map((d) => {
 				const label = d.label ?? d.slug;
-				const color = DOMAIN_COLORS[d.slug] ?? '#98a3af';
+				const face = d.icon
+					? `<img class="pill-emblem" src="${esc(d.icon)}" alt="${esc(label)}" width="22" height="22" decoding="async">`
+					: esc(label);
 				return `<button type="button" data-domain="${esc(d.slug)}" aria-pressed="${selectedDomains.has(d.slug)}"` +
-					` class="pill" style="--dot:${esc(color)}" title="${esc(label)} cards">` +
-					`<i class="dot"></i>${esc(label)}</button>`;
+					` class="pill"${d.icon ? ' data-emblem' : ''} title="${esc(label)} cards">${face}</button>`;
 			})
 			.join('');
 }

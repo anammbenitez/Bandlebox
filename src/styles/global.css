@@ -809,6 +809,54 @@
 		background: var(--dot, currentColor);
 	}
 
+	/* A domain chip is OpenRift's emblem alone (its artwork carries its own
+	 * colors, so no hue is set here, and the alt text names it). Both states keep
+	 * the emblem's own colour, so a player who does not know the emblems by shape
+	 * can still read which domain is which; opacity alone says on or off: selected
+	 * is fully opaque and a touch more vivid, not selected is dimmed to 40%, so the
+	 * row is told apart at a glance and not only by the plate. Several emblems are
+	 * dark hues on a dark plate, so each is lifted (1.3; Chaos, the darkest purple,
+	 * 1.7), which holds every selected emblem at 3:1 or better on the on and hover
+	 * plates (measured on each emblem's median pixel). A lift brightens; it never
+	 * changes which hue it is. A domain with no emblem cached stays a plain text
+	 * pill. */
+	.pill[data-emblem] {
+		padding-inline: 0.5rem;
+	}
+
+	.pill-emblem {
+		width: 1.375rem;
+		height: 1.375rem;
+		flex: none;
+		object-fit: contain;
+		/* one filter list for every state, so the change between them animates */
+		filter: saturate(var(--emblem-sat, 1)) brightness(var(--emblem-lift, 1.3));
+		transition:
+			opacity 160ms cubic-bezier(0.25, 1, 0.5, 1),
+			filter 160ms cubic-bezier(0.25, 1, 0.5, 1);
+	}
+
+	/* selected: full colour, a touch more vivid than the artwork */
+	.pill[aria-pressed="true"] .pill-emblem {
+		--emblem-sat: 1.2;
+	}
+
+	/* not selected: the same emblem in its own colour, dimmed hard. Keeping the colour
+	 * is for the player who does not know the emblems by shape yet: the hue still
+	 * says which domain it is, and only the opacity says it is off. */
+	.pill[aria-pressed="false"] .pill-emblem {
+		opacity: 0.4;
+	}
+
+	/* hovering a not-selected chip previews it coming on */
+	.pill[aria-pressed="false"]:hover .pill-emblem {
+		opacity: 0.75;
+	}
+
+	.pill[data-domain="chaos"] {
+		--emblem-lift: 1.7;
+	}
+
 	.tag {
 		display: inline-flex;
 		align-items: center;

@@ -83,7 +83,7 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 			<!-- The stage is the card's own box and never moves; the face inside it leans
 			     away from the mouse (src/scripts/card-tilt.ts, "card tilt" in global.css). -->
 			<div data-tilt="large" class="mx-auto w-full max-w-[15rem] sm:max-w-[17rem] lg:mx-0 lg:max-w-none">
-				<div data-tilt-face class={`relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-900 shadow-xl shadow-black/40`}>
+				<div data-tilt-face data-landscape={rotateArt ? '' : undefined} class={`card-corner relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full overflow-hidden bg-slate-900`}>
 					<div class="absolute inset-0 flex items-center justify-center text-xs text-slate-500">no art</div>
 					{hero && (
 						<img
@@ -225,7 +225,7 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 								return (
 									<li class={`grid gap-3 p-3 ${rotateArt ? 'sm:grid-cols-[120px_1fr]' : 'sm:grid-cols-[84px_1fr]'}`}>
 										{thumb ? (
-											<div class={`relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full overflow-hidden rounded bg-slate-800`}>
+											<div data-landscape={rotateArt ? '' : undefined} class={`card-corner relative ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full overflow-hidden bg-slate-900`}>
 												<img
 													src={thumb.src}
 													alt={`${card.name} card art — ${printing.publicCode ?? printing.shortCode ?? set.slug}`}
@@ -237,7 +237,7 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 												/>
 											</div>
 										) : (
-											<div class={`flex ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full items-center justify-center rounded bg-slate-800 text-[10px] text-slate-500`}>no art</div>
+											<div data-landscape={rotateArt ? '' : undefined} class={`card-corner flex ${rotateArt ? 'aspect-[7/5]' : 'aspect-[5/7]'} w-full items-center justify-center bg-slate-900 text-[10px] text-slate-500`}>no art</div>
 										)}
 										<div class="min-w-0 text-sm">
 											<div class="flex flex-wrap items-center gap-x-2 gap-y-1">

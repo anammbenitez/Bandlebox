@@ -23,6 +23,16 @@ export const DECK_RULES = {
 
 export const DECK_SCHEMA_VERSION = 1;
 
+/** Longest deck name the editor saves; the creation modal's `maxlength` is the
+ *  same number (spec: deck names stay valid when renamed). */
+export const DECK_NAME_MAX = 80;
+
+/** A deck name as it is saved: trimmed and clamped to `DECK_NAME_MAX`.
+ *  Blank input gives '' — callers treat that as "keep the old name". */
+export function cleanDeckName(raw: string): string {
+	return raw.trim().slice(0, DECK_NAME_MAX).trimEnd();
+}
+
 /** One section of a deck: distinct cards with their copy counts. */
 export interface DeckSlot {
 	/** Index card slug (the site's stable card address everywhere else). */

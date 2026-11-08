@@ -519,4 +519,18 @@ const CHAMPION = CHAMPION_SLUG;
 	);
 }
 
+/* --- deck name rules (spec: deck names stay valid when renamed) ---------------- */
+
+{
+	const { cleanDeckName, DECK_NAME_MAX } = deckMod;
+	assert.equal(DECK_NAME_MAX, 80, 'same limit as the creation modal');
+	assert.equal(cleanDeckName('  Poro Swarm  '), 'Poro Swarm', 'surrounding whitespace is trimmed');
+	assert.equal(cleanDeckName('Poro  Swarm'), 'Poro  Swarm', 'inner spaces are kept');
+	assert.equal(cleanDeckName(''), '', 'empty stays empty');
+	assert.equal(cleanDeckName(' \t\n '), '', 'whitespace-only is blank');
+	assert.equal(cleanDeckName('a'.repeat(80)), 'a'.repeat(80), '80 characters are kept');
+	assert.equal(cleanDeckName('a'.repeat(81)), 'a'.repeat(80), '81 characters are clamped');
+	assert.equal(cleanDeckName('a'.repeat(79) + ' b'), 'a'.repeat(79), 'a clamp that ends on a space is trimmed');
+}
+
 console.log('VERIFY OK: deck-core');

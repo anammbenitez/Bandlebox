@@ -135,6 +135,18 @@ All in `src/styles/global.css` under `@layer components`.
   are 600 weight, and at least 8:1 against their fill in every role.
 - **Fields** — `.field` for input and select; drawn chevron, gold border and
   soft ring on focus, amber caret.
+- **Deck title** — on the deck manager the title is a field that looks like a
+  title: `.deck-name-input` inside the `<h1>`, same 24/600 display face, no box at
+  rest, but a generous click zone (about 46px high, at least 12rem wide and
+  reaching 3.5rem past the end of the name, its left edge on the panels' edge and
+  the name inset to line up with the panel content;
+  the meta line takes the same inset, and the bar keeps its height). Hover gives a 7% wash, a text cursor and `title="Rename deck"`; editing
+  gives the one gold focus ring, selects the whole name, and the meta line reads
+  "Enter to save · Esc to cancel". Enter or leaving the field saves (Escape
+  cancels; blank or unchanged keeps the old name); a save shows "Saved ✓" in the
+  meta line for 1.6s, then the counts return. The **Rename** button stays and only
+  moves focus into the field. These cues live in the existing meta line, so the
+  bar never grows. A shared deck shows the plain `.deck-name-text` and no Rename.
 - **Pills / chips** — `.pill` with `aria-pressed` carrying the selected state;
   `.dot` inside a pill is the domain colour.
 - **Panels / sections** — `.panel` + `.panel-head`; section names in the
@@ -144,6 +156,33 @@ All in `src/styles/global.css` under `@layer components`.
   underline, gold label) and stays pinned while the sheet scrolls under it.
 - **Card tiles** — `.card-tile` (catalog) and `.face` (art-only browser and deck
   rows) with `.face-bar` stepper controls and `.count-chip` copy counts.
+- **One card look** — a card is its art and nothing else: no border, no plate, no
+  inner ring and no shadow of its own, because the printed card already has its
+  frame, and the same on the catalog grid, a deck tile, the card page, the Legend
+  picker and every face in the deck manager. Only three things are shared and may
+  touch it (tokens in `global.css`): `--card-ring`, a gold ring outside the edge for
+  hover and selection (selection is the same ring at full strength); `--card-halo`,
+  a dark text edge that keeps a bare word readable over any art, used for the
+  Legend and Champion copy count (`.card-badge`), so it needs no plate; and
+  `--card-foot-fade`, a
+  dark fade rising from a card's foot behind its - count + row (`.face-bar`) and a
+  picker card's name. The only plates left on a card are the deck tile's pills, one
+  shape for both: the Legal / Not legal verdict (`.deck-badge`, top-right) and the
+  Rename / Delete / Keep actions (`.tile-action`, top-left, on hover; the delete
+  confirmation is the red-tinted pill). Whatever else a tile has is text beneath the art
+  (name, rarity and type, set code, counts). The New-deck tile is the one thing
+  that keeps an edge (dashed), since it is a place for a card, not a card.
+- **Card corner** — OpenRift's card images are cut to the printed card, so the art
+  carries transparent rounded corners of 4.76% of the card's width (a 3mm corner
+  on a 63mm card, measured on the 744px image). Whatever holds card art clips to
+  that same curve, or its own corner shows as a dark wedge behind the art's. A
+  rem radius only fits one size, so the radius is a percentage of the container,
+  which is always the card's shape: `--card-corner` (`4.76% / 3.4%`, portrait) and
+  `--card-corner-landscape` (the pair swapped, for a battlefield shown lying down)
+  in `global.css`. `.card-tile-art`, `.face`, `.legend-pick` and `.dt-face` use it
+  already; anything else that holds card art takes `.card-corner`, plus
+  `data-landscape` when the card lies on its side. Never `rounded-*` or a rem
+  radius on card art.
 - **Card tilt** — the card art on the catalog grid (`.card-tile-art`), a deck tile
   (`.dt-face`) and the card page's own art leans away from the mouse like an upright
   card pressed with a fingertip: the edge nearest the pointer goes back, the far

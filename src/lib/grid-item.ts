@@ -70,7 +70,7 @@ export function gridItemHtml(item: GridItemData): string {
 		`</div>` +
 		`<div class="card-tile-name truncate">${esc(item.name)}</div>` +
 		`<div class="card-tile-meta"><span class="truncate">${esc(item.meta)}</span>` +
-		`<span class="tag">${esc(setBadge || '—')}</span></div>` +
+		`<span class="card-tile-set">${esc(setBadge || '—')}</span></div>` +
 		`</a></li>`
 	);
 }

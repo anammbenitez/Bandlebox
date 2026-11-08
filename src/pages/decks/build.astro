@@ -26,7 +26,26 @@ const domainPayload = escapedJson(
 	     is simply the shell's first row and stays on screen by construction. -->
 	<header class="deck-bar">
 		<div class="min-w-0">
-			<h1 id="deck-name" class="deck-title truncate">Deck</h1>
+			<!-- Deck title (spec: deck title is edited in place). One heading, two
+			     faces: the text span is what a shared or missing deck shows; the
+			     field is what an owned deck shows. setTitleEditable() in
+			     deck-builder.ts shows exactly one. The field sits in a grid with a
+			     mirror of its value (data-value) so it is as wide as its text. -->
+			<h1 id="deck-name" class="deck-title min-w-0">
+				<span id="deck-name-text" class="deck-name-text block truncate">Deck</span>
+				<span id="deck-name-field" class="deck-name-field" data-value="" hidden>
+					<input
+						id="deck-name-input"
+						class="deck-name-input"
+						type="text"
+						aria-label="Deck name"
+						title="Rename deck"
+						maxlength="80"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+				</span>
+			</h1>
 			<p id="deck-meta" class="deck-meta">0 cards</p>
 		</div>
 		<div id="deck-actions" hidden class="flex flex-wrap items-center gap-1.5">

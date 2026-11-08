@@ -11,6 +11,7 @@
 import { imgAttrs } from '../lib/card-image';
 import { GRID_STEP, type GridArt } from '../lib/grid-item';
 import {
+	cleanDeckName,
 	DECK_RULES,
 	qtyOf,
 	type Deck,
@@ -54,7 +55,9 @@ const searchable = cards.map((entry) => ({ entry, text: entry.text.toLowerCase()
 
 // --- element handles --------------------------------------------------------
 
-const nameEl = document.getElementById('deck-name')!;
+const nameTextEl = document.getElementById('deck-name-text')!;
+const nameFieldEl = document.getElementById('deck-name-field')!;
+const nameInput = document.getElementById('deck-name-input') as HTMLInputElement;
 const metaEl = document.getElementById('deck-meta')!;
 const verdictEl = document.getElementById('deck-verdict')!;
 const renameBtn = document.getElementById('deck-rename') as HTMLButtonElement;
@@ -165,7 +168,8 @@ function loadDeckFromHash(): void {
 		bootDeck();
 		return;
 	}
-	nameEl.textContent = 'Deck manager';
+	showTitle('Deck manager');
+	setTitleEditable(false);
 	metaEl.textContent =
 		'Open a deck from your deck list, or create one there first — decks always live in your browser.';
 	const noneEl = document.getElementById('deck-none');
@@ -194,11 +198,12 @@ function seedDefaultRunes(): void {
 }
 
 function bootDeck(): void {
-	nameEl.textContent = deck?.name || 'Deck';
+	showTitle(deck?.name || 'Deck');
 	actionsEl.hidden = false;
 	shareBtn.hidden = shared;
-	// a shared deck is read-only: rename would silently do nothing
-	renameBtn.hidden = shared;
+	// a shared deck is read-only: a title that looked editable would silently
+	// do nothing, so it is plain text there and Rename is hidden with it
+	setTitleEditable(!shared);
 	saveSharedBtn.hidden = !shared;
 	const warning = shared ? null : takeStorageProblem();
 	if (warning && storageWarnEl) {
@@ -391,9 +396,9 @@ function cardHref(slug: string): string {
  *  legend face). The legend is replaced by placing another legend, as before. */
 function legendCardHtml(section: SectionKey, slug: string, qty: number, name: string): string {
 	return (
-		`<li data-slug="${esc(slug)}" class="face relative aspect-[5/7] w-full max-w-44 border-amber-400/50 shadow-lg shadow-black/50">` +
+		`<li data-slug="${esc(slug)}" class="face relative aspect-[5/7] w-full max-w-44">` +
 		`<a href="${esc(cardHref(slug))}" aria-label="${esc(name)}" class="absolute inset-0">${thumbHtml(slug)}</a>` +
-		`<div title="Legend copies" class="absolute right-1.5 top-1.5 grid h-6 min-w-6 place-items-center rounded border border-slate-800 bg-slate-950/90 px-1 text-[11px] font-semibold text-amber-300 tnum">L${qty}</div>` +
+		`<div title="Legend copies" class="card-badge">L${qty}</div>` +
 		`</li>`
 	);
 }
@@ -412,7 +417,7 @@ function rowHtml(section: SectionKey, slug: string, qty: number): string {
 			: `<span class="absolute inset-0 grid place-items-center text-[10px] text-slate-500">no art</span>`;
 		return (
 			`<li data-slug="${esc(slug)}"` +
-			` class="face relative aspect-[7/5] min-w-[9rem] flex-1 basis-[calc(33.333%-0.375rem)]">` +
+			` data-landscape class="face relative aspect-[7/5] min-w-[9rem] flex-1 basis-[calc(33.333%-0.375rem)]">` +
 			`<span class="sr-only">${esc(name)}</span>` +
 			`<span class="absolute inset-0">${art}</span>` +
 			(shared
@@ -741,7 +746,7 @@ function entryHtml(entry: GridEntry): string {
 	return (
 		`<li data-slug="${esc(entry.slug)}"` +
 		(shared ? '' : ' draggable="true"') +
-		` class="face group relative aspect-[5/7] cursor-pointer hover:border-amber-400/50">` +
+		` class="face group relative aspect-[5/7] cursor-pointer">` +
 		`<a href="${esc(cardHref(entry.slug))}" aria-label="${esc(entry.name)}" class="absolute inset-0">${thumbHtml(entry.slug)}</a>` +
 		`<div class="face-bar">${chipControls}</div>` +
 		`</li>`
@@ -1138,8 +1143,8 @@ function renderChampion(): void {
 	if (!slug || !championZoneVerdict(slug)) {
 		championCountEl.textContent = `0 / ≤ ${CHAMPION_CHIP_CAP}`;
 		championFaceEl.innerHTML = shared
-			? `<div class="flex aspect-[5/7] w-full max-w-32 items-center justify-center rounded-md border border-dashed border-slate-800 bg-slate-900/40 px-2 text-center text-[10px] leading-tight text-slate-500">no champion picked</div>`
-			: `<div class="flex aspect-[5/7] w-full max-w-32 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed ${championPicking ? 'border-amber-400/70' : 'border-slate-700'} bg-slate-900/40 px-2 text-center text-slate-500">` +
+			? `<div class="card-corner flex aspect-[5/7] w-full max-w-32 items-center justify-center border border-dashed border-slate-800 bg-slate-900/40 px-2 text-center text-[10px] leading-tight text-slate-500">no champion picked</div>`
+			: `<div class="card-corner flex aspect-[5/7] w-full max-w-32 flex-col items-center justify-center gap-1.5 border border-dashed ${championPicking ? 'border-amber-400/70' : 'border-slate-700'} bg-slate-900/40 px-2 text-center text-slate-500">` +
 				`<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>` +
 				`<span class="text-[10px] leading-tight">champion unit of the legend's tag</span>` +
 				`</div>`;
@@ -1149,9 +1154,9 @@ function renderChampion(): void {
 	const cap = Math.min(CHAMPION_CHIP_CAP, copyLimit(slug));
 	championCountEl.textContent = `${qty} / ${cap}`;
 	championFaceEl.innerHTML =
-		`<div data-slug="${esc(slug)}" class="face relative aspect-[5/7] w-full max-w-32 border-amber-400/50 shadow-lg shadow-black/50">` +
+		`<div data-slug="${esc(slug)}" class="face relative aspect-[5/7] w-full max-w-32">` +
 		`<a href="/cards/${esc(slug)}" aria-label="${esc(idx.names[slug] ?? slug)}" class="absolute inset-0">${thumbHtml(slug)}</a>` +
-		`<div title="Champion copies in the main deck" class="absolute right-1.5 top-1.5 grid h-6 min-w-6 place-items-center rounded border border-slate-800 bg-slate-950/90 px-1 text-[11px] font-semibold text-amber-300 tnum">C${qty}</div>` +
+		`<div title="Champion copies in the main deck" class="card-badge">C${qty}</div>` +
 		(shared
 			? `<div class="face-bar justify-center"><span class="count-chip">× ${qty} copies</span></div>`
 			: `<div class="face-bar">` +
@@ -1237,14 +1242,83 @@ for (const trigger of Array.from(document.querySelectorAll<HTMLElement>('[data-s
 	});
 }
 
-renameBtn.addEventListener('click', () => {	if (!deck || shared) return;
-	const next = window.prompt('Rename deck', deck.name)?.trim();
-	if (next) {
-		mutate((d) => {
-			d.name = next;
-		});
-		nameEl.textContent = next;
+// --- deck title (spec: deck title is edited in place) -------------------------
+// One editing state with two doors: click the title, or press Rename. Enter and
+// leaving the field both end in blur, and blur is the only commit, so there is
+// one path. A rename changes the name alone: it never goes through mutate(),
+// whose re-render would replace the very button the user is pressing to leave
+// the field (blur fires on mousedown, before the click).
+
+const TITLE_HINT = 'Enter to save · Esc to cancel';
+const TITLE_SAVED_MS = 1600;
+let titleCancelled = false;
+let titleTimer = 0;
+
+/** Shows a name in both faces of the title (the text and the field). */
+function showTitle(name: string): void {
+	nameTextEl.textContent = name;
+	nameInput.value = name;
+	nameFieldEl.dataset.value = name;
+}
+
+/** An owned deck shows the field and Rename; a shared deck or no deck shows
+ *  plain text and neither (spec: shared decks keep a read-only title). */
+function setTitleEditable(editable: boolean): void {
+	nameTextEl.hidden = editable;
+	nameFieldEl.hidden = !editable;
+	renameBtn.hidden = !editable;
+}
+
+function commitTitle(): void {
+	const cancelled = titleCancelled;
+	titleCancelled = false;
+	if (!deck || shared) return;
+	window.clearTimeout(titleTimer);
+	const next = cancelled ? '' : cleanDeckName(nameInput.value);
+	if (next === '' || next === deck.name) {
+		// cancelled, blank or unchanged: the stored name comes back, nothing is saved
+		showTitle(deck.name || 'Deck');
+		renderCounts();
+		return;
 	}
+	deck.name = next;
+	deck = saveDeck(deck);
+	showTitle(deck.name);
+	announceRefusal(`Deck renamed to ${deck.name}`);
+	metaEl.textContent = 'Saved ✓';
+	// back to the counts as they are then, not as they were
+	titleTimer = window.setTimeout(renderCounts, TITLE_SAVED_MS);
+}
+
+nameInput.addEventListener('focus', () => {
+	if (!deck || shared) return;
+	window.clearTimeout(titleTimer);
+	titleCancelled = false;
+	metaEl.textContent = TITLE_HINT;
+});
+
+nameInput.addEventListener('input', () => {
+	nameFieldEl.dataset.value = nameInput.value;
+});
+
+nameInput.addEventListener('keydown', (event) => {
+	if (event.isComposing) return; // an IME's Enter confirms the composition
+	if (event.key === 'Enter') {
+		event.preventDefault();
+		nameInput.blur();
+	} else if (event.key === 'Escape') {
+		event.preventDefault();
+		titleCancelled = true;
+		nameInput.blur();
+	}
+});
+
+nameInput.addEventListener('blur', commitTitle);
+
+renameBtn.addEventListener('click', () => {
+	if (!deck || shared) return;
+	nameInput.focus();
+	nameInput.select();
 });
 
 shareBtn.addEventListener('click', async () => {
@@ -1268,9 +1342,9 @@ saveSharedBtn.addEventListener('click', () => {
 	deck = adopted;
 	shared = false;
 	history.replaceState(null, '', `/decks/build#d/${deck.id}`);
-	nameEl.textContent = deck.name;
+	showTitle(deck.name);
+	setTitleEditable(true);
 	shareBtn.hidden = false;
-	renameBtn.hidden = false;
 	saveSharedBtn.hidden = true;
 	renderUnknownWarning();
 	renderRatio();

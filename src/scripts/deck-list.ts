@@ -75,7 +75,7 @@ function deckTileHtml(deck: Deck, confirming: boolean): string {
 				<button type="button" data-deck-confirm class="tile-action" data-variant="danger">Delete — sure?</button>
 				<button type="button" data-deck-cancel class="tile-action">Keep</button>
 			</span>`
-		: `<span class="absolute top-1.5 left-1.5 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+		: `<span class="absolute top-1.5 left-1.5 z-10 flex max-w-[calc(100%-5.5rem)] flex-wrap gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
 				<button type="button" data-deck-rename class="tile-action">Rename</button>
 				<button type="button" data-deck-delete class="tile-action">Delete</button>
 			</span>`;

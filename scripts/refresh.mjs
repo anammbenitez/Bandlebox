@@ -13,7 +13,7 @@
 // Card text and images in the snapshot are Riot Games / OpenRift content:
 // used locally, never mirrored to other places or hosted publicly.
 
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -46,12 +46,26 @@ const GLYPH_NAMES = [
 ];
 const GLYPH_BASE_PATH = '/images/glyphs/';
 
+// The domain emblems OpenRift draws for a card's domains, including the two with
+// no rune (neutral, colorless). They live on a separate path from the glyphs and
+// are not all one format (most are WebP, colorless is an SVG), so each is tried
+// in that order and cached as domain-{slug}.{ext}. The card peek shows these in
+// place of a color dot.
+const DOMAIN_SLUGS = ['fury', 'calm', 'mind', 'body', 'chaos', 'order', 'neutral', 'colorless'];
+const DOMAIN_BASE_PATH = '/images/domains/';
+const DOMAIN_EXTENSIONS = ['webp', 'svg'];
+// OpenRift draws the colorless emblem in `currentColor`, which an <img> reads as
+// black: invisible on this interface. Pin it to the quiet ink tone (slate-400).
+const CURRENTCOLOR_INK = '#b6a98f';
+
 const GLYPH_NOTICE = `# Cached card symbols
 
-These SVG files are the Riftbound game symbols used inside card text (might,
-exhaust, the six domain runes, and the rainbow rune). \`npm run refresh\`
-downloads them from OpenRift's glyph paths:
+These files are the Riftbound game symbols used inside card text (might,
+exhaust, the six domain runes, and the rainbow rune), plus the domain emblems
+(domain-{slug}.webp, or .svg for colorless) the card peek shows for a card's
+domains. \`npm run refresh\` downloads them from OpenRift's glyph and domain paths:
 https://openrift.app/images/glyphs/{name}.svg
+https://openrift.app/images/domains/{slug}.webp
 
 The artwork belongs to Riot Games, and OpenRift cannot grant rights to it.
 This directory is a local cache used to render card text offline. It is
@@ -122,8 +136,57 @@ async function syncGlyphs() {
 		}
 	}
 
+	for (const slug of DOMAIN_SLUGS) {
+		try {
+			await cacheDomainIcon(slug);
+		} catch (err) {
+			failed.push(`domain-${slug} (${err instanceof Error ? err.message : String(err)})`);
+		}
+	}
+
 	await writeAtomic(path.join(GLYPH_DIR, 'NOTICE.md'), GLYPH_NOTICE);
-	return { total: GLYPH_NAMES.length, failed };
+	return { total: GLYPH_NAMES.length + DOMAIN_SLUGS.length, failed };
+}
+
+/** True when the bytes are a WebP file (RIFF container, "WEBP" at offset 8). */
+function isWebp(bytes) {
+	return bytes.length > 12 && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+}
+
+/**
+ * Cache one domain emblem as data/glyphs/domain-{slug}.{ext}, trying each
+ * extension OpenRift is known to use. The previous copy is kept if every
+ * attempt fails; a copy under the other extension is dropped on success so the
+ * file name stays unambiguous.
+ */
+async function cacheDomainIcon(slug) {
+	const reasons = [];
+	for (const ext of DOMAIN_EXTENSIONS) {
+		try {
+			const response = await fetch(`${BASE_URL}${DOMAIN_BASE_PATH}${slug}.${ext}`, {
+				headers: { 'User-Agent': USER_AGENT, Accept: ext === 'svg' ? 'image/svg+xml' : 'image/webp' },
+				redirect: 'follow',
+				signal: AbortSignal.timeout(TIMEOUT_MS),
+			});
+			if (response.status !== 200) throw new Error(`HTTP ${response.status}`);
+			let body = Buffer.from(await response.arrayBuffer());
+			if (ext === 'svg') {
+				const text = body.toString('utf8');
+				if (!text.includes('<svg')) throw new Error('response is not an SVG');
+				body = Buffer.from(text.replaceAll('currentColor', CURRENTCOLOR_INK), 'utf8');
+			} else if (!isWebp(body)) {
+				throw new Error('response is not a WebP image');
+			}
+			await writeAtomic(path.join(GLYPH_DIR, `domain-${slug}.${ext}`), body);
+			for (const other of DOMAIN_EXTENSIONS.filter((candidate) => candidate !== ext)) {
+				await rm(path.join(GLYPH_DIR, `domain-${slug}.${other}`), { force: true });
+			}
+			return;
+		} catch (err) {
+			reasons.push(`${ext}: ${err instanceof Error ? err.message : String(err)}`);
+		}
+	}
+	throw new Error(reasons.join('; '));
 }
 
 /** @param {{total: number, failed: string[]}} result */

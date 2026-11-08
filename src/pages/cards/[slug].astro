@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import CardText from '../../components/CardText.astro';
 import { imgAttrs } from '../../lib/card-image';
 import { cardStats } from '../../lib/card-stats';
-import { renderCardTextHtml, renderKeywordHtml } from '../../lib/card-text';
+import { renderCardTextHtml } from '../../lib/card-text';
 import { glyphUrl } from '../../lib/glyphs';
 import { keywordChipStyle } from '../../lib/keyword-styles';
 import {
@@ -11,6 +11,7 @@ import {
 	channelLabels,
 	domainLabels,
 	enumLabel,
+	errataOf,
 	index,
 	isBattlefield,
 	markerLabels,
@@ -32,6 +33,7 @@ interface Props {
 const { card } = Astro.props;
 
 const cardRecord = snapshot.cards[card.cardId];
+const errata = errataOf(cardRecord);
 const primaryIndex = representativePrinting(card);
 const primaryPrint = primaryIndex ? snapshot.printings[primaryIndex.printingId] : undefined;
 const rotateArt = isBattlefield(card);
@@ -64,12 +66,15 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 ---
 
 <Base title={`${card.name} — BandleBox`}>
+	<!-- Back link. By default it goes to the card grid. When the deck manager sent the
+	     reader here (its links carry ?from=<the deck's address>) the script below
+	     turns it into "Back to deck", so the way back is the deck being built. -->
 	<p class="text-xs">
-		<a class="inline-flex items-center gap-1 text-slate-400 transition-colors hover:text-amber-300" href="/">
+		<a id="back-link" class="inline-flex items-center gap-1 text-slate-400 transition-colors hover:text-amber-300" href="/">
 			<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
 				<path d="M7.5 2.5 4 6l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
 			</svg>
-			All cards
+			<span id="back-label">All cards</span>
 		</a>
 	</p>
 
@@ -132,15 +137,6 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 			)}
 
 			{
-				(cardRecord.keywords ?? []).length > 0 && (
-					<div
-						class="mt-4 flex flex-wrap items-center gap-1.5 text-sm"
-						set:html={(cardRecord.keywords ?? []).map((k) => renderKeywordHtml(k, options)).join('')}
-					/>
-				)
-			}
-
-			{
 				cardRecord.maxCopiesOverride != null && (
 					<div class="callout mt-4" data-tone="warning">
 						Deck limit override: {cardRecord.maxCopiesOverride} copies
@@ -149,14 +145,14 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 			}
 
 			{
-				cardRecord.errata && (
+				errata && (
 					<div class="callout mt-4 border-sky-400/30 bg-sky-400/5 text-sky-100">
-						<strong class="font-semibold">Errata</strong>{cardRecord.errata.effectiveDate && <span class="text-sky-200/70"> · effective {cardRecord.errata.effectiveDate}</span>}
+						<strong class="font-semibold">Errata</strong>{errata.effectiveDate && <span class="text-sky-200/70"> · effective {errata.effectiveDate}</span>}
 						<p class="mt-1">
-							<CardText text={cardRecord.errata.correctedRulesText ?? cardRecord.errata.correctedEffectText ?? ''} />
+							<CardText text={errata.correctedRulesText ?? errata.correctedEffectText ?? ''} />
 						</p>
-						{cardRecord.errata.sourceUrl && (
-							<a class="mt-1 inline-block text-xs text-sky-300 hover:underline" href={cardRecord.errata.sourceUrl}>{cardRecord.errata.source}</a>
+						{errata.sourceUrl && (
+							<a class="mt-1 inline-block text-xs text-sky-300 hover:underline" href={errata.sourceUrl}>{errata.source}</a>
 						)}
 					</div>
 				)
@@ -175,6 +171,10 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 				)
 			}
 
+			<!-- The description is the printing's printed text and nothing else. The
+			     card record's `keywords` field is an index, not printed content: the
+			     text already carries each keyword as a [Keyword] label, so a separate
+			     keyword row would read as a second description. -->
 			<div class="mt-5 max-w-[70ch] space-y-3 text-sm leading-relaxed text-slate-200">
 				{primaryPrint?.printedEffectText && (
 					<p>
@@ -281,3 +281,26 @@ const options = { resolveGlyph: glyphUrl, resolveKeyword: keywordChipStyle };
 			})
 	}
 </Base>
+
+<script>
+	import { cameFromBuilder, returnTarget } from '../../lib/deck-return';
+
+	// Coming from the deck manager: the back link returns to that deck.
+	const link = document.getElementById('back-link') as HTMLAnchorElement | null;
+	const label = document.getElementById('back-label');
+	const target = returnTarget(location.search);
+	if (link && label && target) {
+		link.href = target;
+		label.textContent = 'Back to deck';
+		// When the page before this one in the tab is that very deck, the browser's
+		// own back restores it exactly as it was left (section, filters, scroll);
+		// otherwise (a new tab, a pasted link) the link goes to the deck's address.
+		link.addEventListener('click', (event) => {
+			const plain = event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+			if (plain && history.length > 1 && cameFromBuilder(document.referrer, location.origin)) {
+				event.preventDefault();
+				history.back();
+			}
+		});
+	}
+</script>

@@ -10,8 +10,11 @@
 // Glyph names use underscores in card text (`rune_fury`) and hyphens in file
 // names (`rune-fury.svg`). A name with no file resolves to undefined and the
 // renderer falls back to readable text.
+//
+// The cache also holds the domain emblems as `domain-{slug}` (`domain_fury`),
+// WebP for most and SVG for colorless; the extension is not part of the name.
 
-const FILES = import.meta.glob('../../data/glyphs/*.svg', {
+const FILES = import.meta.glob('../../data/glyphs/*.{svg,webp}', {
 	eager: true,
 	query: '?url',
 	import: 'default',
@@ -19,7 +22,7 @@ const FILES = import.meta.glob('../../data/glyphs/*.svg', {
 
 const URL_BY_NAME = new Map<string, string>();
 for (const [file, url] of Object.entries(FILES)) {
-	const name = file.split('/').pop()?.replace(/\.svg$/u, '');
+	const name = file.split('/').pop()?.replace(/\.(svg|webp)$/u, '');
 	if (name) URL_BY_NAME.set(name, url);
 }
 

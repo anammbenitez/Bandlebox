@@ -22,7 +22,7 @@ The app SHALL provide a browseable grid of cards in the snapshot, showing at min
 
 ### Requirement: Card detail pages are statically rendered
 
-The app SHALL render one statically generated page per card, reachable at `/cards/{card-slug}`, requiring no client-side JavaScript to read. Each detail page SHALL show the card's canonical data (name, types, stats, keywords, errata where present) and all of its printings, including for each: set, rarity, finish (normal/foil), art variant, artist, language, distribution channel or promo markers, and the doublesided token side where one exists.
+The app SHALL render one statically generated page per card, reachable at `/cards/{card-slug}`, requiring no client-side JavaScript to read. Each detail page SHALL show the card's canonical data (name, types, stats, errata where present, and the printed text, in which its keywords appear as labels) and all of its printings, including for each: set, rarity, finish (normal/foil), art variant, artist, language, distribution channel or promo markers, and the doublesided token side where one exists.
 
 #### Scenario: Detail page with all printings
 
@@ -147,19 +147,33 @@ The grid page SHALL provide a control that scrolls back to the top of the page. 
 - **WHEN** the user has scrolled the grid more than one screenful
 - **THEN** a back-to-top control is visible, and activating it returns the page to the top and hides the control
 
+### Requirement: The card page's back link returns to the deck it was opened from
+
+The card detail page SHALL have a back link that, by default, reads "All cards" and goes to the card grid. When the page is opened with the deck manager's address as its return address (the deck manager's card peek and the links on its card faces carry one), the back link SHALL instead read "Back to deck" and return to that deck manager address. An address that is not the deck manager's SHALL be ignored.
+
+#### Scenario: Opened from the deck manager
+
+- **WHEN** a card page is opened from the deck manager with its return address
+- **THEN** the back link reads "Back to deck" and returns to the deck being built
+
+#### Scenario: Opened any other way
+
+- **WHEN** a card page is opened with no return address or one that is not the deck manager's
+- **THEN** the back link reads "All cards" and goes to the card grid
+
 ### Requirement: Card detail page renders card text as formatted content
 
-The card detail page SHALL render the selected printing's printed rules text, effect text, flavor text, and any errata text as formatted content, not raw catalog markup. The page's keyword summary SHALL use the same keyword labels as the text, and its Energy, Might, and Power figures SHALL use the same symbol treatment, so a reader sees one visual language for the card.
+The card detail page SHALL render the selected printing's printed rules text, effect text, flavor text, and any errata text as formatted content, not raw catalog markup. A card's keywords SHALL appear only where its printed text prints them, as labels inside that text; the page SHALL NOT list them again as a separate row, because the card does not. Its Energy, Might, and Power figures SHALL use the same symbol treatment as the text, so a reader sees one visual language for the card.
 
 #### Scenario: Opening a card with markup
 
 - **WHEN** a card whose printed text contains keyword terms, reminder text, and symbols is opened
 - **THEN** the page shows colored keyword labels, glyphs for game symbols, and italic reminder text, and no `[ ]`, `_( )_`, or `:rb_*:` syntax is visible anywhere in the card text
 
-#### Scenario: Keyword summary agrees with the text
+#### Scenario: Keywords appear only inside the text
 
-- **WHEN** a card lists keywords in its summary row
-- **THEN** those keywords appear with the same label styling used for the same keywords inside the card text
+- **WHEN** a card whose data lists keywords is opened
+- **THEN** each keyword shows as a label inside the printed text where the card prints it, and no separate keyword row appears
 
 #### Scenario: Stats use the card's symbols
 

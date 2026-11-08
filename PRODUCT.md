@@ -51,7 +51,7 @@ Undecided:
 
 ## Evidence on Hand
 
-- `README.md` — data acquisition, commands, app layout, ownership notes.
+- `README.md` — the public overview: what the app does, the deck rules table, quick start and commands, how refresh, share links and the deck library work, the project map, contributing, data ownership, license.
 - `openspec/specs/` — confirmed behavioral specifications for catalog browsing, snapshot refresh, deck legality, deck library, deck manager, and site navigation.
 - `openspec/changes/archive/` — the design record of how each surface reached its current behavior.
 - `data/catalog.json`, `data/index.json` — real catalog and derived index, generated locally, intentionally uncommitted.

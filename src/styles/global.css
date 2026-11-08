@@ -1496,19 +1496,28 @@
 
 	/* --- card peek -------------------------------------------------------- */
 
-	/* The deck manager's hover card (spec: card-peek). A read-only tooltip beside a
-	 * card face: it takes no pointer input, so clicks and drags pass through it,
-	 * and sits below dialogs (z 50). Tokens only; domain dots are data and arrive
-	 * from the script as --dot. */
+	/* The deck manager's hover card (spec: card-peek). A non-modal card beside a
+	 * card face, below dialogs (z 50). While it is closed it takes no pointer
+	 * input; once open the pointer can move onto it and it stays there (its "See
+	 * more" link needs that). Tokens only. It is read at a glance with the other
+	 * hand on the deck, so every line is set at reading size: no label below
+	 * 0.875rem, game symbols at 1.5rem and larger. */
 	.card-peek {
 		position: fixed;
 		top: 0;
 		left: 0;
 		z-index: 40;
-		width: min(20rem, calc(100vw - 1rem));
+		/* wide enough that the longest name and its corner emblems (Heimerdinger,
+		 * Academy Instructor: 333px of the 350px line at the name's size) hold one
+		 * line: a wrapped name would push every row below it out of its place */
+		width: min(24rem, calc(100vw - 1rem));
 		max-height: calc(100dvh - 1rem);
-		overflow: hidden;
-		padding: 0.75rem 0.875rem;
+		/* a column, so a card with a long description gives up its own text (the
+		 * facts clip) and never the "See more" link under it */
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 0.875rem 1rem 1rem;
 		pointer-events: none;
 		border: 1px solid color-mix(in oklab, var(--color-bark-300) 45%, var(--color-slate-700));
 		border-radius: 0.75rem;
@@ -1517,8 +1526,8 @@
 			0 1px 0 rgb(255 255 255 / 0.04) inset,
 			0 18px 40px -18px rgb(0 0 0 / 0.9);
 		color: var(--color-slate-200);
-		font-size: 0.875rem;
-		line-height: 1.45;
+		font-size: 0.9375rem;
+		line-height: 1.5;
 		opacity: 0;
 		transform: translateY(3px);
 		transition:
@@ -1529,6 +1538,39 @@
 	.card-peek[data-open="true"] {
 		opacity: 1;
 		transform: none;
+		pointer-events: auto;
+	}
+
+	/* An invisible bridge across the gap to the card face (card-peek.ts says which
+	 * side the face is on with data-side), so the pointer can cross from the face
+	 * onto the peek without ever being over something else, which would close it. */
+	.card-peek::before {
+		content: "";
+		position: absolute;
+	}
+
+	.card-peek[data-side="right"]::before {
+		inset-block: 0;
+		right: 100%;
+		width: 0.8125rem;
+	}
+
+	.card-peek[data-side="left"]::before {
+		inset-block: 0;
+		left: 100%;
+		width: 0.8125rem;
+	}
+
+	.card-peek[data-side="below"]::before {
+		inset-inline: 0;
+		bottom: 100%;
+		height: 0.8125rem;
+	}
+
+	.card-peek[data-side="above"]::before {
+		inset-inline: 0;
+		top: 100%;
+		height: 0.8125rem;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
@@ -1538,141 +1580,166 @@
 		}
 	}
 
+	/* One layout for every card, so it is read by position (muscle memory), top to
+	 * bottom: name (+ domain emblems in the corner) / type line (+ ban marker at
+	 * its right) / Energy | Power | Might / description. Every place but the
+	 * description is always drawn, empty or not, so nothing below it moves with the
+	 * card's type; the description is last, so leaving it out moves nothing. The
+	 * only rule is the hairline above the description. */
 	.peek-facts {
 		display: grid;
-		gap: 0.625rem;
+		flex: 0 1 auto;
+		min-height: 0;
+		overflow: hidden;
+		gap: 0.75rem;
+	}
+
+	/* the way on to the card's own page: last, full width, always visible */
+	.peek-more {
+		flex: none;
+		width: 100%;
+	}
+
+	.peek-more:hover {
+		color: var(--color-amber-300);
+	}
+
+	/* the name on the left, the domain emblems in the top-right corner of the
+	 * same line; the row is as tall as an emblem for every card, so a card with
+	 * no domain does not pull the rows below it up */
+	.peek-title {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		min-height: 1.75rem;
 	}
 
 	.peek-name {
+		flex: 1 1 auto;
+		min-width: 0;
 		font-family: var(--font-display);
-		font-size: 1rem;
+		font-size: 1.125rem;
 		font-weight: 600;
-		line-height: 1.25;
+		line-height: 1.2;
 		color: var(--color-slate-100);
 		text-wrap: balance;
 	}
 
-	.peek-types {
-		margin-top: 0.125rem;
-		font-size: 0.6875rem;
-		font-weight: 600;
-		letter-spacing: 0.07em;
-		text-transform: uppercase;
-		color: var(--color-slate-400);
-	}
-
 	.peek-domains {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem 0.75rem;
-		margin-top: 0.375rem;
-		font-size: 0.75rem;
-		color: var(--color-slate-300);
-	}
-
-	.peek-domains li {
-		display: inline-flex;
+		flex: none;
 		align-items: center;
 		gap: 0.375rem;
 	}
 
-	.peek-domains li::before {
-		content: "";
-		width: 0.4375rem;
-		height: 0.4375rem;
-		border-radius: 999px;
-		background: var(--dot, var(--color-slate-500));
+	/* A domain is its emblem alone: OpenRift's artwork carries its own colors, so
+	 * no hue is set here, and its alt text names it. Only when the emblem is not
+	 * cached does a domain print as a word. */
+	.peek-domains li {
+		display: inline-flex;
+		align-items: center;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-slate-200);
 	}
 
-	.peek-stats {
+	.peek-domain-icon {
+		flex: none;
+		width: 1.75rem;
+		height: 1.75rem;
+		object-fit: contain;
+	}
+
+	/* type line on the left, the ban marker (when there is one) on the right; the
+	 * row holds the marker's height for every card */
+	.peek-sub {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem 1.25rem;
-		border-block: 1px solid var(--color-slate-800);
-		padding-block: 0.5rem;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		min-height: 1.3125rem;
+		margin-top: 0.125rem;
 	}
 
-	.peek-stats dt {
-		font-size: 0.625rem;
+	.peek-types {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-slate-300);
+	}
+
+	.peek-ban {
+		flex: none;
+		margin-left: auto;
+		border: 1px solid color-mix(in oklab, var(--color-red-400) 45%, transparent);
+		border-radius: 0.25rem;
+		padding: 0 0.375rem;
+		font-size: 0.8125rem;
 		font-weight: 600;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
+		line-height: 1.25;
+		color: var(--color-red-300);
+	}
+
+	/* Cost row: three fixed columns, Energy then Power then Might, drawn for every
+	 * card. Within a place, the symbol and number come first (as the card prints
+	 * them) and the word after. The font size here sizes the symbols too (they are
+	 * em-based). The Might column takes the rest, so its "+1" never crowds. */
+	.peek-stats {
+		display: grid;
+		grid-template-columns: 5.5rem 6rem minmax(0, 1fr);
+		align-items: center;
+		min-height: 1.75rem;
+		font-size: 1.375rem;
+		line-height: 1;
+	}
+
+	.peek-stat {
+		display: flex;
+		align-items: center;
+		gap: 0.4375rem;
+	}
+
+	/* a figure the card does not have: the label holds its place, the value is a dash */
+	.peek-stat[data-empty] dd,
+	.peek-stat[data-empty] dt {
 		color: var(--color-slate-500);
 	}
 
-	.peek-stats dd {
-		margin-top: 0.125rem;
-		font-size: 1.125rem;
-		font-weight: 600;
-		line-height: 1;
+	.peek-stat[data-empty] dd {
+		font-weight: 500;
+	}
+
+	.peek-stat dd {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		font-weight: 650;
 		color: var(--color-slate-100);
 		font-variant-numeric: tabular-nums;
 	}
 
-	.peek-stat-value {
-		margin-left: 0.25rem;
-	}
-
-	.peek-stat-note {
-		margin-left: 0.25rem;
-		font-size: 0.75rem;
-		font-weight: 400;
+	/* the <dt> stays first in the markup for assistive tech and prints last */
+	.peek-stat dt {
+		order: 1;
+		font-size: 0.875rem;
+		font-weight: 500;
 		color: var(--color-slate-400);
 	}
 
-	.peek-keywords {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.375rem;
+	.peek-stat-note {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-slate-400);
+	}
+
+	.peek-text {
+		border-top: 1px solid var(--color-slate-800);
+		padding-top: 0.75rem;
+		color: var(--color-slate-200);
 	}
 
 	.peek-text p + p {
 		margin-top: 0.5rem;
-	}
-
-	/* "In this deck": a status dot per line, the same good / bad / quiet language
-	 * as the legality checklist. Empty until the script fills it. */
-	.peek-fit {
-		display: grid;
-		gap: 0.375rem;
-		margin-top: 0.625rem;
-		border-top: 1px solid var(--color-slate-800);
-		padding-top: 0.625rem;
-		font-size: 0.8125rem;
-		line-height: 1.4;
-	}
-
-	.peek-fit:empty {
-		display: none;
-	}
-
-	.peek-fit li {
-		display: grid;
-		grid-template-columns: 0.4375rem 1fr;
-		align-items: baseline;
-		gap: 0.5rem;
-		color: var(--color-slate-300);
-	}
-
-	.peek-fit li::before {
-		content: "";
-		width: 0.4375rem;
-		height: 0.4375rem;
-		border-radius: 999px;
-		background: var(--color-slate-500);
-	}
-
-	.peek-fit li[data-tone="good"]::before {
-		background: var(--color-emerald-400);
-	}
-
-	.peek-fit li[data-tone="bad"] {
-		color: var(--color-red-300);
-	}
-
-	.peek-fit li[data-tone="bad"]::before {
-		background: var(--color-red-400);
 	}
 
 	/* --- frame ------------------------------------------------------------ */

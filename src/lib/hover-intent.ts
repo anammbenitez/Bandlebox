@@ -3,10 +3,12 @@
 //
 // A peek opens only when the user has come to rest on a card: the pointer (or
 // keyboard focus) stays on one face for DWELL_MS with no click, no drag, no
-// scrolling and no key press. This module is that rule and nothing else — no
-// DOM, no data imports, injected clock and timers — so it runs in the browser
-// and under scripts/verify-card-peek.mjs alike (explicit .ts extensions on
-// relative imports, none needed here).
+// scrolling and no key press. Once open it can be reached: the pointer may cross
+// from the face onto the peek (GRACE_MS to get there), and while it is on the
+// peek the peek stays. This module is that rule and nothing else — no DOM, no
+// data imports, injected clock and timers — so it runs in the browser and under
+// scripts/verify-card-peek.mjs alike (explicit .ts extensions on relative
+// imports, none needed here).
 //
 // Targets are KEYS ("zone:slug"), never elements: the deck manager rebuilds its
 // faces under a resting pointer (every deck change re-renders the sections), and
@@ -31,6 +33,10 @@
 export const DWELL_MS = 500;
 /** Pointer drift (CSS px) that still counts as resting; more restarts the dwell. */
 export const TOLERANCE_PX = 4;
+/** How long an open peek waits after the pointer leaves its face, so the pointer
+ *  can cross the gap and land on the peek. Long enough for a slow hand, short
+ *  enough that the peek never seems to cling. */
+export const GRACE_MS = 250;
 
 /** "zone:slug" — stable across re-renders; the zone is where the face sits. */
 export type FaceKey = string;
@@ -52,6 +58,7 @@ export interface HoverIntentOptions {
 	/** Called when an OPEN peek closes (a cancelled pending dwell is silent). */
 	onClose: (key: FaceKey) => void;
 	dwellMs?: number;
+	graceMs?: number;
 	tolerancePx?: number;
 	setTimer?: (fn: () => void, ms: number) => unknown;
 	clearTimer?: (handle: unknown) => void;
@@ -73,6 +80,10 @@ export interface HoverIntent {
 	key(name: string): void;
 	/** Window lost focus or the page was hidden. */
 	blur(): void;
+	/** The pointer is on the open peek itself (true) or has left it (false). While
+	 *  it is on the peek the peek stays; leaving it starts the same short grace as
+	 *  leaving the face, so the pointer can go back to the face. */
+	hold(held: boolean): void;
 	/** The deck changed (faces are about to be rebuilt). */
 	deckChanged(): void;
 	/** The currently open key, or null. */
@@ -88,6 +99,7 @@ interface Point {
 
 export function createHoverIntent(options: HoverIntentOptions): HoverIntent {
 	const dwellMs = options.dwellMs ?? DWELL_MS;
+	const graceMs = options.graceMs ?? GRACE_MS;
 	const tolerance = options.tolerancePx ?? TOLERANCE_PX;
 	const setTimer = options.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
 	const clearTimer = options.clearTimer ?? ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>));
@@ -101,6 +113,10 @@ export function createHoverIntent(options: HoverIntentOptions): HoverIntent {
 	let blockedFocusKey: FaceKey | null = null;
 	let moveLock: Point | null = null;
 	let timer: unknown = null;
+	let graceTimer: unknown = null;
+	/** The pointer is on the open peek. Reset whenever a peek closes: an element
+	 *  hidden under the pointer never reports the pointer leaving it. */
+	let held = false;
 
 	const moved = (from: Point, to: Point): boolean => Math.hypot(to.x - from.x, to.y - from.y) > tolerance;
 
@@ -109,9 +125,26 @@ export function createHoverIntent(options: HoverIntentOptions): HoverIntent {
 		timer = null;
 	}
 
+	function stopGrace(): void {
+		if (graceTimer !== null) clearTimer(graceTimer);
+		graceTimer = null;
+	}
+
+	/** The pointer is off both the face and the peek: close after the grace unless
+	 *  it gets back to one of them first. */
+	function startGrace(): void {
+		stopGrace();
+		graceTimer = setTimer(() => {
+			graceTimer = null;
+			if (mode === 'open' && !held) dismiss();
+		}, graceMs);
+	}
+
 	/** Back to idle; fires onClose only when a peek was actually open. */
 	function dismiss(): void {
 		stopTimer();
+		stopGrace();
+		held = false;
 		const wasOpen = mode === 'open' ? target : null;
 		mode = 'idle';
 		target = null;
@@ -156,7 +189,14 @@ export function createHoverIntent(options: HoverIntentOptions): HoverIntent {
 
 			if (key === null) {
 				// a peek opened by keyboard focus is not the pointer's to close
-				if (source === 'pointer' || mode === 'idle') dismiss();
+				if (source === 'pointer' || mode === 'idle') {
+					// an OPEN peek is given the grace to be reached; a dwell still pending is just dropped
+					if (mode === 'open') {
+						if (!held) startGrace();
+					} else {
+						dismiss();
+					}
+				}
 				return;
 			}
 			if (key === blockedKey) {
@@ -165,7 +205,9 @@ export function createHoverIntent(options: HoverIntentOptions): HoverIntent {
 			}
 
 			if (mode !== 'idle' && target === key) {
-				// same face: drifting restarts a pending dwell; an open peek stays
+				// same face: drifting restarts a pending dwell; an open peek stays, and a
+				// pointer that came back from the gap cancels the grace it had started
+				if (mode === 'open') stopGrace();
 				if (mode === 'pending' && source === 'pointer' && anchor && moved(anchor, here)) {
 					beginPending(key, 'pointer', here);
 				}
@@ -220,6 +262,21 @@ export function createHoverIntent(options: HoverIntentOptions): HoverIntent {
 			lockUntilMove();
 		},
 
+		hold(next) {
+			if (mode !== 'open') {
+				held = false;
+				return;
+			}
+			held = next;
+			if (next) {
+				// the pointer took the peek over: it is the pointer's now, whatever opened it
+				source = 'pointer';
+				stopGrace();
+			} else {
+				startGrace();
+			}
+		},
+
 		deckChanged() {
 			lockUntilMove();
 		},
@@ -230,6 +287,8 @@ export function createHoverIntent(options: HoverIntentOptions): HoverIntent {
 
 		destroy() {
 			stopTimer();
+			stopGrace();
+			held = false;
 			mode = 'idle';
 			target = null;
 			anchor = null;

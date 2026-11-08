@@ -131,17 +131,36 @@ All in `src/styles/global.css` under `@layer components`.
   underline, gold label) and stays pinned while the sheet scrolls under it.
 - **Card tiles** — `.card-tile` (catalog) and `.face` (art-only browser and deck
   rows) with `.face-bar` stepper controls and `.count-chip` copy counts.
-- **Card peek** — `.card-peek`, one `role="tooltip"` element (`#card-peek`) that
+- **Card peek** — `.card-peek`, one `role="group"` element (`#card-peek`) that
   `src/scripts/card-peek.ts` fills and places beside a card face once the pointer
-  has rested on it. Read-only: no backdrop, no focus capture, `pointer-events:
-  none`, so a click or drag always reaches the card. A `.dialog`-toned surface
-  (slate over bark, bark hairline), the display face for the name, the micro-label
-  voice for the type line and stat names, the existing `.kw` / glyph rules for
-  card text. Domain dots are data (`--dot` from `DOMAIN_COLORS`); the "in this
-  deck" lines use the legality language — emerald dot for fits, red for a rule
-  problem, quiet slate for information. It appears only when the user is still
-  (no click, drag, scroll or key; see the `card-peek` spec) and never over the
-  face it describes.
+  has rested on it. Non-modal: no backdrop, no focus capture. It is click-through
+  only while closed; once open it takes the pointer, so the pointer can cross onto
+  it (an invisible bridge, `::before`, covers the gap to the face, and a 250ms
+  grace covers the rest) and it stays while the pointer is on it. It ends with a
+  full-width `.btn` "See more" that opens the card's page, which links back to the
+  deck ("Back to deck"). A `.dialog`-toned surface
+  (slate over bark, bark hairline), 24rem wide. It is read at a glance with the
+  other hand on the deck, so nothing in it is a micro-label: the name is the
+  display face at 18px, the type line is 14px sentence case,
+  the cost row sets each symbol at 22px with its word after it (14px), and the
+  description is 15px on a 1.5 line, under the one hairline. **One layout for
+  every card**, so it is learned by position: name (domain emblems in the
+  top-right corner of the same line) / type line (ban marker at its right) /
+  Energy, Power, Might in three fixed columns
+  / description. All of it is always drawn: a figure the card lacks keeps its
+  label and shows a muted dash, so a Legend, a battlefield, a rune and a unit
+  put every line in the same place and only the description (last) can be
+  absent. The width is set so the longest card name and its corner emblems still hold one line. A domain is its
+  emblem alone (28px, OpenRift's own artwork, which carries its own colors),
+  named by its alt text; no hue of the interface stands for a domain here, so the dots in the
+  filter chips and rune counters are the only domain dots left in the deck
+  manager. The description is the printed text only; keywords show as the
+  `.kw` labels the text prints, never as a row of their own. A banned card
+  carries a small red-outlined "Banned in Constructed" marker beside its type
+  line; nothing else about the deck (colors vs the Legend, copies held, limits)
+  is repeated in it. It appears only when the user is still (no click, drag,
+  scroll or key; see the `card-peek` spec) and never over the face it describes;
+  it fades and lifts 3px over 140ms, and not at all under reduced motion.
 - **Legality** — `.verdict` (`data-legal`) and `.check-item[data-status]` with
   drawn check / cross / pending icons.
 - **Empty states** — `.empty-state` is a leaf-green dashed tray and always names

@@ -21,6 +21,7 @@ import {
 	sectionTotal,
 	setQty,
 } from '../lib/deck';
+import { cardPageHref } from '../lib/deck-return';
 import { adoptDeck, getDeck, saveDeck, takeStorageProblem } from '../lib/deck-store';
 import { buildDeckRuleIndexes, isLegalEverywhere, validate, type DeckRuleIndexes, type LegalityReport } from '../lib/deck-rules';
 import { decodeDeck, encodeDeck, hashToPayload, isSharePayload } from '../lib/deck-share';
@@ -108,15 +109,10 @@ const DOMAIN_COLORS: Record<string, string> = {
 	order: '#eab308',
 };
 
-// The hover card on every card face (spec: card-peek). It reads the live deck
-// for its "in this deck" lines and must be told when the deck is rebuilt.
-const peek = initCardPeek({
-	root: appEl,
-	getDeck: () => deck,
-	idx,
-	domainColors: DOMAIN_COLORS,
-	domainLabel: (slug) => domains.find((d) => d.slug === slug)?.label ?? slug,
-});
+// The hover card on every card face (spec: card-peek). It shows the card alone,
+// but must be told when the deck is rebuilt: the faces are replaced under a
+// resting pointer, and it must not reopen on them until the pointer moves.
+const peek = initCardPeek({ root: appEl });
 
 const copyLimit = (slug: string): number => idx.cards[slug]?.maxCopiesOverride ?? DECK_RULES.maxCopies;
 
@@ -384,13 +380,19 @@ function thumbHtml(slug: string): string {
 	return faceImgHtml(entry.art, entry.art.rotate ? 'data-rotate' : 'class="h-full w-full object-cover"');
 }
 
+/** A card's own page, remembering this deck so the page can link back to it
+ *  (deck-return.ts). Read at render time: the address is the deck manager's own. */
+function cardHref(slug: string): string {
+	return cardPageHref(slug, `${location.pathname}${location.search}${location.hash}`);
+}
+
 /** The Legend section shows its single card as a big face (like the browser
  *  impressions — reference: card art + "L1" badge; spec: no copy chip on the
  *  legend face). The legend is replaced by placing another legend, as before. */
 function legendCardHtml(section: SectionKey, slug: string, qty: number, name: string): string {
 	return (
 		`<li data-slug="${esc(slug)}" class="face relative aspect-[5/7] w-full max-w-44 border-amber-400/50 shadow-lg shadow-black/50">` +
-		`<a href="/cards/${esc(slug)}" aria-label="${esc(name)}" class="absolute inset-0">${thumbHtml(slug)}</a>` +
+		`<a href="${esc(cardHref(slug))}" aria-label="${esc(name)}" class="absolute inset-0">${thumbHtml(slug)}</a>` +
 		`<div title="Legend copies" class="absolute right-1.5 top-1.5 grid h-6 min-w-6 place-items-center rounded border border-slate-800 bg-slate-950/90 px-1 text-[11px] font-semibold text-amber-300 tnum">L${qty}</div>` +
 		`</li>`
 	);
@@ -739,8 +741,8 @@ function entryHtml(entry: GridEntry): string {
 	return (
 		`<li data-slug="${esc(entry.slug)}"` +
 		(shared ? '' : ' draggable="true"') +
-		` class="face group relative aspect-[5/7] cursor-pointer hover:border-amber-400/50"` +
-		`<a href="/cards/${esc(entry.slug)}" aria-label="${esc(entry.name)}" class="absolute inset-0">${thumbHtml(entry.slug)}</a>` +
+		` class="face group relative aspect-[5/7] cursor-pointer hover:border-amber-400/50">` +
+		`<a href="${esc(cardHref(entry.slug))}" aria-label="${esc(entry.name)}" class="absolute inset-0">${thumbHtml(entry.slug)}</a>` +
 		`<div class="face-bar">${chipControls}</div>` +
 		`</li>`
 	);

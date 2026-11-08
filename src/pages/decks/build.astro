@@ -47,13 +47,20 @@ const domainPayload = escapedJson(
 	     carries the same message to screen readers -->
 	<p id="deck-live" class="sr-only" role="status" aria-live="polite"></p>
 
-	<!-- Card peek (spec: card-peek): the hover card for card faces. It is a
-	     read-only tooltip: no backdrop, no focus capture, no pointer input, so a
-	     click or drag always reaches the card underneath. src/scripts/card-peek.ts
-	     fills and places it. -->
-	<div id="card-peek" class="card-peek" role="tooltip" hidden>
+	<!-- Card peek (spec: card-peek): the hover card for card faces. Non-modal: no
+	     backdrop and no focus capture. The pointer can move onto it (it stays
+	     while the pointer is on it) to use "See more", which opens the card's
+	     page; that page links back to this deck. src/scripts/card-peek.ts fills
+	     and places it, and sets the link's address for each card. It is a group,
+	     not a tooltip, because a tooltip must not hold a link. -->
+	<div id="card-peek" class="card-peek" role="group" aria-label="Card details" hidden>
 		<div class="peek-facts"></div>
-		<ul class="peek-fit" aria-label="In this deck"></ul>
+		<a class="btn peek-more" href="/cards">
+			See more
+			<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+				<path d="M4.5 2.5 8 6 4.5 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+			</svg>
+		</a>
 	</div>
 
 	<div id="deck-storage-warning" hidden class="callout mt-4" data-tone="warning">

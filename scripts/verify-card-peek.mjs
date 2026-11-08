@@ -14,7 +14,8 @@ import snapshotData from '../data/catalog.json' with { type: 'json' };
 
 const { buildDeckRuleIndexes } = await import('../src/lib/deck-rules.ts');
 const { deckFit } = await import('../src/lib/deck-fit.ts');
-const { DWELL_MS, TOLERANCE_PX, createHoverIntent, faceKey, parseFaceKey } = await import('../src/lib/hover-intent.ts');
+const { DWELL_MS, GRACE_MS, TOLERANCE_PX, createHoverIntent, faceKey, parseFaceKey } = await import('../src/lib/hover-intent.ts');
+const { cardPageHref, returnTarget, cameFromBuilder } = await import('../src/lib/deck-return.ts');
 
 let checks = 0;
 
@@ -315,15 +316,137 @@ check('repeated same-coordinate events (synthetic moves) never restart the dwell
 	assert.deepEqual(opened(h), [A]);
 });
 
-check('an open peek stays while the pointer moves within the same face, and closes on leaving', () => {
+check('an open peek stays while the pointer moves within the same face, and closes once it has left for good', () => {
 	const h = harness();
 	h.intent.point(A, 100, 100);
 	h.advance(DWELL_MS);
 	h.intent.point(A, 160, 140);
 	assert.equal(h.intent.openKey(), A);
 	h.intent.point(null, 400, 400);
+	h.advance(GRACE_MS);
 	assert.deepEqual(h.events, [['open', A, 'pointer'], ['close', A]]);
 	assert.equal(h.intent.openKey(), null);
+});
+
+/* --- reaching the peek (spec: card-peek, the pointer can move onto the peek) -- */
+
+/** A harness with a peek already open on A and the pointer just off the face. */
+function openThenLeave() {
+	const h = harness();
+	h.intent.point(A, 100, 100);
+	h.advance(DWELL_MS);
+	h.intent.point(null, 200, 100);
+	return h;
+}
+
+check('leaving the face gives the pointer the grace to reach the peek, then the peek closes', () => {
+	const h = openThenLeave();
+	h.advance(GRACE_MS - 1);
+	assert.equal(h.intent.openKey(), A, 'still open just before the grace ends');
+	h.advance(1);
+	assert.deepEqual(h.events, [['open', A, 'pointer'], ['close', A]]);
+});
+
+check('reaching the peek within the grace keeps it open for as long as the pointer is on it', () => {
+	const h = openThenLeave();
+	h.advance(GRACE_MS - 50);
+	h.intent.hold(true);
+	h.advance(GRACE_MS * 20);
+	assert.deepEqual(h.events, [['open', A, 'pointer']], 'no close while held');
+	assert.equal(h.intent.openKey(), A);
+});
+
+check('leaving the peek for nowhere closes it after the same grace', () => {
+	const h = openThenLeave();
+	h.intent.hold(true);
+	h.intent.hold(false);
+	h.advance(GRACE_MS - 1);
+	assert.equal(h.intent.openKey(), A);
+	h.advance(1);
+	assert.deepEqual(h.events, [['open', A, 'pointer'], ['close', A]]);
+});
+
+check('going from the peek back to its face keeps the peek open', () => {
+	const h = openThenLeave();
+	h.intent.hold(true);
+	h.advance(500);
+	h.intent.hold(false);
+	h.advance(GRACE_MS / 2);
+	h.intent.point(A, 110, 100); // back on the face
+	h.advance(GRACE_MS * 5);
+	assert.deepEqual(h.events, [['open', A, 'pointer']]);
+});
+
+check('coming back to the face during the grace cancels the close', () => {
+	const h = openThenLeave();
+	h.advance(GRACE_MS - 50);
+	h.intent.point(A, 105, 100);
+	h.advance(GRACE_MS * 5);
+	assert.deepEqual(h.events, [['open', A, 'pointer']]);
+});
+
+check('moving onto a neighbouring face during the grace closes at once and the neighbour waits its own dwell', () => {
+	const h = openThenLeave();
+	h.advance(GRACE_MS / 2);
+	h.intent.point(B, 160, 100);
+	assert.deepEqual(h.events, [['open', A, 'pointer'], ['close', A]], 'closed without waiting out the grace');
+	h.advance(DWELL_MS - 1);
+	assert.deepEqual(opened(h), [A]);
+	h.advance(1);
+	assert.deepEqual(opened(h), [A, B]);
+});
+
+check('a press, a scroll, a key or the window losing focus still closes a held peek at once', () => {
+	for (const interrupt of [(i) => i.press(null), (i) => i.scroll('wheel'), (i) => i.key('a'), (i) => i.blur(), (i) => i.deckChanged()]) {
+		const h = openThenLeave();
+		h.intent.hold(true);
+		interrupt(h.intent);
+		assert.deepEqual(h.events, [['open', A, 'pointer'], ['close', A]]);
+	}
+});
+
+check('a hold never outlives the peek it was for: the next peek closes on leaving as usual', () => {
+	const h = openThenLeave();
+	h.intent.hold(true);
+	h.intent.press(null); // closes it with the pointer still "on" the hidden peek
+	h.intent.point(B, 300, 300);
+	h.advance(DWELL_MS);
+	assert.equal(h.intent.openKey(), B);
+	h.intent.point(null, 400, 400);
+	h.advance(GRACE_MS);
+	assert.equal(h.intent.openKey(), null, 'not stuck open by the old hold');
+});
+
+check('holding with no peek open does nothing, and does not stick', () => {
+	const h = harness();
+	h.intent.hold(true);
+	h.intent.point(A, 100, 100);
+	h.advance(DWELL_MS);
+	h.intent.point(null, 200, 100);
+	h.advance(GRACE_MS);
+	assert.deepEqual(h.events, [['open', A, 'pointer'], ['close', A]]);
+});
+
+check('a peek opened by keyboard focus is taken over by the pointer on it, and closes when the pointer leaves it', () => {
+	const h = harness();
+	h.intent.focus(A);
+	h.advance(DWELL_MS);
+	h.intent.hold(true);
+	h.advance(GRACE_MS * 5);
+	assert.equal(h.intent.openKey(), A, 'stays while the pointer is on it');
+	h.intent.hold(false);
+	h.advance(GRACE_MS);
+	assert.deepEqual(h.events, [['open', A, 'focus'], ['close', A]]);
+});
+
+check('a pending dwell is dropped the moment the pointer leaves: the grace is only for an open peek', () => {
+	const h = harness();
+	h.intent.point(A, 100, 100);
+	h.advance(DWELL_MS - 100);
+	h.intent.point(null, 200, 100);
+	h.advance(DWELL_MS * 2);
+	assert.deepEqual(h.events, []);
+	assert.equal(h.timers.size, 0, 'no timer left running');
 });
 
 check('moving to a neighbouring face closes the first peek and the neighbour waits its own dwell', () => {
@@ -667,9 +790,9 @@ function fragmentFor(card) {
 		superTypes: record?.superTypes ?? [],
 		domains: (record?.domains ?? []).map((slug) => ({ slug, label: slug })),
 		stats: record ? cardStats(record) : [],
-		keywords: record?.keywords ?? [],
 		effectText: printing?.printedEffectText ?? null,
 		rulesText: printing?.printedRulesText ?? null,
+		banned: idx.cards[card.slug]?.banned ?? false,
 	});
 }
 const allFragments = indexData.cards.map((card) => ({ card, html: fragmentFor(card) }));
@@ -690,23 +813,73 @@ check('a unit shows name, type line, domain, cost row in Energy / Power / Might 
 	assert.match(html, /When I hold, you score 1 point\./);
 });
 
-check('every card lists exactly the figures it has, and never an empty Might', () => {
+/** The state of one cost place in a fragment: its value markup, or 'empty'. */
+function placeOf(html, kind) {
+	const start = html.indexOf(`<div class="peek-stat" data-stat="${kind}"`);
+	assert.ok(start >= 0, `${kind} place is drawn`);
+	const cell = html.slice(start, html.indexOf('</div>', start));
+	return cell.includes('data-empty="true"') ? 'empty' : cell;
+}
+
+check('every card draws all three cost places; a place is empty exactly when the card lacks that figure', () => {
 	for (const { card, html } of allFragments) {
 		const record = snapshotData.cards[card.cardId];
-		assert.equal(html.includes('data-stat="might"'), record.might != null, `${card.slug}: Might`);
-		assert.equal(html.includes('data-stat="energy"'), record.energy != null, `${card.slug}: Energy`);
-		assert.equal(html.includes('data-stat="power"'), record.power != null, `${card.slug}: Power`);
+		for (const [kind, has] of [
+			['energy', record.energy != null],
+			['power', record.power != null],
+			['might', record.might != null],
+		]) {
+			assert.equal(placeOf(html, kind) === 'empty', !has, `${card.slug}: ${kind}`);
+		}
 	}
 });
 
-check('Legends, battlefields and runes carry no cost row but keep name, type line and domains', () => {
+check('an empty cost place keeps its label and prints a dash that assistive tech hears as "none"', () => {
+	const legend = allFragments.find(({ card }) => card.slug === LEGEND).html;
+	for (const [kind, label] of [['energy', 'Energy'], ['power', 'Power'], ['might', 'Might']]) {
+		assert.match(
+			legend,
+			new RegExp(
+				`data-stat="${kind}" data-empty="true"><dt>${label}</dt><dd><span aria-hidden="true">—</span><span class="sr-only">none</span></dd>`,
+			),
+			`${kind} on a Legend`,
+		);
+	}
+	// a figure the card does have is untouched by the placeholder
+	assert.notEqual(placeOf(allFragments.find(({ card }) => card.slug === NEEKO).html, 'might'), 'empty');
+});
+
+check('Legends, battlefields and runes keep every place: name, type line, domains and an all-empty cost row', () => {
 	const costless = allFragments.filter(({ card }) => ['legend', 'battlefield', 'rune'].some((t) => card.types.includes(t)));
 	assert.ok(costless.length > 100, 'fixture covers many cards');
 	for (const { card, html } of costless) {
-		assert.ok(!html.includes('peek-stats'), `${card.slug}: no cost row`);
 		assert.match(html, /<h2 class="peek-name">/);
 		assert.match(html, /<p class="peek-types">/);
+		assert.match(html, /<dl class="peek-stats">/, `${card.slug}: cost row is still drawn`);
+		for (const kind of ['energy', 'power', 'might']) assert.equal(placeOf(html, kind), 'empty', `${card.slug}: ${kind}`);
 	}
+});
+
+check('every card has one skeleton: name, [domains], type line, [ban marker], Energy, Power, Might, [text], in that order and no other', () => {
+	/** The landmarks present in a fragment, in document order. */
+	const landmarks = (html) =>
+		[...html.matchAll(/class="(peek-name|peek-ban|peek-types|peek-domains|peek-stats|peek-text)[ "]|data-stat="(energy|power|might)"/g)].map(
+			(m) => m[1] ?? m[2],
+		);
+	const shape = new Set();
+	for (const { card, html } of allFragments) {
+		const marks = landmarks(html);
+		// drop the optional landmarks to compare the fixed spine
+		const spine = marks.filter((m) => !['peek-ban', 'peek-domains', 'peek-text'].includes(m));
+		assert.deepEqual(spine, ['peek-name', 'peek-types', 'peek-stats', 'energy', 'power', 'might'], `${card.slug}: spine`);
+		// the optional ones sit where they always do
+		const order = (name) => marks.indexOf(name);
+		if (order('peek-domains') >= 0) assert.ok(order('peek-name') < order('peek-domains') && order('peek-domains') < order('peek-types'), `${card.slug}: domains in the corner of the name line`);
+		if (order('peek-ban') >= 0) assert.ok(order('peek-types') < order('peek-ban') && order('peek-ban') < order('peek-stats'), `${card.slug}: ban marker on the type line`);
+		if (order('peek-text') >= 0) assert.equal(order('peek-text'), marks.length - 1, `${card.slug}: description is last`);
+		shape.add(marks.filter((m) => m !== 'peek-text').join('>'));
+	}
+	assert.ok(shape.size <= 4, `only the domain list and the ban marker vary the markup: ${shape.size} shapes`);
 });
 
 check('a text section appears exactly when the card has printed rules or effect text', () => {
@@ -728,17 +901,146 @@ check('no raw card-text markup survives into any fragment', () => {
 	}
 });
 
-check('keywords render as labels, one per keyword on the card', () => {
-	const withKeywords = allFragments.filter(({ card }) => (snapshotData.cards[card.cardId].keywords ?? []).length > 0);
-	assert.ok(withKeywords.length > 100, 'fixture covers many keyword cards');
-	for (const { card, html } of withKeywords) {
-		const keywords = snapshotData.cards[card.cardId].keywords;
-		assert.ok(html.includes('class="peek-keywords"'), `${card.slug}: keyword row`);
-		const row = html.slice(html.indexOf('class="peek-keywords"'));
-		const labels = row.slice(0, row.indexOf('</div>')).match(/<span class="kw"/g) ?? [];
-		assert.equal(labels.length, keywords.length, `${card.slug}: ${keywords.join(', ')}`);
+/** Keyword labels a card's own printed text marks, counted from the markup. */
+const { tokenizeCardText } = await import('../src/lib/card-text.ts');
+function keywordTokenCount(tokens) {
+	let count = 0;
+	for (const token of tokens) {
+		if (token.type === 'keyword') count += 1 + keywordTokenCount(token.children);
+		else if (token.type === 'paren' || token.type === 'italic') count += keywordTokenCount(token.children);
 	}
-	assert.ok(!allFragments.find(({ card }) => (snapshotData.cards[card.cardId].keywords ?? []).length === 0).html.includes('peek-keywords'));
+	return count;
+}
+
+check("the description is the printed text only: keyword labels appear where the card prints them, never as a separate row", () => {
+	let printing = 0;
+	let listedButNotPrinted = 0;
+	for (const { card, html } of allFragments) {
+		assert.ok(!html.includes('peek-keywords'), `${card.slug}: no standalone keyword row`);
+		// every label in the fragment comes from a [Keyword] in the card's own text
+		const printed = keywordTokenCount(tokenizeCardText(textOf(card).join('\n')));
+		const rendered = (html.match(/<span class="kw"/g) ?? []).length;
+		assert.equal(rendered, printed, `${card.slug}: labels rendered vs printed`);
+		const listed = snapshotData.cards[card.cardId].keywords ?? [];
+		if (listed.length > 0 && printed > 0) printing++;
+		if (listed.length > 0 && printed === 0) listedButNotPrinted++;
+	}
+	assert.ok(printing > 100, `fixture covers many keyword cards printing them inline (${printing})`);
+	// cards whose metadata lists a keyword the card does not print stay silent about it
+	console.log(`   (${printing} keyword cards print them inline; ${listedButNotPrinted} list keywords with no printed text and show none)`);
+});
+
+check('Abandon shows Reaction and Predict only as labels inside its printed text', () => {
+	const html = allFragments.find(({ card }) => card.name === 'Abandon').html;
+	const text = html.slice(html.indexOf('class="peek-text'));
+	assert.equal((html.match(/<span class="kw"/g) ?? []).length, 2, 'two labels in the whole fragment');
+	assert.equal((text.match(/<span class="kw"/g) ?? []).length, 2, 'and both inside the text block');
+	assert.match(text, /Reaction[\s\S]*Counter a spell[\s\S]*Predict/, 'in the order the card prints them');
+});
+
+/* --- domain emblems (spec: card-peek, domains show as their emblem) ---------- */
+
+const emblemOf = (slug) => `/glyphs/domain-${slug}.webp`;
+const domainFacts = (domains) => ({
+	name: 'Fixture',
+	types: ['Unit'],
+	superTypes: [],
+	domains,
+	stats: [],
+	effectText: null,
+	rulesText: null,
+});
+
+check('each domain prints as its emblem alone, and the emblem carries the domain name as its alt text', () => {
+	const asked = [];
+	const html = peekFactsHtml(
+		domainFacts([
+			{ slug: 'calm', label: 'Calm' },
+			{ slug: 'mind', label: 'Mind' },
+		]),
+		{
+			resolveGlyph: (name) => {
+				asked.push(name);
+				return emblemOf(name.replace('domain_', ''));
+			},
+		},
+	);
+	assert.deepEqual(asked, ['domain_calm', 'domain_mind'], 'the emblem is the domain_{slug} asset');
+	assert.match(html, /<li data-domain="calm"><img class="peek-domain-icon" src="\/glyphs\/domain-calm\.webp" alt="Calm" [^>]*><\/li>/);
+	assert.match(html, /<li data-domain="mind"><img class="peek-domain-icon" src="\/glyphs\/domain-mind\.webp" alt="Mind" [^>]*><\/li>/);
+	assert.match(html, /<ul class="peek-domains" aria-label="Domains">/);
+	assert.ok(!/<span>(Calm|Mind)<\/span>/.test(html), 'no word printed beside an emblem');
+});
+
+check('no color is printed for a domain: the old dot hook is gone', () => {
+	const html = peekFactsHtml(domainFacts([{ slug: 'fury', label: 'Fury' }]), { resolveGlyph: (name) => emblemOf(name) });
+	assert.ok(!/--dot|style=/.test(html), 'no inline color for a domain');
+});
+
+check('a domain with no cached emblem still shows its name', () => {
+	const html = peekFactsHtml(domainFacts([{ slug: 'fury', label: 'Fury' }]), { resolveGlyph: () => undefined });
+	assert.match(html, /<li data-domain="fury"><span>Fury<\/span><\/li>/);
+	assert.ok(!html.includes('<img'), 'no broken image');
+	const bare = peekFactsHtml(domainFacts([{ slug: 'fury', label: 'Fury' }]));
+	assert.match(bare, /<li data-domain="fury"><span>Fury<\/span><\/li>/, 'also without any resolver');
+});
+
+check('a card with no domain has no domain list', () => {
+	assert.ok(!peekFactsHtml(domainFacts([])).includes('peek-domains'));
+});
+
+check('the domain emblems share the name line, in its corner, and the type line comes below', () => {
+	const html = allFragments.find(({ card }) => card.slug === AHRI).html;
+	const at = (needle) => html.indexOf(needle);
+	const titleEnd = at('class="peek-sub"');
+	assert.ok(at('class="peek-title"') < at('class="peek-name"') && at('class="peek-name"') < at('class="peek-domains"'), 'name, then the corner');
+	assert.ok(at('class="peek-domains"') < titleEnd, 'the emblems are inside the name line, before the type line starts');
+	assert.ok(titleEnd < at('class="peek-types"') && at('class="peek-types"') < at('class="peek-stats"') && at('class="peek-stats"') < at('class="peek-text'), 'then the type line, the cost row, the text');
+});
+
+check('the ban marker sits on the type line, not on the name line', () => {
+	const html = allFragments.find(({ card }) => idx.cards[card.slug]?.banned).html;
+	const at = (needle) => html.indexOf(needle);
+	assert.ok(at('class="peek-sub"') < at('class="peek-ban"') && at('class="peek-ban"') < at('class="peek-stats"'));
+	assert.ok(at('class="peek-ban"') > at('class="peek-types"'), 'after the type, at the right end of its line');
+});
+
+const glyphDir = new URL('../data/glyphs/', import.meta.url);
+const { existsSync } = await import('node:fs');
+if (existsSync(glyphDir)) {
+	check('every domain the catalog lists has a cached emblem (npm run refresh)', () => {
+		const slugs = new Set((snapshotData.enums?.domains ?? []).map((d) => d.slug));
+		for (const card of Object.values(snapshotData.cards)) for (const slug of card.domains ?? []) slugs.add(slug);
+		assert.ok(slugs.size >= 8, `domains found: ${[...slugs].join(', ')}`);
+		for (const slug of slugs) {
+			const found = ['webp', 'svg'].some((ext) => existsSync(new URL(`domain-${slug}.${ext}`, glyphDir)));
+			assert.ok(found, `data/glyphs/domain-${slug}.{webp,svg} is missing: run npm run refresh`);
+		}
+	});
+} else {
+	console.log('skip - data/glyphs/ not present, domain emblem coverage not checked');
+}
+
+/* --- the one rule verdict the peek keeps --------------------------------------- */
+
+check('a card banned in Constructed carries a ban marker, and nothing else does', () => {
+	for (const { card, html } of allFragments) {
+		const banned = idx.cards[card.slug]?.banned ?? false;
+		assert.equal(html.includes('class="peek-ban"'), banned, `${card.slug}: ban marker`);
+	}
+	assert.ok(allFragments.some(({ html }) => html.includes('peek-ban')), 'fixture has a banned card');
+});
+
+check('the ban marker reads "Banned in Constructed" to assistive tech while showing only "Banned"', () => {
+	const html = allFragments.find(({ card }) => idx.cards[card.slug]?.banned).html;
+	assert.match(html, /<p class="peek-ban">Banned<span class="sr-only"> in Constructed<\/span><\/p>/);
+	assert.equal(html.match(/<p class="peek-ban">(.*?)<\/p>/)[1].replace(/<[^>]+>/g, ''), 'Banned in Constructed');
+});
+
+check('the fragment never carries a deck-aware line', () => {
+	for (const { card, html } of allFragments) {
+		assert.ok(!/peek-fit|Fits your Legend|in this deck|limit \d/i.test(html), `${card.slug}: deck-aware text`);
+	}
 });
 
 check('card names and labels are escaped, never injected as markup', () => {
@@ -748,13 +1050,85 @@ check('card names and labels are escaped, never injected as markup', () => {
 		superTypes: [],
 		domains: [{ slug: 'a"b', label: '<b>x</b>' }],
 		stats: [],
-		keywords: [],
 		effectText: null,
 		rulesText: null,
 	});
 	assert.ok(!html.includes('<img'), 'name escaped');
 	assert.ok(!html.includes('<b>x'), 'label escaped');
 	assert.ok(!html.includes('a"b'), 'attribute value escaped');
+});
+
+/* --- the way on to the card page and back (spec: card-peek, See more) -------- */
+
+check('the card page address carries the deck manager address it was opened from', () => {
+	assert.equal(cardPageHref('abandon', '/decks/build#d/abc123'), '/cards/abandon?from=%2Fdecks%2Fbuild%23d%2Fabc123');
+	assert.equal(returnTarget('?from=%2Fdecks%2Fbuild%23d%2Fabc123'), '/decks/build#d/abc123');
+});
+
+check('every card slug round-trips through its own link', () => {
+	for (const card of indexData.cards) {
+		const href = cardPageHref(card.slug, '/decks/build#d/x');
+		const url = new URL(href, 'http://site.test');
+		assert.equal(decodeURIComponent(url.pathname), `/cards/${card.slug}`, card.slug);
+		assert.equal(returnTarget(url.search), '/decks/build#d/x', card.slug);
+	}
+});
+
+check('a shared deck address survives the trip, hash and all', () => {
+	const shared = '/decks/build#s/e1AbC-_9zQ0aBcDeF' + 'x'.repeat(1500);
+	assert.equal(returnTarget(new URL(cardPageHref('abandon', shared), 'http://site.test').search), shared);
+});
+
+check('a saved deck with a query string is accepted too, and the bare route', () => {
+	assert.equal(returnTarget('?from=' + encodeURIComponent('/decks/build')), '/decks/build');
+	assert.equal(returnTarget('?from=' + encodeURIComponent('/decks/build?x=1#d/a')), '/decks/build?x=1#d/a');
+});
+
+check('only the deck manager is ever a way back: anything else is ignored', () => {
+	const bad = [
+		'https://evil.example/decks/build',
+		'//evil.example/decks/build',
+		'/\\evil.example',
+		'javascript:alert(1)',
+		'/decks',
+		'/decks/builder',
+		'/decks/build/extra',
+		'/decks/build/../..',
+		'/cards/abandon',
+		'/',
+		'',
+		'decks/build',
+		'/decks/build#d/a\nb',
+		'/decks/build\\x',
+		'/decks/build#' + 'x'.repeat(8100),
+	];
+	for (const value of bad) {
+		assert.equal(returnTarget('?from=' + encodeURIComponent(value)), null, JSON.stringify(value.slice(0, 40)));
+	}
+	assert.equal(returnTarget(''), null, 'no query at all');
+	assert.equal(returnTarget('?other=1'), null, 'no from');
+});
+
+check('building a card link from something that is not the deck manager gives the plain card address', () => {
+	assert.equal(cardPageHref('abandon', 'https://evil.example/decks/build'), '/cards/abandon');
+	assert.equal(cardPageHref('abandon', '/decks'), '/cards/abandon');
+	assert.equal(cardPageHref('abandon', ''), '/cards/abandon');
+});
+
+check('a slug is encoded, never trusted as a path', () => {
+	assert.equal(cardPageHref('a b/c', '/decks/build#d/x').split('?')[0], '/cards/a%20b%2Fc');
+});
+
+check('the previous page counts as the deck only when it is the deck manager on this site', () => {
+	const origin = 'http://localhost:4321';
+	assert.equal(cameFromBuilder('http://localhost:4321/decks/build', origin), true);
+	assert.equal(cameFromBuilder('http://localhost:4321/decks/build?x=1', origin), true);
+	assert.equal(cameFromBuilder('http://localhost:4321/decks', origin), false);
+	assert.equal(cameFromBuilder('http://localhost:4321/decks/build/x', origin), false);
+	assert.equal(cameFromBuilder('https://evil.example/decks/build', origin), false);
+	assert.equal(cameFromBuilder('http://localhost:4322/decks/build', origin), false);
+	assert.equal(cameFromBuilder('', origin), false, 'no referrer');
+	assert.equal(cameFromBuilder('not a url', origin), false);
 });
 
 console.log(`VERIFY OK: card-peek (${checks} checks)`);

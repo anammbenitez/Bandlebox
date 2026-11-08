@@ -1,32 +1,27 @@
 // DOM glue for the deck manager's card peek (spec: card-peek; design.md D3, D4,
-// D6). The dwell and stillness rule lives in src/lib/hover-intent.ts and the
-// deck-aware words in src/lib/deck-fit.ts; this file only turns browser events
-// into inputs for the first, fetches a card's facts fragment, and places a
-// read-only tooltip beside the face.
+// D6). The dwell and stillness rule lives in src/lib/hover-intent.ts; this file
+// only turns browser events into inputs for it, fetches a card's facts fragment,
+// and places the peek beside the face. The peek shows the card, not the deck:
+// nothing in it depends on what the deck holds. It can be reached: the pointer
+// may cross onto it (it stays while the pointer is on it) and its "See more"
+// link opens the card's page, which links back to this deck (deck-return.ts).
 //
 // Faces are `.face[data-slug]` elements: the browser tiles, the Legend, the
 // Champion, battlefields, and the main / rune / side rows. A face is identified
 // to the state machine by "zone:slug", never by element, because every deck
 // change rebuilds the section faces under a resting pointer.
 
-import type { Deck } from '../lib/deck';
-import { deckFit, fitLines } from '../lib/deck-fit';
-import type { DeckRuleIndexes } from '../lib/deck-rules';
+import { cardPageHref } from '../lib/deck-return';
 import { createHoverIntent, faceKey, parseFaceKey, type FaceKey } from '../lib/hover-intent';
 
 export interface CardPeekOptions {
 	/** The deck manager root (`#deck-app`): all faces live under it. */
 	root: HTMLElement;
-	/** The open deck (own or shared), or null before one has loaded. */
-	getDeck: () => Deck | null;
-	idx: DeckRuleIndexes;
-	/** Domain slug -> hue; data-only, set on the domain dots as `--dot`. */
-	domainColors: Record<string, string>;
-	domainLabel: (slug: string) => string;
 }
 
 export interface CardPeek {
-	/** The deck is about to be rebuilt: close the peek and wait for the pointer to move. */
+	/** The deck is about to be rebuilt: close the peek and wait for the pointer to move
+	 *  (the faces are re-rendered under a resting pointer, so it must not reopen on them). */
 	closeForDeckChange(): void;
 }
 
@@ -43,8 +38,8 @@ export function initCardPeek(options: CardPeekOptions): CardPeek {
 	const { root } = options;
 	const peekEl = document.getElementById('card-peek');
 	const factsEl = peekEl?.querySelector<HTMLElement>('.peek-facts');
-	const fitEl = peekEl?.querySelector<HTMLElement>('.peek-fit');
-	if (!peekEl || !factsEl || !fitEl) return { closeForDeckChange() {} };
+	const moreEl = peekEl?.querySelector<HTMLAnchorElement>('.peek-more');
+	if (!peekEl || !factsEl || !moreEl) return { closeForDeckChange() {} };
 
 	// --- faces ---------------------------------------------------------------
 
@@ -107,21 +102,29 @@ export function initCardPeek(options: CardPeekOptions): CardPeek {
 
 		let left: number;
 		let top: number;
+		// which side of the face the peek sits on: the stylesheet lays an invisible
+		// bridge across the gap on that side, so the pointer can cross onto the peek
+		let side: 'right' | 'left' | 'below' | 'above';
 		if (r.right + GAP + w <= vw - MARGIN) {
 			// beside the face, right first
 			left = r.right + GAP;
 			top = clamp(r.top, MARGIN, vh - h - MARGIN);
+			side = 'right';
 		} else if (r.left - GAP - w >= MARGIN) {
 			left = r.left - GAP - w;
 			top = clamp(r.top, MARGIN, vh - h - MARGIN);
+			side = 'left';
 		} else {
 			// a narrow window: above or below, whichever has the room
 			left = clamp(r.left + r.width / 2 - w / 2, MARGIN, vw - w - MARGIN);
 			const below = vh - r.bottom - GAP - MARGIN;
 			const above = r.top - GAP - MARGIN;
-			top = below >= h || below >= above ? r.bottom + GAP : r.top - GAP - h;
+			const under = below >= h || below >= above;
+			top = under ? r.bottom + GAP : r.top - GAP - h;
 			top = clamp(top, MARGIN, vh - h - MARGIN);
+			side = under ? 'below' : 'above';
 		}
+		peekEl!.dataset.side = side;
 		peekEl!.style.left = `${Math.round(left)}px`;
 		peekEl!.style.top = `${Math.round(top)}px`;
 		peekEl!.style.visibility = '';
@@ -141,20 +144,8 @@ export function initCardPeek(options: CardPeekOptions): CardPeek {
 		if (!face) return;
 
 		factsEl!.innerHTML = html;
-		for (const item of Array.from(factsEl!.querySelectorAll<HTMLElement>('[data-domain]'))) {
-			const color = options.domainColors[item.dataset.domain ?? ''];
-			if (color) item.style.setProperty('--dot', color);
-		}
-		const lines = fitLines(deckFit(slug, options.getDeck(), options.idx), { domain: options.domainLabel });
-		fitEl!.replaceChildren(
-			...lines.map((line) => {
-				const item = document.createElement('li');
-				item.dataset.tone = line.tone;
-				item.textContent = line.text;
-				return item;
-			}),
-		);
-
+		// the way on to the card page, and from it back to this deck
+		moreEl!.href = cardPageHref(slug, `${location.pathname}${location.search}${location.hash}`);
 		place(face);
 		describedEl = face.querySelector('a, button');
 		describedEl?.setAttribute('aria-describedby', peekEl!.id);
@@ -187,11 +178,22 @@ export function initCardPeek(options: CardPeekOptions): CardPeek {
 		intent.point(null, event.clientX, event.clientY, event.pointerType);
 	});
 
+	// the peek itself can be reached: while the pointer is on it, it stays
+	peekEl.addEventListener('pointerenter', (event) => {
+		if (event.pointerType !== 'touch') intent.hold(true);
+	});
+	peekEl.addEventListener('pointerleave', (event) => {
+		if (event.pointerType !== 'touch') intent.hold(false);
+	});
+
 	// any press closes the peek; a press on a face also blocks that face until
-	// the pointer leaves it (a click is an action, usually "add this card")
+	// the pointer leaves it (a click is an action, usually "add this card"). A
+	// press on the peek is not one of those: it is how "See more" is clicked, and
+	// closing the peek on the way down would take the link away before the click.
 	document.addEventListener(
 		'pointerdown',
 		(event) => {
+			if (event.target instanceof Node && peekEl.contains(event.target)) return;
 			intent.press(faceOf(event.target)?.key ?? null, event.pointerType);
 		},
 		true,

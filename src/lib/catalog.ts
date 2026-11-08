@@ -52,6 +52,7 @@ export interface IndexFile {
 }
 
 export interface ErrataRecord {
+	language?: string | null;
 	effectiveDate?: string | null;
 	correctedRulesText?: string | null;
 	correctedEffectText?: string | null;
@@ -74,7 +75,9 @@ export interface CardRecord {
 	tags?: string[];
 	maxCopiesOverride?: number | null;
 	additionalLegendCount?: number | null;
-	errata?: ErrataRecord | null;
+	/** One entry (older snapshots: an object or null) or a list of entries (now:
+	 *  an empty list when the card has none). Read it through `errataOf`. */
+	errata?: ErrataRecord | ErrataRecord[] | null;
 	bans?: string[];
 }
 
@@ -178,6 +181,16 @@ export const snapshot = snapshotFile as unknown as Snapshot;
 export const cardByUuid = new Map<string, IndexCard>(index.cards.map((c) => [c.cardId, c]));
 
 /** The set's release relevant to this English-only app: EN first, then any dated release. */
+/** The card's English errata entry, or null. Reads either shape the catalog has
+ *  used (a single object or null, then a list of entries), so an empty list can
+ *  never pass for "this card has errata". */
+export function errataOf(card: CardRecord | undefined): ErrataRecord | null {
+	const raw = card?.errata;
+	if (!raw) return null;
+	const entries = Array.isArray(raw) ? raw : [raw];
+	return entries.find((entry) => !entry.language || entry.language === 'EN') ?? null;
+}
+
 export function setPrimaryRelease(set: IndexSet): SetRelease | null {
 	const lang = index.meta.langs;
 	const releases = Object.values(set.releases ?? {});

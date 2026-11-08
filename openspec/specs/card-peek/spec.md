@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Gives the deck manager a quick, readable look at any card's deck-building facts without leaving the deck: a non-modal peek that appears only when the user has paused on a card, and stays out of the way of clicking, dragging and scrolling.
+Gives the deck manager a quick, readable look at any card's facts (what it costs, its domains and what it says) without leaving the deck: a non-modal peek that appears only when the user has paused on a card, stays out of the way of clicking, dragging and scrolling, and can be reached to open the card's own page.
 
 ## Requirements
 
@@ -27,7 +27,7 @@ The deck manager SHALL show a card peek beside any card face (browser tiles, and
 
 ### Requirement: Pointer movement restarts the dwell
 
-While a dwell is pending, pointer movement of more than a few pixels SHALL restart it, so the peek opens only once the pointer has come to rest. Once open, the peek SHALL stay while the pointer remains on the same face, and SHALL close when the pointer leaves it.
+While a dwell is pending, pointer movement of more than a few pixels SHALL restart it, so the peek opens only once the pointer has come to rest. Once open, the peek SHALL stay while the pointer remains on the same face or on the peek itself, and SHALL close a short moment after the pointer has left both, a grace that lets the pointer cross the gap from the face onto the peek.
 
 #### Scenario: Drifting delays the peek
 
@@ -41,13 +41,23 @@ While a dwell is pending, pointer movement of more than a few pixels SHALL resta
 
 #### Scenario: Leaving closes the peek
 
-- **WHEN** the pointer leaves a face whose peek is open
-- **THEN** the peek closes
+- **WHEN** the pointer leaves a face whose peek is open and goes to neither the peek nor back to the face
+- **THEN** the peek closes after the short grace
+
+#### Scenario: Moving onto the peek
+
+- **WHEN** the pointer leaves a face whose peek is open and arrives on the peek within the grace
+- **THEN** the peek stays open for as long as the pointer is on it
+
+#### Scenario: Moving off the peek
+
+- **WHEN** the pointer leaves the peek for somewhere that is neither the peek nor its face
+- **THEN** the peek closes after the same short grace, and moving back onto the face or the peek within it keeps the peek open
 
 #### Scenario: Moving to another card
 
 - **WHEN** the pointer moves from one card with an open peek onto a neighbouring card
-- **THEN** the first peek closes and the neighbour's peek opens only after its own full dwell
+- **THEN** the first peek closes at once, without waiting out the grace, and the neighbour's peek opens only after its own full dwell
 
 ### Requirement: A click, press or drag on a card blocks its peek
 
@@ -114,7 +124,7 @@ Any key press SHALL cancel a pending dwell and close an open peek, with the peek
 #### Scenario: Deck changes underneath
 
 - **WHEN** the deck changes while a peek is open, by any means
-- **THEN** the peek closes, so it never shows stale copy counts
+- **THEN** the peek closes, since the faces it points at are rebuilt and must not reopen under a resting pointer
 
 ### Requirement: Copy controls and touch input do not open a peek
 
@@ -156,94 +166,126 @@ Moving keyboard focus onto a card face (its link or its copy controls) SHALL ope
 
 ### Requirement: The peek presents a card's facts
 
-The peek SHALL show the card's name, type line and domains; a cost row giving whichever of Energy, Power and Might the card has, each with its game symbol; its keywords; and its printed rules and effect text. It SHALL be set at a size comfortable to read, not a reduced copy of the card face.
+The peek SHALL show the card's name, with the card's domains as emblems in the top-right corner of that same line; a type line; a cost row giving Energy, Power and Might, each figure the card has with its game symbol; and the card's printed description. It SHALL be set at a size comfortable to read at a glance: no text smaller than a reading size, and game symbols and domain emblems clearly larger than inline text. Every card's name and its emblems SHALL fit on one line at the peek's width.
 
 #### Scenario: A unit with all three stats
 
 - **WHEN** the peek opens on Ahri, Alluring
-- **THEN** it shows the name, the champion unit type with the calm domain, Energy 5, Power 1 and Might 4, and the text "When I hold, you score 1 point."
+- **THEN** it shows the name with the calm emblem at the right end of its line, the champion unit type line, Energy 5, Power 1 and Might 4, and the text "When I hold, you score 1 point."
 
 #### Scenario: A spell has no Might
 
 - **WHEN** the peek opens on a spell
-- **THEN** its cost row shows Energy, and Power only if the spell has one, with no Might entry
+- **THEN** its Energy shows, its Power shows only if the spell has one, and its Might place shows a dash
 
 #### Scenario: A card without a cost
 
 - **WHEN** the peek opens on a Legend, battlefield or rune
-- **THEN** no cost row appears and the name, type line, domains and text are shown
+- **THEN** the cost row is still drawn with a dash in each of its three places, and the name, type line, domains and text are shown
 
 #### Scenario: A card without rules text
 
 - **WHEN** a card has no printed rules or effect text
 - **THEN** the peek omits the text section rather than showing an empty block
 
-### Requirement: The peek reports colors and champion fit for this deck
+### Requirement: Every card is laid out in the same order, in the same places
 
-The peek SHALL state, for the open deck, whether the card fits the Legend's colors, using the same decision as the legality checklist: it fits, it is outside the Legend's colors (naming them), or it is pending while no Legend is placed. A champion unit SHALL also state whether its tag matches the Legend's champion tag.
+The peek SHALL use one layout for every card, whatever its type, so a player learns where to look. Top to bottom: the card's name, with the domain emblems at the right end of that line (the top-right corner); the type line, with the ban marker at the right end of that line; the cost row; the description. The cost row SHALL always have three places in a fixed order from left to right, Energy, then Power, then Might, each starting at the same position on every card; a place the card has no figure for SHALL keep its label and show a dash, never be left out or closed up. The description SHALL come last and only it may be absent, so that nothing above it moves with the card's type.
 
-#### Scenario: A card inside the Legend's colors
+#### Scenario: Different card types, same places
 
-- **WHEN** the peek opens on a fury card in a deck led by a fury and chaos Legend
-- **THEN** it says the card fits the Legend's colors
+- **WHEN** the peek opens on a unit, then a spell, a Legend, a battlefield and a rune
+- **THEN** the name, the type line, the domains, the Energy, Power and Might places and the start of the description are each at the same position in every one of them
 
-#### Scenario: A card outside the Legend's colors
+#### Scenario: A figure the card lacks
 
-- **WHEN** the peek opens on a calm card in that same deck
-- **THEN** it says the card is outside the Legend's colors and names fury and chaos
+- **WHEN** the peek opens on a card with Energy and Might but no Power
+- **THEN** the Power place shows a dash between them, and Might stays where it is on a card that has all three
 
-#### Scenario: A neutral card
+#### Scenario: No description
 
-- **WHEN** the peek opens on a neutral-domain card
-- **THEN** it says the card fits, as neutral cards fit every deck
+- **WHEN** the peek opens on a card with no printed text
+- **THEN** the name, type line and cost row are where they are on every other card, and nothing is drawn below them
 
-#### Scenario: No Legend yet
+### Requirement: Domains show as their emblems, never as a color
 
-- **WHEN** the peek opens in a deck with no Legend placed
-- **THEN** the color line says it depends on choosing a Legend, and nothing is marked wrong
+Each of a card's domains SHALL appear in the peek as that domain's emblem (the image OpenRift draws for it), in the top-right corner on the same line as the card's name, with the domain's name as the emblem's text alternative for assistive technology. This covers all eight domains the catalog lists, including Neutral and Colorless, which have no rune. The peek SHALL NOT use a colored dot or any hue of its own to stand for a domain. A domain whose emblem is not available locally SHALL still show its name, as text in the same place.
 
-#### Scenario: Champion tag
+#### Scenario: A card of two domains
 
-- **WHEN** the peek opens on a champion unit
-- **THEN** it says whether the unit's tag matches the Legend's champion tag, and non-champion cards show no tag line
+- **WHEN** the peek opens on a card of the calm and mind domains
+- **THEN** the calm emblem and the mind emblem appear side by side at the right end of the name line, and no colored dot appears
 
-#### Scenario: Battlefields have no color rule
+#### Scenario: Colorless and neutral
 
-- **WHEN** the peek opens on a battlefield
-- **THEN** no color verdict is shown, since battlefields are any color
+- **WHEN** the peek opens on a Colorless battlefield or the Neutral champion
+- **THEN** it shows that domain's own emblem in the same corner
 
-### Requirement: The peek reports copies held and bans
+#### Scenario: An emblem is missing
 
-The peek SHALL show how many copies of the card the deck already holds in each section it appears in, against that card's copy limit, and SHALL carry a clear warning when the card is banned in Constructed.
+- **WHEN** a domain's emblem has not been cached
+- **THEN** that domain shows as its name alone in the corner, with no broken image
 
-#### Scenario: Copies against the limit
+### Requirement: The description is the card's printed text
 
-- **WHEN** the peek opens on a card with two copies in the main deck
-- **THEN** it shows two held in the main deck against the card's limit of three
+The peek's description SHALL be the card's printed effect text and printed rules text, rendered with the same keyword labels, symbols and italics as the card detail page. Keywords SHALL appear only where that text prints them, as labels inside the text. The peek SHALL NOT list a card's keywords as a separate row of labels, because the card itself does not.
 
-#### Scenario: A card not in the deck
+#### Scenario: Keywords print inside the text
 
-- **WHEN** the peek opens on a card with no copies in the deck
-- **THEN** it says the card is not in the deck and still shows the limit
+- **WHEN** the peek opens on Abandon
+- **THEN** the Reaction and Predict labels appear inside its description, in the order the card prints them, and nowhere else in the peek
 
-#### Scenario: A card with its own limit
+#### Scenario: A keyword the card does not print
 
-- **WHEN** the peek opens on a card whose copy limit differs from the standard three
-- **THEN** the peek shows that card's own limit
+- **WHEN** a card's data lists a keyword but the card prints no text containing it
+- **THEN** the peek shows no label for it
+
+### Requirement: The peek marks a banned card
+
+The peek SHALL show a "Banned" marker at the right end of the card's type line when the card is banned in Constructed, using the same decision as the legality checklist, and assistive technology SHALL hear it as "Banned in Constructed". A card that is not banned SHALL show no marker.
 
 #### Scenario: A banned card
 
 - **WHEN** the peek opens on a card banned in Constructed
-- **THEN** it shows a ban warning, and a card that is not banned shows none
+- **THEN** a ban marker appears at the right end of the card's type line
+
+#### Scenario: An ordinary card
+
+- **WHEN** the peek opens on a card that is not banned
+- **THEN** no ban marker appears
+
+### Requirement: The peek describes the card, not the deck
+
+The peek SHALL show only facts that belong to the card. It SHALL NOT show whether the card fits the Legend's colors, whether a champion tag matches, how many copies the deck holds, or the card's copy limit; the deck sheet and its legality checklist already carry those.
+
+#### Scenario: A card in the deck
+
+- **WHEN** the peek opens on a card the deck already holds
+- **THEN** it shows the same facts as for a card the deck does not hold
+
+#### Scenario: No Legend yet
+
+- **WHEN** the peek opens in a deck with no Legend placed
+- **THEN** it shows the same facts as with a Legend, and nothing is marked pending or wrong
 
 ### Requirement: The peek never gets in the way
 
-The peek SHALL be non-modal: no backdrop, no focus capture, and no pointer input of its own, so clicks and drags pass through it. It SHALL sit beside the card face without covering that face, flip to the other side when there is no room, and stay fully inside the visible window. It SHALL also appear for shared, read-only decks.
+The peek SHALL be non-modal: no backdrop and no focus capture. It takes pointer input only while it is open, and only so that it can stay open under the pointer and be clicked; while it is closed, clicks and drags pass through where it will be. It SHALL sit beside the card face without covering that face, with no gap on the way to it that would close the peek, flip to the other side when there is no room, and stay fully inside the visible window. It SHALL also appear for shared, read-only decks.
 
-#### Scenario: Clicks pass through
+#### Scenario: A press outside the peek
 
-- **WHEN** a peek is open and the user clicks or drags toward something it overlaps
-- **THEN** the action reaches the control underneath and the peek closes by the press rule
+- **WHEN** a peek is open and the user presses on, or starts dragging, anything outside it
+- **THEN** the action reaches that control and the peek closes by the press rule
+
+#### Scenario: A press on the peek
+
+- **WHEN** the user presses on the peek, including its "See more" link
+- **THEN** the peek stays open until the link is followed, and the press does not count as a click on any card beneath it
+
+#### Scenario: The gap between face and peek
+
+- **WHEN** the pointer crosses the space between a card face and its peek
+- **THEN** it is never over some other card while it does, so the peek does not close on the way
 
 #### Scenario: Edge of the window
 
@@ -259,6 +301,35 @@ The peek SHALL be non-modal: no backdrop, no focus capture, and no pointer input
 
 - **WHEN** a shared deck is open in read-only view and the pointer rests on a card
 - **THEN** the peek opens as it does for the user's own decks
+
+### Requirement: The peek leads to the card's page, and back to the deck
+
+The peek SHALL end with a "See more" link, last in the peek and full width, that opens the card's own page (`/cards/{slug}`). The link SHALL carry the address of the deck being built, so the card page can send the reader back to that deck. The card page's back link SHALL then read "Back to deck" and return to the deck manager with the same deck open, whether it is one of the user's own decks or a shared one. When the page before the card page in that tab is the deck manager, the back link SHALL use the browser's own back, so the deck comes back as it was left.
+
+#### Scenario: Following See more
+
+- **WHEN** the user moves onto a peek and clicks "See more"
+- **THEN** the card's page opens, and its back link reads "Back to deck"
+
+#### Scenario: Going back to the deck
+
+- **WHEN** the user clicks "Back to deck" on that card page
+- **THEN** the deck manager opens with the same deck, and no extra history entry is left behind
+
+#### Scenario: A shared deck
+
+- **WHEN** the deck being built is a shared, read-only deck and the user follows See more and then Back to deck
+- **THEN** the same shared deck is open again
+
+#### Scenario: A card page opened some other way
+
+- **WHEN** a card page is opened with no return address, or with an address that is not the deck manager's
+- **THEN** its back link keeps its default and returns to the card grid
+
+#### Scenario: A link opened in a new tab
+
+- **WHEN** the See more link is opened in a new tab and the user clicks Back to deck there
+- **THEN** the deck manager opens with the deck in that tab
 
 ### Requirement: Card faces carry no competing native tooltip
 

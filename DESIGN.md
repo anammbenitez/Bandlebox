@@ -99,7 +99,10 @@ repeated inside panels.
 - At `lg`: two equal columns — the card browser and the deck viewer — with a
   small gap between their frames. Both columns are branch-framed; each frame
   fills the working height and its content scrolls inside it (filters pin inside the browser, the ledger pins inside the
-  sheet). No grip or drag resizes either column.
+  sheet). The pinned filter bar is the frame's own fill, not a darker plate, and
+  cards slide under its foot through a short fade that comes in only once the column
+  has scrolled (`.browser-chrome`, mirroring the frame's foot fade). No grip or drag
+  resizes either column.
 - Below `lg` the Deck / Back to cards buttons swap the browser and the deck as
   panes, so the deck is never buried behind an endless list. Each pane fills the
   same working height and scrolls inside its own frame; hiding one pane keeps
@@ -119,9 +122,11 @@ All in `src/styles/global.css` under `@layer components`.
   dialogs.
 - **Buttons** — one `.btn`, five roles by `data-variant`, set by what the
   control does and not by how loud it should be. **primary** is the struck-gold
-  plate (the one thing a screen is for); the **default** is a raised bark plate,
-  lighter than the panel it sits on, with a 3:1 edge, a top light and a soft drop
-  (everything else you can press); **ghost** is bare text until hovered (a quiet way
+  plate (the one thing a screen is for); the **default** is a deep-walnut plate
+  with a 10px corner, lighter than the panel it sits on, with a 3:1 edge, a lit top
+  lip, one soft pool of lamp light from above (a radial wash, not a top-to-bottom
+  bevel) and a soft layered drop, never a hard 1px line (everything else you can
+  press); **ghost** is bare text until hovered (a quiet way
   out or back); **link** is navigation, lantern-amber text with an arrow that leans
   forward on hover, no plate; **danger** is a red-tinted plate. `data-size="sm"`
   is 32px, the default 38px (level with `.field`), and both grow on a coarse
@@ -148,7 +153,9 @@ All in `src/styles/global.css` under `@layer components`.
   moves focus into the field. These cues live in the existing meta line, so the
   bar never grows. A shared deck shows the plain `.deck-name-text` and no Rename.
 - **Pills / chips** — `.pill` with `aria-pressed` carrying the selected state;
-  `.dot` inside a pill is the domain colour.
+  `.dot` inside a pill is the domain colour. A pill is the default button's plate cut
+  to a chip (same walnut fill and lamp-lit top, quieter at rest); when on it is lit
+  sap, exactly as a pressed toggle button is, with no glow halo.
 - **Panels / sections** — `.panel` + `.panel-head`; section names in the
   display face.
 - **Deck sheet** — `.sheet` frames the viewer. `.sheet-ledger` holds five

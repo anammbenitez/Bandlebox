@@ -433,96 +433,248 @@
 
 	/* --- controls --------------------------------------------------------- */
 
+	/* One button, in roles. Weight comes from material, not size, so a screen reads
+	 * at a glance which control is for what:
+	 *   primary   the struck-gold plate: the one thing this screen is for
+	 *   (default) a raised bark plate: everything else you can press
+	 *   ghost     bare text until you reach for it: a quiet way out or back
+	 *   link      navigation: lantern-amber text and an arrow, no plate
+	 *   danger    a red-tinted plate: it destroys something
+	 * A control that stays on once pressed (aria-pressed="true") lights up as lit
+	 * sap, so its state is seen, not only announced. Every role has hover, pressed
+	 * down, focus (the global gold outline), disabled and, for the toggle, on. Fill,
+	 * edge and light come from the palette's tokens (no raw colors): the fill is a
+	 * flat color that animates, with the plate's light laid over it as a gradient
+	 * that does not. */
 	.btn {
+		--btn-fill: color-mix(in oklab, var(--color-bark-700) 55%, var(--color-slate-700));
+		/* the edge holds 3:1 against the panel, so the plate is seen as a control even
+		 * before its label is read */
+		--btn-edge: color-mix(in oklab, var(--color-bark-300) 90%, var(--color-slate-700));
+		--btn-ink: var(--color-slate-100);
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		gap: 0.375rem;
+		gap: 0.4375rem;
 		height: 2.375rem;
-		padding-inline: 0.875rem;
-		border: 1px solid color-mix(in oklab, var(--color-bark-300) 42%, var(--color-slate-700));
+		padding-inline: 1rem;
+		border: 1px solid var(--btn-edge);
 		border-radius: 0.5rem;
-		background: linear-gradient(180deg, #2d2013, #1b120a);
-		box-shadow: inset 0 1px 0 rgb(255 232 190 / 0.07), 0 1px 0 rgb(0 0 0 / 0.5);
+		background-color: var(--btn-fill);
+		background-image: linear-gradient(180deg, rgb(255 232 190 / 0.1), rgb(0 0 0 / 0.16));
+		box-shadow:
+			inset 0 1px 0 rgb(255 232 190 / 0.12),
+			0 1px 0 rgb(0 0 0 / 0.55),
+			0 3px 6px -3px rgb(0 0 0 / 0.7);
 		font-size: 0.875rem;
-		font-weight: 500;
-		color: var(--color-slate-200);
+		font-weight: 600;
+		line-height: 1;
+		color: var(--btn-ink);
+		text-decoration: none;
 		white-space: nowrap;
+		cursor: pointer;
+		user-select: none;
 		transition:
 			background-color 140ms ease,
 			border-color 140ms ease,
 			color 140ms ease,
-			opacity 140ms ease;
+			box-shadow 140ms ease,
+			transform 140ms ease;
 	}
 
-	.btn:hover {
-		border-color: color-mix(in oklab, var(--color-amber-400) 55%, var(--color-bark-300));
-		background: linear-gradient(180deg, #3a2a19, #231810);
-		color: var(--color-slate-100);
+	.btn > svg {
+		flex: none;
 	}
 
-	.btn:active {
-		background: #170f08;
+	.btn:not(:disabled, [aria-disabled="true"]):hover {
+		--btn-fill: color-mix(in oklab, var(--color-bark-500) 55%, var(--color-slate-700));
+		--btn-edge: color-mix(in oklab, var(--color-amber-400) 55%, var(--color-bark-300));
 	}
 
+	/* pressed down: the plate sinks a pixel and loses its drop */
+	.btn:not(:disabled, [aria-disabled="true"]):active {
+		--btn-fill: color-mix(in oklab, var(--color-bark-900) 62%, var(--color-slate-800));
+		background-image: none;
+		box-shadow: inset 0 2px 5px rgb(0 0 0 / 0.6);
+		transform: translateY(1px);
+	}
+
+	/* on: a toggle that is currently set (aria-pressed="true") is lit sap, and it
+	 * is flat, as a plate held down would be */
+	.btn[aria-pressed="true"] {
+		--btn-fill: color-mix(in oklab, var(--color-amber-400) 20%, var(--color-slate-900));
+		--btn-edge: color-mix(in oklab, var(--color-amber-400) 75%, var(--color-bark-300));
+		--btn-ink: var(--color-amber-300);
+		background-image: linear-gradient(180deg, rgb(255 232 190 / 0.08), transparent 60%);
+		box-shadow:
+			inset 0 1px 0 rgb(255 232 190 / 0.14),
+			inset 0 -2px 4px rgb(0 0 0 / 0.25);
+	}
+
+	.btn[aria-pressed="true"]:not(:disabled, [aria-disabled="true"]):hover {
+		--btn-fill: color-mix(in oklab, var(--color-amber-400) 27%, var(--color-slate-900));
+		--btn-edge: var(--color-amber-400);
+	}
+
+	/* disabled, for every role alike: a flat, unlit plate that does not answer */
 	.btn:disabled,
 	.btn[aria-disabled="true"] {
+		--btn-fill: var(--color-slate-900);
+		--btn-edge: var(--color-slate-800);
+		--btn-ink: var(--color-slate-500);
+		background-image: none;
+		box-shadow: none;
 		cursor: not-allowed;
-		opacity: 0.45;
 	}
+
+	/* --- primary: the struck-gold plate --- */
 
 	.btn[data-variant="primary"] {
-		border-color: color-mix(in oklab, var(--color-amber-300) 70%, var(--color-bark-500));
-		background: linear-gradient(180deg, var(--color-amber-300), var(--color-amber-400) 58%, var(--color-amber-500));
-		color: #1b1207;
-		font-weight: 600;
+		--btn-fill: var(--color-amber-400);
+		--btn-edge: color-mix(in oklab, var(--color-amber-300) 70%, var(--color-bark-500));
+		--btn-ink: var(--color-amber-950);
+		background-image: linear-gradient(180deg, rgb(255 255 255 / 0.4), rgb(255 255 255 / 0) 52%, rgb(0 0 0 / 0.14));
 		box-shadow:
 			inset 0 1px 0 rgb(255 255 255 / 0.4),
-			0 1px 0 rgb(0 0 0 / 0.5);
+			0 1px 0 rgb(0 0 0 / 0.5),
+			0 3px 6px -3px rgb(0 0 0 / 0.7);
+		font-weight: 650;
 	}
 
-	.btn[data-variant="primary"]:hover {
-		border-color: var(--color-amber-300);
-		background: linear-gradient(180deg, #fdeec6, var(--color-amber-300) 58%, var(--color-amber-400));
-		color: #1b1207;
+	.btn[data-variant="primary"]:not(:disabled, [aria-disabled="true"]):hover {
+		--btn-fill: var(--color-amber-300);
+		--btn-edge: color-mix(in oklab, var(--color-amber-300) 70%, white);
+	}
+
+	.btn[data-variant="primary"]:not(:disabled, [aria-disabled="true"]):active {
+		--btn-fill: var(--color-amber-500);
+		background-image: none;
+		box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.35);
 	}
 
 	.btn[data-variant="primary"]:disabled,
 	.btn[data-variant="primary"][aria-disabled="true"] {
-		border-color: var(--color-slate-700);
-		background: var(--color-slate-800);
+		--btn-fill: var(--color-slate-900);
+		--btn-edge: var(--color-slate-800);
+		--btn-ink: var(--color-slate-500);
+		background-image: none;
 		box-shadow: none;
-		color: var(--color-slate-500);
-		opacity: 1;
 	}
+
+	/* --- ghost: text until you reach for it --- */
 
 	.btn[data-variant="ghost"] {
-		border-color: transparent;
-		background: transparent;
-		color: var(--color-slate-400);
+		--btn-fill: transparent;
+		--btn-edge: transparent;
+		--btn-ink: var(--color-slate-300);
+		background-image: none;
+		box-shadow: none;
+		font-weight: 500;
 	}
 
-	.btn[data-variant="ghost"]:hover {
-		border-color: var(--color-slate-700);
-		background: var(--color-slate-900);
-		color: var(--color-slate-100);
+	.btn[data-variant="ghost"]:not(:disabled, [aria-disabled="true"]):hover {
+		--btn-fill: color-mix(in oklab, var(--color-slate-100) 7%, transparent);
+		--btn-edge: var(--color-slate-700);
+		--btn-ink: var(--color-slate-100);
 	}
+
+	.btn[data-variant="ghost"]:not(:disabled, [aria-disabled="true"]):active {
+		--btn-fill: color-mix(in oklab, var(--color-slate-100) 12%, transparent);
+		box-shadow: none;
+	}
+
+	.btn[data-variant="ghost"]:disabled,
+	.btn[data-variant="ghost"][aria-disabled="true"] {
+		--btn-fill: transparent;
+		--btn-edge: transparent;
+		--btn-ink: var(--color-slate-500);
+	}
+
+	/* --- link: navigation, not an action --- */
+
+	.btn[data-variant="link"] {
+		--btn-fill: transparent;
+		--btn-edge: transparent;
+		--btn-ink: var(--color-amber-300);
+		background-image: none;
+		box-shadow: none;
+	}
+
+	.btn[data-variant="link"]:not(:disabled, [aria-disabled="true"]):hover {
+		--btn-fill: color-mix(in oklab, var(--color-amber-400) 11%, transparent);
+		--btn-ink: color-mix(in oklab, var(--color-amber-300) 60%, white);
+	}
+
+	.btn[data-variant="link"]:not(:disabled, [aria-disabled="true"]):active {
+		--btn-fill: color-mix(in oklab, var(--color-amber-400) 18%, transparent);
+		box-shadow: none;
+	}
+
+	/* the arrow leans toward where the link goes */
+	.btn[data-variant="link"] > svg:last-child {
+		transition: transform 140ms ease;
+	}
+
+	.btn[data-variant="link"]:not(:disabled, [aria-disabled="true"]):hover > svg:last-child {
+		transform: translateX(2px);
+	}
+
+	.btn[data-variant="link"]:disabled,
+	.btn[data-variant="link"][aria-disabled="true"] {
+		--btn-fill: transparent;
+		--btn-edge: transparent;
+		--btn-ink: var(--color-slate-500);
+	}
+
+	/* --- danger: it destroys something --- */
 
 	.btn[data-variant="danger"] {
-		border-color: color-mix(in oklab, var(--color-red-400) 55%, transparent);
-		background: color-mix(in oklab, var(--color-red-400) 12%, var(--color-slate-900));
-		color: var(--color-red-300);
+		--btn-fill: color-mix(in oklab, var(--color-red-400) 14%, var(--color-slate-900));
+		--btn-edge: color-mix(in oklab, var(--color-red-400) 55%, transparent);
+		--btn-ink: var(--color-red-300);
+		background-image: linear-gradient(180deg, rgb(255 200 190 / 0.07), transparent 60%);
 	}
 
-	.btn[data-variant="danger"]:hover {
-		border-color: var(--color-red-400);
-		color: #ffe9e9;
+	.btn[data-variant="danger"]:not(:disabled, [aria-disabled="true"]):hover {
+		--btn-fill: color-mix(in oklab, var(--color-red-400) 22%, var(--color-slate-900));
+		--btn-edge: var(--color-red-400);
+		--btn-ink: color-mix(in oklab, var(--color-red-300) 55%, white);
 	}
+
+	.btn[data-variant="danger"]:not(:disabled, [aria-disabled="true"]):active {
+		--btn-fill: color-mix(in oklab, var(--color-red-500) 24%, var(--color-slate-950));
+	}
+
+	.btn[data-variant="danger"]:disabled,
+	.btn[data-variant="danger"][aria-disabled="true"] {
+		--btn-fill: var(--color-slate-900);
+		--btn-edge: var(--color-slate-800);
+		--btn-ink: var(--color-slate-500);
+		background-image: none;
+	}
+
+	/* --- size --- */
 
 	.btn[data-size="sm"] {
+		gap: 0.375rem;
 		height: 2rem;
-		padding-inline: 0.6875rem;
-		font-size: 0.75rem;
+		padding-inline: 0.75rem;
+		font-size: 0.8125rem;
+	}
+
+	/* a finger needs more than a cursor does: controls grow on a coarse pointer */
+	@media (pointer: coarse) {
+		.btn {
+			min-height: 2.75rem;
+		}
+
+		.btn[data-size="sm"] {
+			min-height: 2.5rem;
+		}
+
+		.field {
+			min-height: 2.75rem;
+		}
 	}
 
 	.field {
@@ -1594,14 +1746,29 @@
 		gap: 0.75rem;
 	}
 
-	/* the way on to the card's own page: last, full width, always visible */
-	.peek-more {
+	/* The way on to the card's own page. It is navigation, so it is a link, not a
+	 * plate: a row that runs edge to edge along the foot of the card, under one
+	 * hairline, with the arrow at the far end. It stays last and visible however
+	 * long the text above it is. */
+	.btn.peek-more {
+		--btn-edge: var(--color-slate-800);
 		flex: none;
-		width: 100%;
+		justify-content: space-between;
+		height: auto;
+		min-height: 2.75rem;
+		margin: 0.125rem -1rem -1rem;
+		padding-inline: 1rem;
+		border-width: 1px 0 0;
+		border-radius: 0 0 calc(0.75rem - 1px) calc(0.75rem - 1px);
 	}
 
-	.peek-more:hover {
-		color: var(--color-amber-300);
+	.btn.peek-more:active {
+		transform: none;
+	}
+
+	/* the card's edge is right there, so the focus ring sits inside the row */
+	.btn.peek-more:focus-visible {
+		outline-offset: -3px;
 	}
 
 	/* the name on the left, the domain emblems in the top-right corner of the

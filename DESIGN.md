@@ -117,9 +117,22 @@ All in `src/styles/global.css` under `@layer components`.
 - **Frame** — `.frame`, `.frame--lit`, `.frame--quiet`, `.frame-body`, `.bd-frame`,
   `.deck-frame` (see above). Used on the two working columns only, not on cards or
   dialogs.
-- **Buttons** — `.btn` with `data-variant="primary|ghost|danger"` and
-  `data-size="sm"`. 7px radius, bark-toned ink border, and a primary that is a
-  struck-gold plate with an inner top light rather than a flat accent.
+- **Buttons** — one `.btn`, five roles by `data-variant`, set by what the
+  control does and not by how loud it should be. **primary** is the struck-gold
+  plate (the one thing a screen is for); the **default** is a raised bark plate,
+  lighter than the panel it sits on, with a 3:1 edge, a top light and a soft drop
+  (everything else you can press); **ghost** is bare text until hovered (a quiet way
+  out or back); **link** is navigation, lantern-amber text with an arrow that leans
+  forward on hover, no plate; **danger** is a red-tinted plate. `data-size="sm"`
+  is 32px, the default 38px (level with `.field`), and both grow on a coarse
+  pointer. States are drawn for every role: hover (brighter fill, gold edge),
+  pressed down (sinks a pixel, loses its drop), focus (the one global gold
+  outline), and disabled (one flat, unlit plate for every role, so it never reads
+  as a quiet default). A toggle (`aria-pressed="true"`) is lit sap: amber wash,
+  gold edge, amber label, so its state is seen. Fill, edge and ink are tokens
+  (`--btn-fill`, `--btn-edge`, `--btn-ink`), never raw colors, and the fill is a
+  flat color so it animates while the plate's light is a fixed overlay. Labels
+  are 600 weight, and at least 8:1 against their fill in every role.
 - **Fields** — `.field` for input and select; drawn chevron, gold border and
   soft ring on focus, amber caret.
 - **Pills / chips** — `.pill` with `aria-pressed` carrying the selected state;
@@ -137,7 +150,7 @@ All in `src/styles/global.css` under `@layer components`.
   only while closed; once open it takes the pointer, so the pointer can cross onto
   it (an invisible bridge, `::before`, covers the gap to the face, and a 250ms
   grace covers the rest) and it stays while the pointer is on it. It ends with a
-  full-width `.btn` "See more" that opens the card's page, which links back to the
+  **link**-role `.btn` "See more" that opens the card's page, which links back to the
   deck ("Back to deck"). A `.dialog`-toned surface
   (slate over bark, bark hairline), 24rem wide. It is read at a glance with the
   other hand on the deck, so nothing in it is a micro-label: the name is the

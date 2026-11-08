@@ -304,7 +304,7 @@ The peek SHALL be non-modal: no backdrop and no focus capture. It takes pointer 
 
 ### Requirement: The peek leads to the card's page, and back to the deck
 
-The peek SHALL end with a "See more" link, last in the peek and full width, that opens the card's own page (`/cards/{slug}`). The link SHALL carry the address of the deck being built, so the card page can send the reader back to that deck. The card page's back link SHALL then read "Back to deck" and return to the deck manager with the same deck open, whether it is one of the user's own decks or a shared one. When the page before the card page in that tab is the deck manager, the back link SHALL use the browser's own back, so the deck comes back as it was left.
+The peek SHALL end with a "See more" link, last in the peek, styled as navigation (a row along the foot of the card, with an arrow at its far end, not a button plate), that opens the card's own page (`/cards/{slug}`). The link SHALL carry the address of the deck being built, so the card page can send the reader back to that deck. The card page's back link SHALL then read "Back to deck" and return to the deck manager with the same deck open, whether it is one of the user's own decks or a shared one. When the page before the card page in that tab is the deck manager, the back link SHALL use the browser's own back, so the deck comes back as it was left.
 
 #### Scenario: Following See more
 

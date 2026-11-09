@@ -43,13 +43,17 @@
 	--color-bark-950: #150c05;
 	--color-bark-900: #22150a;
 	--color-bark-700: #4a3218;
-	--color-bark-500: #6d4a26;
-	--color-bark-300: #9a6d3d;
-	--color-leaf-600: #33502a;
-	--color-leaf-500: #4d7a3a;
-	--color-leaf-400: #79ad5c;
-	--color-leaf-200: #b3d394;
-	--color-bloom: #a9cbe8;
+	--color-bark-500: #7a4f26;
+	--color-bark-300: #a8703a;
+	/* The logo's own colours: sticker-bright leaf greens, the dark forest line it
+	 * is drawn with, and the cornflower of its flowers. */
+	--color-forest-950: #06200b;
+	--color-forest-900: #0d3412;
+	--color-leaf-600: #2f6a22;
+	--color-leaf-500: #46a02c;
+	--color-leaf-400: #7bd23c;
+	--color-leaf-200: #c3ee92;
+	--color-bloom: #5b9cf2;
 }
 
 @font-face {
@@ -102,10 +106,10 @@
 		 * horizon, fading to bark ink behind the working area. No texture behind
 		 * card art — the art is the brightest thing on the table. */
 		background:
-			radial-gradient(60% 440px at 10% -40px, rgb(122 72 196 / 0.5), transparent 72%),
-			radial-gradient(48% 400px at 88% -20px, rgb(36 150 140 / 0.38), transparent 70%),
-			radial-gradient(80% 280px at 50% 150px, rgb(244 164 84 / 0.3), transparent 74%),
-			linear-gradient(180deg, #1b1533 0, #2a1b1c 230px, var(--color-slate-950) 560px),
+			radial-gradient(60% 440px at 10% -40px, rgb(62 156 50 / 0.42), transparent 72%),
+			radial-gradient(48% 400px at 88% -20px, rgb(48 110 218 / 0.34), transparent 70%),
+			radial-gradient(80% 280px at 50% 150px, rgb(222 144 66 / 0.26), transparent 74%),
+			linear-gradient(180deg, #112519 0, #261b12 230px, var(--color-slate-950) 560px),
 			var(--color-slate-950);
 		background-attachment: fixed;
 	}
@@ -340,8 +344,8 @@
 		align-items: center;
 		line-height: 0;
 		rotate: -6deg;
-		color: var(--color-amber-400);
-		filter: drop-shadow(0 0 3px color-mix(in oklab, var(--color-amber-400) 18%, transparent));
+		color: var(--color-leaf-400);
+		filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.5));
 	}
 
 	.nav-mark > svg {
@@ -2346,7 +2350,7 @@
 		box-shadow:
 			inset 0 0 0 1px color-mix(in oklab, var(--color-amber-400) 22%, transparent),
 			inset 0 0 34px -10px #000,
-			0 0 0 1px #120b05,
+			0 0 0 1.5px var(--color-forest-950),
 			0 18px 34px -22px #000;
 	}
 

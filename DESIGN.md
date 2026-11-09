@@ -7,7 +7,9 @@ colour; the interface stays quiet; the deck's state is always legible at a
 glance.
 
 The world is Bandle City's woodland — bark-brown shadow, lantern gold, living
-green — with a painted branch on the header and a simple bark frame around the
+green — and its colours are the logo's (the vine-wreath mark in the header):
+sticker-bright leaf greens, a vine's orange-brown, cornflower flowers, all held
+by a dark forest outline — with a painted branch on the header and a simple bark frame around the
 working panels. Inside the frame the interface stays a plain tool:
 it never sits between the reader and a card's text.
 
@@ -31,9 +33,10 @@ token, never a raw hex.
 | `amber-300` | `#f7e0ad` | links, active labels, lantern light |
 | `emerald-*` | — | legal / pass |
 | `red-*` | — | illegal / fail / destructive |
-| `bark-*` | `#22150a` → `#9a6d3d` | the nav rail, the brand, the ink under a button |
-| `leaf-*` | `#33502a` → `#b3d394` | foliage, section rules, empty-state edges |
-| `bloom` | `#a9cbe8` | the sprig blossom's blue — the only cool colour |
+| `bark-*` | `#22150a` → `#a8703a` | the nav rail, the brand, the ink under a button; the top step is the logo's vine |
+| `leaf-*` | `#2f6a22` → `#c3ee92` | foliage, the current-page leaf, section rules, empty-state edges; sticker-bright, as in the logo |
+| `forest-*` | `#06200b`, `#0d3412` | the logo's own dark outline: the line round a frame, the outline of the lit leaf |
+| `bloom` | `#5b9cf2` | the logo flower's cornflower — the only cool colour |
 
 The six Riftbound domains keep their fixed hues (`deck-builder.ts`
 `DOMAIN_COLORS`). They appear only as data: a dot beside the rune-ratio count
@@ -66,7 +69,7 @@ The two never swap roles.
 ## Frames, header branch, background
 
 **Panel frame.** The deck sheet and card browser sit in `.frame` (`Frame.astro`):
-a 3px bark rail (`#4f3720`), a thin lantern hairline just inside it, and a warm
+a 3px bark rail (`#4f3720`), a thin lantern hairline just inside it, a 1.5px forest-ink outline around it (the logo's line), and a warm
 dark fill (`lit` for the sheet, `quiet` for the browser). It is a plain box —
 no images, no positioned pieces — so it resizes and reflows like any block and
 needs no per-breakpoint geometry. Padding is `--frame-pad` (0.875rem, 0.625rem on
@@ -83,8 +86,8 @@ twigs are placed so their own branch sits on the strip's line, away from the nav
 links; the first is hidden below 48rem.
 
 **Background.** The page behind the header is a layered dusk gradient on `body`:
-a violet glow top-left, a teal glow top-right and a lantern-amber horizon over an
-indigo-to-bark fade that reaches plain bark ink by ~560px. Atmosphere only; never
+a leaf-green glow top-left, a cornflower glow top-right and a vine-orange horizon over a
+forest-to-bark fade that reaches plain bark ink by ~560px. Atmosphere only; never
 repeated inside panels.
 
 ## Layout

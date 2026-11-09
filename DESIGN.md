@@ -75,7 +75,7 @@ fuller painted frame (eight positioned pieces) was tried and retired as too
 complex to keep correct across sizes.
 
 **Header branch.** The one painted detail is the site header's underside: a
-repeating branch strip (`.site-header::after`, `edge_bottom_loop.png`, built
+repeating branch strip (`.site-header::after`, `edge_bottom_loop.webp`, built
 and straightened by `scripts/build-wood-loops.mjs` from the ChatGPT pack) with
 two flowering twigs resting on it (`.header-sprig--a/--b`, from
 `sprig_horizontal_upper/lower.png`) and the hanging vine on non-wide pages. The

@@ -1,5 +1,6 @@
 ---
-import { getImage } from 'astro:assets';
+import { getImage, Image } from 'astro:assets';
+import logo from '../assets/brand/logo.webp';
 import sprigUpper from '../assets/wood/sprig_horizontal_upper.png';
 import sprigLower from '../assets/wood/sprig_horizontal_lower.png';
 
@@ -20,13 +21,7 @@ const currentPath = Astro.url.pathname;
 <header class="site-header sticky top-0 z-40 pb-1">
 	<nav id="site-nav" class:list={['site-nav nav-wide mx-auto max-w-none gap-4 px-4 sm:gap-6']}>
 		<a href="/" class="nav-brand" aria-label="BandleBox — home">
-			<svg class="text-amber-400" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
-				<path d="M4.2 22.6C5.2 16 9 10.8 15.6 7.8" stroke="#6d4a26" stroke-width="2.2" stroke-linecap="round" />
-				<path d="M15.4 15.2C12.6 10.6 12.9 5.9 16.1 1.8c4.1 2 6.3 6 5.5 10.9-2.4 1.9-4.5 2.7-6.2 2.5Z" fill="currentColor" />
-				<path d="M17.2 13.6c1.5-3.5 2.5-6.4 3.2-9.1" stroke="#2b4425" stroke-width="1" stroke-linecap="round" />
-				<path d="M11.2 18.6C7.4 18.4 4.2 16.2 2.4 12.2c3.1-1.8 6.4-1.6 9.5 0.8 0 2.2-0.2 4-0.7 5.6Z" fill="currentColor" fill-opacity="0.68" />
-				<path d="M3.6 21.4c3.4-2.6 6.4-5.2 9.2-7.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity=".55" />
-			</svg>
+			<Image class="brand-mark" src={logo} alt="" width={40} height={41} densities={[1, 2, 3]} format="webp" quality={90} loading="eager" decoding="async" />
 			<span>BandleBox</span>
 		</a>
 		{nav.map((n) => {

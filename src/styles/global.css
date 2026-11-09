@@ -239,7 +239,7 @@
 		right: 0;
 		bottom: -0.875rem;
 		height: 2.25rem;
-		background: url("../assets/wood/edge_bottom_loop.png") repeat-x 0 0 / auto 100%;
+		background: url("../assets/wood/edge_bottom_loop.webp") repeat-x 0 0 / auto 100%;
 		filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.55)) brightness(0.92) saturate(0.95);
 		pointer-events: none;
 	}
@@ -293,19 +293,13 @@
 		white-space: nowrap;
 	}
 
-	/* The brand's leaf sits in a lantern-ringed bark medallion. */
-	.nav-brand > svg {
-		box-sizing: border-box;
-		width: 2.25rem;
-		height: 2.25rem;
-		padding: 0.3125rem;
+	/* The brand mark is the finished vine-wreath logo; it carries its own dark
+	 * outline, so it sits straight on the bark band with only a soft drop. */
+	.nav-brand > .brand-mark {
+		width: auto;
+		height: 2.5rem;
 		align-self: center;
-		border-radius: 999px;
-		background: radial-gradient(circle at 35% 30%, #4a3319, #1a1008 72%);
-		box-shadow:
-			0 0 0 1.5px var(--color-amber-500),
-			0 0 0 3.5px #1a1008,
-			0 0 14px -2px color-mix(in oklab, var(--color-amber-400) 40%, transparent);
+		filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.55));
 	}
 
 	.nav-link {

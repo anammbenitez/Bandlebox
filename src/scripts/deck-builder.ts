@@ -79,6 +79,13 @@ const setEl = document.getElementById('bd-set') as HTMLSelectElement;
 const resetEl = document.getElementById('bd-reset') as HTMLButtonElement;
 const pillsEl = document.getElementById('bd-pills') as HTMLDivElement;
 const domainsEl = document.getElementById('bd-domains') as HTMLDivElement;
+const domainGroupEl = document.getElementById('bd-domain-group')!;
+// the filter dropdown: a native popover under the "Filters" button
+const filtersBtn = document.getElementById('bd-filters-btn') as HTMLButtonElement;
+const filtersPop = document.getElementById('bd-filters') as HTMLElement;
+const filtersBadgeEl = document.getElementById('bd-filters-badge')!;
+const filtersCountEl = document.getElementById('bd-filters-count')!;
+const activeDomainsEl = document.getElementById('bd-active-domains')!;
 const listEl = document.getElementById('bd-list') as HTMLUListElement;
 const sentinelEl = document.getElementById('bd-sentinel')!;
 const countEl = document.getElementById('bd-count')!;
@@ -801,13 +808,60 @@ io?.observe(sentinelEl);
 // beyond two viewports, so this stays cheap per scroll tick.
 window.addEventListener('scroll', maybeFill, { passive: true });
 
+/** The domain filter does not apply to battlefields (any color) or the Legend
+ *  (any other Legend must stay choosable), so chips set there change nothing. */
+const domainFilterApplies = (): boolean => activeSection !== 'battlefields' && activeSection !== 'legend';
+
+/** How many of the dropdown's filters are set: type (when it is not just the
+ *  section's own preset), rarity, set, and the domains (as one). */
+function activeFilterCount(): number {
+	const allowed = SECTION_CARD_TYPES[activeSection];
+	const presetType = allowed.length === 1 ? allowed[0] : '';
+	let count = 0;
+	if (typeEl.value && typeEl.value !== presetType) count++;
+	if (rarityEl.value) count++;
+	if (setEl.value) count++;
+	if (domainFilterApplies() && selectedDomains.size > 0) count++;
+	return count;
+}
+
+/** The emblems of the domains the filter is set to, beside the card count, so the
+ *  Legend's colors stay in view with the dropdown closed. */
+function renderActiveDomains(): void {
+	const chosen = domains.filter((d) => selectedDomains.has(d.slug) && !NOT_A_FILTER.has(d.slug));
+	if (!domainFilterApplies() || chosen.length === 0) {
+		activeDomainsEl.hidden = true;
+		activeDomainsEl.innerHTML = '';
+		return;
+	}
+	const names = chosen.map((d) => d.label ?? d.slug);
+	activeDomainsEl.hidden = false;
+	activeDomainsEl.setAttribute('role', 'img');
+	activeDomainsEl.setAttribute('aria-label', `Filtered to ${names.join(', ')}`);
+	activeDomainsEl.title = `Domains: ${names.join(', ')}`;
+	activeDomainsEl.innerHTML = chosen
+		.map((d) =>
+			d.icon
+				? `<img src="${esc(d.icon)}" alt="" width="16" height="16" data-domain="${esc(d.slug)}" decoding="async">`
+				: `<span>${esc(d.label ?? d.slug)}</span>`,
+		)
+		.join('');
+}
+
 function apply(): void {
 	const f = readFilters();
 	seq = searchable.filter(({ entry }) => matches(entry, f)).map(({ entry }) => entry);
 	const active = f.q || f.type || f.rarity || f.set || (activeSection !== 'battlefields' && selectedDomains.size > 0);
-	countEl.textContent = active
-		? `Showing ${seq.length.toLocaleString('en-US')} of ${cards.length.toLocaleString('en-US')} cards`
-		: `Showing all ${cards.length.toLocaleString('en-US')} cards`;
+	const shown = seq.length.toLocaleString('en-US');
+	const total = cards.length.toLocaleString('en-US');
+	countEl.textContent = active ? `Showing ${shown} of ${total} cards` : `Showing all ${total} cards`;
+	// the dropdown repeats the count (it covers the line above) and the button
+	// says how many filters are set
+	filtersCountEl.textContent = active ? `${shown} of ${total} cards` : `All ${total} cards`;
+	const set = activeFilterCount();
+	filtersBadgeEl.hidden = set === 0;
+	filtersBadgeEl.innerHTML = set === 0 ? '' : `${set}<span class="sr-only"> ${set === 1 ? 'filter' : 'filters'} set</span>`;
+	renderActiveDomains();
 	emptyEl.hidden = seq.length > 0;
 	renderPrefix(GRID_STEP, true);
 	refreshChips();
@@ -872,14 +926,12 @@ pillsEl.addEventListener('click', (event) => {
 
 function renderDomains(): void {
 	const filterable = domains.filter((d) => !NOT_A_FILTER.has(d.slug));
-	if (filterable.length === 0) {
-		domainsEl.hidden = true;
-		return;
-	}
+	domainGroupEl.hidden = filterable.length === 0;
+	if (filterable.length === 0) return;
 	// A chip is the domain's emblem alone (its alt text names it); a domain with
-	// no emblem cached is printed as its name instead.
+	// no emblem cached is printed as its name instead. The "Domains" label is
+	// the dropdown's own.
 	domainsEl.innerHTML =
-		`<span class="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">Domains</span>` +
 		filterable
 			.map((d) => {
 				const label = d.label ?? d.slug;
@@ -898,9 +950,41 @@ domainsEl.addEventListener('click', (event) => {
 	const domain = chip.dataset.domain ?? '';
 	if (selectedDomains.has(domain)) selectedDomains.delete(domain);
 	else selectedDomains.add(domain);
-	renderDomains();
+	// the chip changes in place: replacing it would drop the keyboard focus that
+	// is on it (and the dropdown's focus with it)
+	chip.setAttribute('aria-pressed', String(selectedDomains.has(domain)));
 	apply();
 });
+
+/* --- filter dropdown: a native popover, placed under its button --- */
+
+/** The panel is in the top layer (nothing clips it), so it is placed from the
+ *  button's rect: its top under the button, its right edge on the button's, kept
+ *  inside the window. Below lg the bar scrolls with the column, so the button can
+ *  leave the window while the panel is open: the panel then stays at the window's
+ *  top edge instead of leaving with it. Width must match `.filter-pop` in
+ *  global.css (22rem). */
+function placeFilters(): void {
+	const rect = filtersBtn.getBoundingClientRect();
+	const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+	const width = Math.min(22 * rem, window.innerWidth - rem);
+	const right = Math.min(Math.max(window.innerWidth - rect.right, rem / 2), window.innerWidth - width - rem / 2);
+	const top = Math.min(Math.max(rect.bottom + 6, rem / 2), window.innerHeight - 10 * rem);
+	filtersPop.style.setProperty('--pop-top', `${Math.round(top)}px`);
+	filtersPop.style.setProperty('--pop-right', `${Math.round(right)}px`);
+}
+
+filtersPop.addEventListener('beforetoggle', (event) => {
+	if ((event as Event & { newState?: string }).newState === 'open') placeFilters();
+});
+
+// the button moves when the page or the column scrolls (below lg the bar is not
+// pinned), and filtering scrolls the column to its top: the panel follows
+const followFilters = (): void => {
+	if (filtersPop.matches(':popover-open')) placeFilters();
+};
+window.addEventListener('resize', followFilters);
+document.getElementById('deck-browser')?.addEventListener('scroll', followFilters, { passive: true });
 
 searchEl.addEventListener('input', apply);
 typeEl.addEventListener('change', apply);

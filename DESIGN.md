@@ -99,8 +99,9 @@ repeated inside panels.
   `#deck-app` takes the remaining height.
 - At `lg`: two equal columns — the card browser and the deck viewer — with a
   small gap between their frames. Both columns are branch-framed; each frame
-  fills the working height and its content scrolls inside it (filters pin inside the browser, the ledger pins inside the
-  sheet). The pinned filter bar is the frame's own fill, not a darker plate, and
+  fills the working height and its content scrolls inside it (the browser's bar pins inside it, the ledger pins inside the
+  sheet). The bar is two rows, the section pills and the search with its Filters
+  button (the other filters are in the dropdown, see Components); it is the frame's own fill, not a darker plate, and
   cards slide under its foot through a short fade that comes in only once the column
   has scrolled (`.browser-chrome`, mirroring the frame's foot fade). No grip or drag
   resizes either column.
@@ -169,6 +170,27 @@ All in `src/styles/global.css` under `@layer components`.
   name as a plain text pill. Colorless is not
   a filter: it has no chip, and a Colorless card is never hidden by a chip set (as a
   Neutral card is not).
+- **Filter dropdown** — the deck browser keeps in its bar only what every visit uses
+  (the section pills and the search); Domains, Type, Rarity and Set live in one
+  dropdown under a **Filters** button beside the search (`#bd-filters`, `.filter-pop`).
+  The panel is a native popover: top layer, so no frame or scroller clips it; a click
+  outside or Escape closes it and focus goes back to the button; it does not close
+  when a filter is changed, so several can be set in one visit. It opens under the
+  button with its right edge on the button's (placed by `deck-builder.ts`, kept inside
+  the window, and held at the window's top edge if the unpinned bar scrolls away
+  below `lg`), 22rem wide or the window less 1rem, on the dialog surface (slate over
+  bark, bark hairline) and fading in over 140ms (not at all under reduced motion).
+  Inside, top to bottom: **Domains** (the emblem chips, so Legend colors are one tap
+  away), **Type | Rarity** side by side, **Set** full width, each select under its
+  micro-label; then, under one hairline, the card count (it repeats the line the
+  panel covers, so it reads while filtering) and **Reset** (small). The button says
+  how many filters are set with an amber count badge (`.filter-badge`: type when it is
+  not just the section's own preset, rarity, set, and the domains as one; none shows
+  no badge), and the count line under the bar shows the emblems of the domains the
+  filter is set to (`.active-domains`, hidden on Battlefields and Legend, where
+  domains do not filter), so the Legend's colors stay in view with the dropdown
+  closed. A chip changes `aria-pressed` in place and is never re-rendered, so the
+  keyboard focus on it survives.
 - **Panels / sections** — `.panel` + `.panel-head`; section names in the
   display face.
 - **Deck sheet** — `.sheet` frames the viewer. `.sheet-ledger` holds five

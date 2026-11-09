@@ -135,24 +135,65 @@ const domainPayload = escapedJson(
 					All
 				</button>
 			</div>
-	<div class="mt-2 grid grid-cols-2 gap-2 lg:flex lg:flex-wrap lg:items-center">
+	<!-- The bar holds what every visit uses (the section pills, the search); the
+			     rest of the filters live in one dropdown under "Filters" (spec: filter
+			     dropdown). The panel is a native popover: top layer, light dismiss,
+			     Escape, focus back to the button. deck-builder.ts places it under the
+			     button. -->
+			<div class="mt-2 flex items-center gap-2">
 				<input
 					id="bd-search"
-					class="field col-span-2 min-w-0 lg:min-w-48 lg:flex-1"
+					class="field min-w-0 flex-1"
 					type="search"
-					placeholder="Search name or card text…"
+					placeholder="Search name or text…"
+					aria-label="Search cards by name or card text"
 					autocomplete="off"
 				/>
-				<select id="bd-type" class="field"></select>
-				<select id="bd-rarity" class="field"></select>
-				<select id="bd-set" class="field"></select>
-				<button id="bd-reset" type="button" class="btn">Reset</button>
+				<button id="bd-filters-btn" type="button" class="btn shrink-0" popovertarget="bd-filters">
+					<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+						<path d="M2.5 4.5h5M12 4.5h1.5M2.5 11.5h1.5M8.5 11.5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+						<circle cx="9.75" cy="4.5" r="1.75" stroke="currentColor" stroke-width="1.6" />
+						<circle cx="6.25" cy="11.5" r="1.75" stroke="currentColor" stroke-width="1.6" />
+					</svg>
+					Filters
+					<span id="bd-filters-badge" class="filter-badge" hidden></span>
+				</button>
 			</div>
-			<!-- domain chips: the Legend's colors come preselected -->
-				<div id="bd-domains" class="mt-2 flex flex-wrap items-center gap-1.5"></div>
+			<div id="bd-filters" popover role="group" aria-label="Card filters" class="filter-pop">
+				<div class="filter-pop-body">
+					<!-- domain chips: the Legend's colors come preselected -->
+					<div id="bd-domain-group" class="filter-group">
+						<p id="bd-domains-label" class="label">Domains</p>
+						<div id="bd-domains" role="group" aria-labelledby="bd-domains-label" class="flex flex-wrap items-center gap-1.5"></div>
+					</div>
+					<div class="filter-grid">
+						<label class="filter-group">
+							<span class="label">Type</span>
+							<select id="bd-type" class="field"></select>
+						</label>
+						<label class="filter-group">
+							<span class="label">Rarity</span>
+							<select id="bd-rarity" class="field"></select>
+						</label>
+						<label class="filter-group filter-wide">
+							<span class="label">Set</span>
+							<select id="bd-set" class="field"></select>
+						</label>
+					</div>
+					<div class="filter-foot">
+						<p id="bd-filters-count" class="text-xs text-slate-400 tnum"></p>
+						<button id="bd-reset" type="button" class="btn" data-size="sm">Reset</button>
+					</div>
+				</div>
+			</div>
 			</div>
 			<div class="mt-2 flex items-center justify-between gap-2">
-				<p id="bd-count" class="text-xs text-slate-400 tnum" aria-live="polite"></p>
+				<div class="flex min-w-0 items-center gap-2">
+					<p id="bd-count" class="text-xs text-slate-400 tnum" aria-live="polite"></p>
+					<!-- the domains the filter is set to, so the Legend's colors stay in
+					     view with the dropdown closed -->
+					<span id="bd-active-domains" class="active-domains" hidden></span>
+				</div>
 				<button type="button" class="btn lg:hidden" data-size="sm" data-scroll-to="deck-viewer">Deck <span id="deck-jump-count" class="tnum">0</span></button>
 			</div>
 			<!-- container-driven card grid (spec: card impressions size with their

@@ -1,6 +1,17 @@
 ---
 import '../styles/global.css';
-import SiteHeader from '../components/SiteHeader.astro';
+import { ClientRouter } from 'astro:transitions';
+import { getImage } from 'astro:assets';
+import { installImageFallback } from '../behaviors/image-fallback';
+import { Colophon } from '../ui/organisms/Colophon';
+import { SiteHeader, type SiteHeaderImages } from '../ui/organisms/SiteHeader';
+import logo from '../assets/brand/logo.webp';
+import sprigUpper from '../assets/wood/sprig_horizontal_upper.png';
+import sprigLower from '../assets/wood/sprig_horizontal_lower.png';
+
+// Card art fallback, inlined so it listens before the first image can fail
+// (design D4): the function is self-contained, so its source runs as-is.
+const imageFallbackScript = `(${installImageFallback.toString()})(document);`;
 
 interface Props {
 	title?: string;
@@ -11,6 +22,16 @@ interface Props {
 	 *  page's own panes carry the scrolling instead. */
 	appShell?: boolean;
 }
+
+// The header's art, optimized at build and handed to the React header (static:
+// no client directive, so it ships as plain HTML).
+const logoImage = await getImage({ src: logo, width: 40, height: 41, densities: [1, 2, 3], format: 'webp', quality: 90 });
+const sprig = async (src: ImageMetadata) => (await getImage({ src, width: src.width, format: 'webp', quality: 88 })).src;
+const headerImages: SiteHeaderImages = {
+	logo: { src: logoImage.src, srcSet: logoImage.srcSet.attribute, width: 40, height: 41 },
+	sprigUpper: await sprig(sprigUpper),
+	sprigLower: await sprig(sprigLower),
+};
 
 const { title = 'BandleBox', description = 'Personal, offline-first browser for every available Riftbound card.', wide = false, appShell = false } = Astro.props;
 ---
@@ -26,19 +47,15 @@ const { title = 'BandleBox', description = 'Personal, offline-first browser for 
 		<meta name="generator" content={Astro.generator} />
 		<meta name="description" content={description} />
 		<title>{title}</title>
+		<ClientRouter fallback="none" />
+		<script is:inline set:html={imageFallbackScript} />
 	</head>
 	<body class:list={['flex min-h-screen flex-col text-slate-100 antialiased', wide && 'is-wide', appShell && 'app-shell']}>
 		<a class="skip-link" href="#main">Skip to content</a>
-		<SiteHeader />
+		<SiteHeader client:load transition:persist="site-header" currentPath={Astro.url.pathname} images={headerImages} />
 		<main id="main" tabindex="-1" class={`mx-auto w-full flex-1 px-4 focus:outline-none ${wide ? 'mx-0 pb-6 pt-0' : 'max-w-6xl pb-10 pt-9'}`}>
 			<slot />
 		</main>
-		<footer class="colophon">
-			<div class="colophon-row">
-				<span class="colophon-own">Card data &amp; art: <span class="colophon-mark">RIFTBOUND</span> © Riot Games.</span>
-				<span class="colophon-src">Catalog from <a class="colophon-link" href="https://openrift.app">OpenRift</a>.</span>
-				<span class="colophon-note">Card images are requested from OpenRift when needed and never mirrored locally; card symbols are cached locally for offline reading.</span>
-			</div>
-		</footer>
+		<Colophon />
 	</body>
 </html>

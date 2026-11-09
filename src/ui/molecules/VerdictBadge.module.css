@@ -1,0 +1,32 @@
+/* The deck tile's Legal / Not legal badge, moved verbatim from the global
+ * component layer (design D9). The deck bar's `verdict` pill is still global
+ * while the pre-React deck manager uses it. */
+
+/* Legal / Not legal: the one status read at a glance, so it keeps its pill on the
+   card's top corner (the only plate left on a card's art). */
+.badge {
+	position: absolute;
+	top: 0.375rem;
+	right: 0.375rem;
+	z-index: 10;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	border: 1px solid var(--color-slate-700);
+	border-radius: 999px;
+	background: color-mix(in oklab, var(--color-slate-950) 92%, transparent);
+	padding: 0.125rem 0.4375rem;
+	font-size: 0.625rem;
+	font-weight: 600;
+	color: var(--color-slate-300);
+}
+
+.badge[data-legal="true"] {
+	border-color: color-mix(in oklab, var(--color-emerald-400) 45%, transparent);
+	color: var(--color-emerald-300);
+}
+
+.badge[data-legal="false"] {
+	border-color: color-mix(in oklab, var(--color-red-400) 45%, transparent);
+	color: var(--color-red-300);
+}

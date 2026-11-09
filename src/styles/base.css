@@ -1,0 +1,126 @@
+@font-face {
+	font-family: "Bricolage Grotesque";
+	src: url("/fonts/bricolage-grotesque-latin.woff2") format("woff2");
+	font-weight: 300 800;
+	font-style: normal;
+	font-display: swap;
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@layer base {
+	/* The corner of a card. OpenRift's card images are cut to the printed card, a
+	   63 x 88mm face with a 3mm corner, so the art has transparent rounded corners
+	   of 4.76% of the card's width (measured on the 744px "full" image: ~35px).
+	   Whatever holds card art must clip to that same curve or its own corner shows
+	   through the art's: a square or too-tight container leaves a dark wedge, a
+	   too-round one cuts the art. A fixed radius only fits one size, so the radius
+	   is a percentage of the container, which is always the card's own shape.
+	   Horizontal radius is % of width and vertical is % of height, hence the pair:
+	   4.76% of 5 is 3.4% of 7 (portrait), and the other way round for a card lying
+	   on its side (a battlefield shown landscape). Use `.card-corner`, or
+	   `data-landscape` with it, rather than a rem radius, on any card art. */
+	:root {
+		--card-corner: 4.76% / 3.4%;
+		--card-corner-landscape: 3.4% / 4.76%;
+
+		/* One card, the same everywhere. The art is the card: it carries no border,
+		   no plate, no inner ring and no shadow of its own (the printed card already
+		   has its frame), and the three things that can touch it are shared.
+		   - ring: hover and selection, a gold ring drawn outside the card's edge.
+		   - halo: the dark edge that keeps a bare word readable over any art
+		     (a count, a legality word, a Rename action), so none of them needs a box.
+		   - foot fade: the dark rising from a card's foot under its +/- controls. */
+		--card-ring: 0 0 0 2px color-mix(in oklab, var(--color-amber-400) 65%, transparent);
+		--card-halo: 0 0 2px rgb(0 0 0 / 0.95), 0 1px 3px rgb(0 0 0 / 0.9), 0 0 8px rgb(0 0 0 / 0.7);
+		--card-foot-fade: linear-gradient(to top, rgb(0 0 0 / 0.78), rgb(0 0 0 / 0.45) 60%, transparent);
+	}
+
+	html {
+		color-scheme: dark;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	body {
+		font-family: var(--font-sans);
+		font-synthesis-weight: none;
+		text-rendering: optimizeLegibility;
+		/* Dusk: violet and teal glows at the top corners over a lantern-amber
+		 * horizon, fading to bark ink behind the working area. No texture behind
+		 * card art — the art is the brightest thing on the table. */
+		background:
+			radial-gradient(60% 440px at 10% -40px, rgb(62 156 50 / 0.42), transparent 72%),
+			radial-gradient(48% 400px at 88% -20px, rgb(48 110 218 / 0.34), transparent 70%),
+			radial-gradient(80% 280px at 50% 150px, rgb(222 144 66 / 0.26), transparent 74%),
+			linear-gradient(180deg, #112519 0, #261b12 230px, var(--color-slate-950) 560px),
+			var(--color-slate-950);
+		background-attachment: fixed;
+	}
+
+	::selection {
+		background: color-mix(in oklab, var(--color-amber-400) 34%, transparent);
+		color: #fdf8ec;
+	}
+
+	/* One focus language for every control, including the ones scripts build. */
+	:focus-visible {
+		outline: 2px solid color-mix(in oklab, var(--color-amber-400) 82%, transparent);
+		outline-offset: 2px;
+	}
+
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: var(--color-slate-700) transparent;
+	}
+
+	::-webkit-scrollbar {
+		width: 12px;
+		height: 12px;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: var(--color-slate-700);
+		border: 3px solid var(--color-slate-950);
+		border-radius: 999px;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--color-slate-600);
+	}
+
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	input,
+	select,
+	textarea {
+		caret-color: var(--color-amber-400);
+	}
+
+	h1,
+	h2,
+	h3 {
+		font-family: var(--font-display);
+		font-weight: 600;
+		text-wrap: balance;
+		letter-spacing: -0.005em;
+	}
+
+	p {
+		text-wrap: pretty;
+	}
+
+	a {
+		text-underline-offset: 0.22em;
+	}
+
+	/* Numerals that sit in columns (counts, deck totals, dates) stay aligned. */
+	.tnum {
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* Attribute-driven hiding must beat component display rules (flex/grid). */
+	[hidden] {
+		display: none !important;
+	}
+}

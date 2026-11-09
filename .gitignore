@@ -30,3 +30,6 @@ pnpm-debug.log*
 
 #openchamber
 .openchamber/
+# Playwright
+/test-results/
+/playwright-report/

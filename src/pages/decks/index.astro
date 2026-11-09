@@ -1,29 +1,22 @@
 ---
-// Decks home: the saved-deck tile grid (redesign-deck-pages tasks 1.1-1.4).
-// The server prepares two small payload programs — the constructed-rule
-// indexes for badge computation and a slim Legend art map for tile covers;
-// everything interactive (tiles, badges, creation modal) runs from
-// src/scripts/deck-list.ts against the in-browser deck library.
+// Your decks (deck-library spec). The heading is static; the library is an
+// island over the browser's decks. Rule indexes (for the legality badges) ride
+// in a JSON tag the island reads once it runs; the Legends (tile covers and
+// the picker) are small enough to pass as props.
 import Base from '../../layouts/Base.astro';
-import { index, isBattlefield, snapshot } from '../../lib/catalog';
-import { buildDeckRuleIndexes } from '../../lib/deck-rules';
-import { escapedJson } from '../../lib/grid-payload';
+import { DeckLibrary } from '../../features/deck-library/DeckLibrary';
+import { buildDeckRuleIndexes } from '../../domain/deck-rules';
+import { PAYLOAD_IDS } from '../../domain/payload-ids';
+import { index, snapshot } from '../../server/catalog';
+import { escapedJson } from '../../server/grid-payload';
 
 const ruleIndexes = escapedJson(buildDeckRuleIndexes(snapshot, index));
 
-// Legend covers only: a deck tile's front image is the deck's Legend art.
-// Ships the image id only; deck-list.ts derives the cover (tile) and picker
-// (thumb) URLs from it via card-image.ts.
 const legends = index.cards
 	.filter((card) => card.types.includes('legend'))
 	.map((card) => {
 		const printing = card.printings.find((p) => p.imageIds.length > 0) ?? card.printings[0];
-		return {
-			slug: card.slug,
-			name: card.name,
-			imageId: printing?.imageIds[0] ?? null,
-			rotate: isBattlefield(card),
-		};
+		return { slug: card.slug, name: card.name, imageId: printing?.imageIds[0] ?? null };
 	});
 ---
 
@@ -34,46 +27,10 @@ const legends = index.cards
 			<p class="page-lede">Decks live in this browser locally and save themselves as you build, be creative!</p>
 		</div>
 	</header>
-
-	<div id="deck-storage-warning" hidden class="mt-4 rounded-md border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
-		Decks are not being saved this visit — browser storage is unavailable or full. Keep this window open, or try again in a normal browser window.
-	</div>
-
-	<!-- tile grid: the create tile (with the plus affordance) is part of the grid -->
-	<ul id="deck-grid" class="mt-5 grid list-none grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5"></ul>
-
-	<p id="deck-empty" hidden class="mt-4 text-sm text-slate-400">No decks yet — the plus tile starts your first one.</p>
-
-	<!-- creation modal: Legend picker + deck name, both required -->
-	<div id="deck-create-modal" hidden class="dialog-backdrop" role="dialog" aria-modal="true" aria-labelledby="deck-create-title">
-		<div class="dialog">
-			<h2 id="deck-create-title" class="text-base font-semibold">New deck</h2>
-			<p class="mt-1 text-sm text-slate-400">Choose the Legend to play and name the deck. Cancel keeps everything as it was.</p>
-
-			<label class="mt-4 block">
-				<span class="label">Deck name</span>
-				<input id="modal-name" type="text" placeholder="e.g. Poro Swarm" autocomplete="off" maxlength="80" class="field mt-1.5 w-full" />
-			</label>
-
-			<div class="mt-4">
-				<span class="label">Legend</span>
-				<input id="modal-legend-search" type="search" placeholder="Search legends…" autocomplete="off" class="field mt-1.5 w-full" />
-				<div id="modal-selected" class="mt-2 hidden rounded border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs text-amber-300"></div>
-				<ul id="modal-legend-list" class="mt-2 grid max-h-56 grid-cols-4 gap-2 overflow-y-auto pr-1 sm:grid-cols-5"></ul>
-			</div>
-
-			<div class="mt-5 flex justify-end gap-2">
-				<button id="modal-cancel" type="button" class="btn">Cancel</button>
-				<button id="modal-accept" type="button" disabled class="btn" data-variant="primary">Create deck</button>
-			</div>
-		</div>
-	</div>
+	<DeckLibrary client:load legends={legends} />
+	<script type="application/json" id={PAYLOAD_IDS.deckRules} set:html={ruleIndexes} />
 </Base>
 
-<script type="application/json" id="deck-rules-data" set:html={ruleIndexes} />
-<script type="application/json" id="deck-legends-data" set:html={escapedJson(legends)} />
-
 <script>
-	import '../../scripts/deck-list';
-	import '../../scripts/card-tilt';
+	import '../../behaviors/card-tilt';
 </script>

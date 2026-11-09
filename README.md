@@ -43,7 +43,7 @@ INDEX:
 
 ## The rules are the product
 
-A count, a color requirement or a legality verdict is only useful if it is correct and current. The checker (`validate()` in `src/lib/deck-rules.ts`) runs after every edit and reports each rule as it stands.
+A count, a color requirement or a legality verdict is only useful if it is correct and current. The checker (`validate()` in `src/domain/deck-rules.ts`) runs after every edit and reports each rule as it stands.
 
 | Check | What it enforces | Driven by |
 | --- | --- | --- |
@@ -59,7 +59,7 @@ A count, a color requirement or a legality verdict is only useful if it is corre
 | Constructed bans | Nothing banned in Constructed, in any section | snapshot |
 | Cards match this snapshot | Every card in the deck exists in your local snapshot | snapshot |
 
-The constants live in one place, `DECK_RULES` in [`src/lib/deck.ts`](src/lib/deck.ts). When the rules change, change them there.
+The constants live in one place, `DECK_RULES` in [`src/domain/deck.ts`](src/domain/deck.ts). When the rules change, change them there.
 
 **How a verdict is reached**
 
@@ -96,24 +96,25 @@ Then open `http://localhost:4321`.
 | `npm run preview` | Serves the production build from `dist/`. |
 | `npm run refresh` | Fetches the English catalog from OpenRift into `data/` and rebuilds the derived index. Also caches the card symbols and domain emblems under `data/glyphs/`, even when the catalog itself is unchanged. |
 
-There is no lint script and no test framework. Correctness is the build plus four plain-Node scripts that import `src/lib/*.ts` directly. Each runs as a whole:
+Correctness is five checks, all of which must pass:
 
-| Script | What it checks |
+| Command | What it covers |
 | --- | --- |
-| `node scripts/verify-deck-core.mjs` | The deck model, the library store (including storage-failure paths), the legality rules, and share-link encode and decode. |
-| `node scripts/verify-card-text.mjs` | The card-text tokenizer and renderer. Sweeps the real snapshot when `data/catalog.json` exists. |
-| `node scripts/verify-card-image.mjs` | The card-image module: URL scheme, per-surface size chains, dimensions and the fallback markup. |
-| `node scripts/verify-card-peek.mjs` | The hover peek: the dwell and stillness state machine (on a fake clock), the facts fragment, and the deck-fit facts, against the real snapshot. |
+| `npm run lint` | The layer rules (what may import what), React hooks rules, and `.astro` files only in pages and layouts. |
+| `npm run typecheck` | `astro check` over the whole project. |
+| `npm test` | Vitest: the deck model, the library store and its repositories, the legality rules, share links, the card-text tokenizer and component, card image sizes, the hover peek state machine (on fake timers) and its facts, the deck store, and the React components. Sweeps of the real snapshot run when `data/` exists. |
+| `npm run build` | The static build, then a check that no catalog text reached a client bundle. |
+| `npm run test:e2e` | A Playwright suite that drives the built site: every capability's main flows and screenshots of each page at desktop and phone size. It uses port 4399 and answers card-art requests with a placeholder. |
 
 ## How it works
 
 ```text
-OpenRift API ──refresh──▶ data/ snapshot ──build──▶ static pages ──JSON islands──▶ vanilla TypeScript
+OpenRift API ──refresh──▶ data/ snapshot ──build──▶ static pages ──props and JSON tags──▶ React islands
 ```
 
 1. `scripts/refresh.mjs` writes the OpenRift response verbatim (`data/catalog.json`) and a normalized card ↔ printing ↔ set index (`data/index.json`).
-2. At build time, Astro pages read the snapshot through `src/lib/catalog.ts`, the one module that imports the data files, and render the grid and one page per card.
-3. Pages serialize what the browser needs into `<script type="application/json">` tags. Small scripts in `src/scripts/` read them back. There is no UI framework.
+2. At build time, Astro pages read the snapshot through `src/server/catalog.ts`, the one module that imports the data files, and render the grid and one page per card.
+3. Pages hand what the browser needs to React: small data as island props, large payloads as `<script type="application/json">` tags. Static components (the header, the card page) ship no JavaScript; the grid, the deck library and the deck manager are islands.
 
 ### Refresh
 
@@ -147,32 +148,35 @@ All decks live in one versioned `localStorage` entry (`riftbound-deck-library`),
 
 ### Card art
 
-Art is never mirrored. The browser requests OpenRift's media paths when it needs a card, and `src/lib/card-image.ts` is the one place that decides which size: the largest (`full`) for a card's hero image, `400w` for tiles and card faces, `240w` for thumbnails. A failed size degrades to a smaller one, then to a quiet no-art state, never a broken-image icon.
+Art is never mirrored. The browser requests OpenRift's media paths when it needs a card, and `src/domain/card-image.ts` is the one place that decides which size: the largest (`full`) for a card's hero image, `400w` for tiles and card faces, `240w` for thumbnails. A failed size degrades to a smaller one, then to a quiet no-art state, never a broken-image icon.
 
 ## Project map
 
 ```text
 scripts/
-  refresh.mjs          catalog, symbol and emblem sync; derived index
-  verify-*.mjs         the four plain-Node checks above
+  refresh.mjs          fetch and validate the OpenRift catalog
+  check-bundle.mjs     fail the build if catalog text reaches a client bundle
+  check-structure.mjs  .astro only in pages and layouts, no barrel files
 src/
-  lib/                 pure modules: deck model, rules, share, store, card text and image
-  scripts/             DOM glue: grid-filters, deck-builder, deck-list, card-peek
-  pages/               routes: /, /cards/[slug], /decks, /decks/build, /peek/[slug].json
-  components/ layouts/ styles/ assets/
-openspec/
-  specs/               current behavior, one folder per capability
-  changes/             proposed changes and their archive
-data/                  local snapshot, git-ignored
+  pages/ layouts/      Astro: routes and the document, composing React components
+  features/            catalog-grid, card-detail, deck-library, deck-manager (with its card peek)
+  ui/                  the shared React kit: atoms, molecules, organisms, hooks
+  state/               the deck store (Zustand) shared by the library and the manager
+  behaviors/           small framework-free scripts: card tilt, image fallback, back-to-deck link
+  domain/              pure TypeScript: rules, deck model, share links, card text, repositories
+  server/              build-time only: the snapshot and the page data builders
+  styles/              design tokens and base styles
+tests/e2e/             the Playwright suite
+openspec/              specs and the record of how each change was made
 ```
 
-The split that matters: modules in `src/lib/` stay free of data imports and DOM or Vite-only APIs, and keep explicit `.ts` extensions on relative imports. That is what lets the same code run in the browser and under the verify scripts.
+The split that matters: `src/domain/` stays free of React, DOM and data imports, and only pages import `src/server/`. ESLint enforces the import rules, so the 3.9 MB snapshot cannot end up in the browser.
 
 ## Contributing
 
 Issues and pull requests are welcome.
 
-- Run `npm run build` and the four verify scripts before sending a change. Add new assertions to the relevant script.
+- Run `npm run lint`, `typecheck`, `test`, `build` and `test:e2e` before sending a change. Add assertions next to the code they test (`*.test.ts(x)`) and end-to-end flows to `tests/e2e/`.
 - Behavior is specified with [OpenSpec](https://github.com/Fission-AI/OpenSpec) (installed separately; it is not an npm dependency here). Current behavior lives in [`openspec/specs/`](openspec/specs). A change is proposed in `openspec/changes/<name>/`, implemented from its tasks, then archived with its deltas synced into the specs.
 - If you change `DECK_RULES` or a check in `validate()`, update the rules table in this README in the same change.
 - Start interface work from [`DESIGN.md`](DESIGN.md). Colors come from the tokens in `src/styles/global.css`, never raw hex. Domain and keyword hues are data-only, never decoration. The painted branch is a corner accent, not a border. Check changed UI with `.opencode/skills/impeccable/scripts/impeccable.cmd detect <path>` (or `impeccable` under `sh`).

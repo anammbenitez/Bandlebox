@@ -120,7 +120,29 @@ repeated inside panels.
 
 ## Components
 
-All in `src/styles/global.css` under `@layer components`.
+The UI is React components (`.tsx`); Astro files are only pages and layouts
+(`src/pages`, `src/layouts`). The shared component styles described below live in
+`src/styles/global.css` under `@layer components`, by decision (openspec change
+`migrate-to-react`, design D9): that file stays the home of the shared rules.
+Some one-component styles sit in a co-located module instead (`Frame`,
+`CardTile`, the deck library, the verdict badge). Tokens (`src/styles/tokens.css`) and base styles
+(`src/styles/base.css`) stay global.
+
+**Where a component lives (atomic placement).** A component goes in `src/ui/` only
+if it knows nothing about decks, legality, or the catalog as game data: atoms
+(`Button`, `Chip`, `TextField`/`SelectField`, `Glyph`, `DomainEmblem`,
+`CardImage`), molecules (`CardText`, `CardTile`, `StatColumns`, `VerdictBadge`,
+`EmptyState`), organisms (`SiteHeader`, `Colophon`, `Frame`). Anything that knows
+the rules (the legality checklist, the rune ratio, deck sections, the card
+browser) belongs to its feature in `src/features/<name>/`.
+
+**Tailwind or a CSS Module.** Use Tailwind utilities in the component's markup
+for layout and simple looks, with `tailwind-variants` holding a component's
+variant table. Use a co-located `*.module.css` when a style needs pseudo-elements,
+keyframes, scroll-driven animation, multi-property transforms, or more than about
+eight non-layout declarations; the card tilt, the peek, `Frame`, the deck shell and
+the header branch are module territory. Either way, colors come from the tokens
+(`var(--color-…)` or the Tailwind token classes), never raw hex in new rules.
 
 - **Frame** — `.frame`, `.frame--lit`, `.frame--quiet`, `.frame-body`, `.bd-frame`,
   `.deck-frame` (see above). Used on the two working columns only, not on cards or

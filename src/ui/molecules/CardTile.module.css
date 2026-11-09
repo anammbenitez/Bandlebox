@@ -1,0 +1,60 @@
+/* The catalog grid tile, moved verbatim from the global component layer
+ * (design D9) when the grid became React. The lean is the global "card tilt"
+ * rules on [data-tilt]; the hover ring is the shared --card-ring token. */
+
+.tile {
+	display: block;
+	border-radius: 0.625rem;
+}
+
+.art {
+	position: relative;
+	aspect-ratio: 5 / 7;
+	overflow: hidden;
+	border-radius: var(--card-corner);
+	background: var(--color-slate-900);
+	transition: box-shadow 140ms ease;
+}
+
+/* Hover is the shared ring, and the lean under "card tilt" below. */
+.tile:hover .art {
+	box-shadow: var(--card-ring);
+}
+
+.tile:focus-visible {
+	outline: 2px solid var(--color-amber-400);
+	outline-offset: 3px;
+}
+
+.name {
+	margin-top: 0.5rem;
+	font-size: 0.8125rem;
+	font-weight: 500;
+	line-height: 1.3;
+	color: var(--color-slate-200);
+	transition: color 140ms ease;
+}
+
+.tile:hover .name {
+	color: var(--color-amber-300);
+}
+
+/* The set code at the end of the meta line: a word like the rest, no pill. */
+.set {
+	flex: none;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	color: var(--color-slate-400);
+}
+
+.meta {
+	margin-top: 0.1875rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	font-size: 0.6875rem;
+	line-height: 1.4;
+	color: var(--color-slate-500);
+	font-variant-numeric: tabular-nums;
+}

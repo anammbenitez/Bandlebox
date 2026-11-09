@@ -1,0 +1,51 @@
+/* ---------------------------------------------------------------------------
+ * Palette: Bandlewood — bark ink, lantern gold, living green.
+ *
+ * Bandle City at dusk: deep brown-black shadow, a warm lamp, branch frames and
+ * leaves around every panel, the cards themselves the brightest thing on the
+ * table. Tailwind's `slate` scale is retuned to bark ink and `amber` to lantern
+ * light so every existing `slate-*` / `amber-*` class lands in this world.
+ * The six domain hues and the printed keyword hues remain data, not palette.
+ * ------------------------------------------------------------------------ */
+@theme {
+	--font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+	--font-display: "Bricolage Grotesque", "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+
+	--color-slate-950: #0c0906;
+	--color-slate-900: #15100b;
+	--color-slate-800: #241b12;
+	--color-slate-700: #3b2d1d;
+	--color-slate-600: #574330;
+	--color-slate-500: #9a8c76;
+	--color-slate-400: #b6a98f;
+	--color-slate-300: #d3c8b1;
+	--color-slate-200: #e7ddc9;
+	--color-slate-100: #f6efe0;
+
+	--color-amber-300: #f7e0ad;
+	--color-amber-400: #e9c479;
+	--color-amber-500: #c8a05e;
+	--color-amber-950: #241a0c;
+
+	--color-emerald-300: #9fd9b4;
+	--color-emerald-400: #5fbd86;
+	--color-red-300: #f2a8a0;
+	--color-red-400: #de7568;
+	--color-red-500: #c25649;
+
+	/* Wood and foliage: the header branch, the frame rail and highlights use these. */
+	--color-bark-950: #150c05;
+	--color-bark-900: #22150a;
+	--color-bark-700: #4a3218;
+	--color-bark-500: #7a4f26;
+	--color-bark-300: #a8703a;
+	/* The logo's own colours: sticker-bright leaf greens, the dark forest line it
+	 * is drawn with, and the cornflower of its flowers. */
+	--color-forest-950: #06200b;
+	--color-forest-900: #0d3412;
+	--color-leaf-600: #2f6a22;
+	--color-leaf-500: #46a02c;
+	--color-leaf-400: #7bd23c;
+	--color-leaf-200: #c3ee92;
+	--color-bloom: #5b9cf2;
+}

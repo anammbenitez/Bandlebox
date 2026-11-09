@@ -2,50 +2,60 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Riftbound Deck Manager is a personal, offline-first Astro site (static output, TypeScript strict, Tailwind v4 via `@tailwindcss/vite`) for browsing the English Riftbound card catalog and building rules-checked decks. No server state, no accounts. Also read `AGENTS.md` (shared agent rules), `PRODUCT.md` (users/purpose), and `DESIGN.md` (design system).
+Riftbound Deck Manager is a personal, offline-first site (Astro for pages and the build, React for every UI component, static output, TypeScript strict, Tailwind v4 via `@tailwindcss/vite`) for browsing the English Riftbound card catalog and building rules-checked decks. No server state, no accounts. Also read `AGENTS.md` (shared agent rules), `PRODUCT.md` (users/purpose), and `DESIGN.md` (design system).
 
 ## Commands
 
-- `npm run refresh` — fetch the OpenRift catalog into `data/` (`catalog.json`, `etag.txt`, derived `index.json`, `glyphs/`). **Required before dev/build on a fresh checkout**: `data/` is git-ignored and `src/lib/catalog.ts` imports the JSON directly, so the build fails without it. Uses ETag revalidation; failures keep the previous snapshot.
+- `npm run refresh` — fetch the OpenRift catalog into `data/` (`catalog.json`, `etag.txt`, derived `index.json`, `glyphs/`). **Required before dev/build on a fresh checkout**: `data/` is git-ignored and `src/server/catalog.ts` imports the JSON directly, so the build fails without it. Uses ETag revalidation; failures keep the previous snapshot.
 - Dev server: run in background mode per `AGENTS.md` — `astro dev --background` (then `astro dev stop|status|logs`). Serves at `http://localhost:4321`.
-- `npm run build` — static build into `dist/` (one page per card). This is the main correctness gate; there is no lint script and no test framework.
+- `npm run build` — static build into `dist/` (one page per card), then `scripts/check-bundle.mjs` fails the build if catalog text reached a client bundle.
 - `npm run preview` — serve `dist/`.
-- Verification scripts (plain Node, which strips TS types and imports `src/lib/*.ts` directly):
-  - `node scripts/verify-deck-core.mjs` — deck model, store (incl. storage-failure paths), legality rules, share encode/decode.
-  - `node scripts/verify-card-text.mjs` — card-text tokenizer/renderer; sweeps the real snapshot if `data/catalog.json` exists.
-  - `node scripts/verify-card-image.mjs` — card-image module: URL scheme, per-role variant chains, dimensions, the inline `onerror` fallback, and the markup built on it.
-  - `node scripts/verify-card-peek.mjs` — hover card: the dwell/stillness state machine (`hover-intent.ts`, driven on a fake clock) the facts fragment (`peek-facts.ts`: fixed places for every card, domain emblems, printed-text-only description, ban marker) and the deck-fit facts (`deck-fit.ts`) against the real snapshot.
-  - `node scripts/verify-card-tilt.mjs` — card tilt arithmetic (`card-tilt.ts`: pointer → -1..1 on the face, frame-rate-independent smoothing, settle, CSS number format) and the `data-tilt` / `data-tilt-face` markup of the grid tile.
-  Each runs as a whole (no per-case filter); add new assertions to the relevant script.
+- `npm run typecheck` (`astro check`), `npm run lint` (ESLint layer rules, which also lints the ported `*.test.mjs` tests, plus `scripts/check-structure.mjs`; the `.mjs` tests are linted but not type-checked), `npm test` (Vitest: domain, state, components; real-snapshot sweeps skip when `data/` is missing).
+- `npm run test:e2e` — the Playwright parity suite (`tests/e2e/`): functional specs per capability plus visual baselines at 1440×900 and 390×844. It builds and serves the site on **port 4399** (never 4321, where `astro dev` runs). Card-art requests to OpenRift are answered with a local placeholder. Update screenshots deliberately with `npx playwright test visual --update-snapshots`.
+- "Done" means `lint`, `typecheck`, `test`, `build` and `test:e2e` all pass.
 - UI check: `.opencode/skills/impeccable/scripts/impeccable.cmd detect <path>` (or `impeccable` under `sh`). `AGENTS.md` requires re-running it on changed UI before calling UI work done.
 
 ## Architecture
 
-**Data flow: snapshot → build-time pages → JSON islands → vanilla TS.**
+**Astro owns pages and the build; React owns every visual component.** A React component used in an `.astro` page without a `client:` directive renders to plain HTML at build and ships no JavaScript (the header, the footer, the whole card page). Interactive parts are islands (`client:load`): the catalog grid, the deck library and the deck manager.
 
-1. `scripts/refresh.mjs` writes the verbatim OpenRift response (`catalog.json`) and a normalized card ↔ printing ↔ set index (`index.json`). Never mirror card art locally — images load remotely via `imgUrl()`.
-2. `src/lib/catalog.ts` is the only module that imports `data/*.json`; it exposes `index`, `snapshot`, and lookup helpers. Only Astro page front matter (server/build time) should import it.
-3. Pages serialize what the client needs into `<script type="application/json" id="…">` tags (using `escapedJson` from `grid-payload.ts`), e.g. `grid-data`, `deck-card-data`, `deck-rules-data`. Client scripts in `src/scripts/` (`grid-filters.ts`, `deck-builder.ts`, `deck-list.ts`) read them back with `JSON.parse` — there is no UI framework.
+```
+src/
+  pages/ layouts/   Astro only: front matter loads data, the template composes components (thin)
+  features/<name>/  product logic per capability: catalog-grid, card-detail, deck-library, deck-manager (+ its card peek)
+  ui/               feature-agnostic React kit: atoms/ molecules/ organisms/ hooks/
+  state/            client stores shared by several features: deck-store.ts (Zustand)
+  behaviors/        framework-free DOM behaviors loaded by pages: card-tilt, image-fallback, deck-return-link
+  domain/           pure TypeScript (no React, DOM, or data imports): rules, models, share links, card-text tokenizer, repositories/
+  server/           build-time only: catalog.ts (the only importer of data/*.json), payload and view-model builders
+  styles/           tokens.css (@theme) and base.css; global.css holds the shared component rules (`@layer components`)
+tests/e2e/          Playwright parity suite
+```
 
-**Pure modules in `src/lib/` must stay free of data imports and DOM/Vite-only APIs** so they run both in the browser and under the Node verify scripts. Keep explicit `.ts` extensions on relative imports in these modules (Node type-stripping needs them). Key ones:
-- `deck.ts` — deck model, `DECK_RULES` (constructed limits), section keys/targets.
-- `deck-rules.ts` — `validate(deck, indexes)` → per-rule pass/fail/pending report. Indexes come from `buildDeckRuleIndexes(snapshot, index)`, built in page front matter and passed in.
-- `deck-fit.ts` — `deckFit(slug, deck, indexes)`: one card's color / champion-tag / copies / ban facts for the open deck, built on `deck-rules.ts`'s `domainVerdict` and `legendChampionTag` so it and the checklist cannot disagree. The hover card no longer prints these (it describes the card, not the deck), so nothing in the UI imports it today; it is kept, with its checks, for any surface that wants a card's fit.
-- `hover-intent.ts` — the card hover's dwell and stillness rule as a DOM-free state machine (injected timers; targets are `zone:slug` keys, since faces are re-rendered under a resting pointer). Judges movement by coordinates, never event type. Also the reach-the-peek rule: a short grace after the pointer leaves the face, and `hold()` while it is on the peek.
-- `card-tilt.ts` — the arithmetic of the card that leans away from the mouse (grid tiles, deck tiles, the card page's art): pointer → -1..1 per axis, smoothing, settle. The controller is `src/scripts/card-tilt.ts` (delegated on `[data-tilt]` stages around `[data-tilt-face]` art; publishes `--tilt-x/-y/-p`); angles, depth and perspective live in `global.css` under "card tilt", not in code.
-- `deck-return.ts` — the way back from a card page to the deck: the deck manager links to `/cards/{slug}?from=<its own address>` (the peek's "See more", the Legend face), and the card page turns its back link into "Back to deck". `from` is untrusted input: only an address inside `/decks/build` is accepted.
-- `card-stats.ts` — a card's Might / Energy / Power with the symbol each carries in card text; shared by the detail page and the hover card.
-- `deck-store.ts` — all decks in one versioned `localStorage` entry; falls back to memory and surfaces a one-shot warning when storage fails.
-- `deck-share.ts` — stateless share links: deck encoded into the URL hash.
-- `card-text.ts` / `keyword-styles.ts` / `glyphs.ts` — tokenize card text into keyword chips and game-glyph images.
-- `card-image.ts` — the one place that decides how card art is requested from OpenRift: URL scheme, which variant each surface role uses (`hero` = `full`, `tile` = `400w`, `thumb` = `240w`), the degrade-then-remove fallback, and dimensions. Surfaces call `imgAttrs(imageId, role)`; never hard-code a size or an `onerror`. Payloads carry the `imageId`, not a URL.
-- `grid-item.ts` — the grid card HTML shared by server render and client infinite scroll (`GRID_STEP` window).
+Import rules are enforced by ESLint (`eslint.config.js`): `features` use `ui`, `state` and `domain`, never another feature and never `server`; `state`, `ui`, `behaviors` and `server` use `domain` only (`ui` also its own folders); only `pages`/`layouts` import `server`. `.astro` files live only in `pages` and `layouts`. No barrel `index.ts` files. A component goes in `ui/` only if it knows nothing about decks, legality or the catalog as game data. Keep explicit `.ts` extensions on relative imports in `domain/`.
 
-Routes: `/` (filterable grid), `/cards/[slug]`, `/decks` (library), `/decks/build` (builder; deck selected client-side), `/peek/[slug].json` (static endpoint, one per card: `{ html }` with the hover card's facts, rendered by `peek-facts.ts` in one fixed order for every card (name + domain emblems in the corner / type line + ban marker / Energy, Power, Might in three fixed columns, a dash for a figure the card lacks / printed description); fetched lazily once a dwell completes. Nothing in it depends on the deck).
+**Data flow: snapshot → build-time pages → props / JSON tags → React.**
 
-**Card description = the printing's printed text.** A card's description is its representative printing's `printedEffectText` then `printedRulesText`, rendered through `card-text.ts`; the keywords appear inside it as `[Keyword]` labels. The card record's `keywords` array is a search index, not printed content (the card never shows it as a row), so no surface renders it on its own.
+1. `scripts/refresh.mjs` writes the verbatim OpenRift response (`catalog.json`) and a normalized card ↔ printing ↔ set index (`index.json`). Never mirror card art locally — images load remotely via `imageUrl()`.
+2. `src/server/catalog.ts` is the only module that imports `data/*.json`. Only Astro pages (and `server/` builders such as `card-detail.ts` and `grid-payload.ts`) may import it, so the 3.9 MB snapshot never enters a client bundle.
+3. Small data goes to islands as props. The big payloads stay in `<script type="application/json">` tags (`escapedJson` from `grid-payload.ts`), named once in `domain/payload-ids.ts` (`PAYLOAD_IDS`, used by the Astro page that writes a tag and the island that reads it). Islands read them once after hydration with `useJsonTag(id)` / `readJsonTag(id)` from `ui/hooks/useJsonTag.ts` (`null` while hydrating and for a missing or malformed tag). Island props are HTML-escaped and would be far larger.
+4. Pages that depend on browser state (`/decks`, `/decks/build`, the grid's URL state) render a neutral shell at build and during hydration; real data appears after (`useSyncExternalStore` with a `null` server snapshot). Do not set state in effects: the `react-hooks` lint rule rejects it.
 
-**Domain emblems** are OpenRift's `/images/domains/{slug}` images (WebP, colorless is SVG), cached by `npm run refresh` into `data/glyphs/domain-{slug}.*` and resolved with `glyphUrl('domain_{slug}')`. They are distinct from the `rune_*` text glyphs; neutral and colorless have no rune, only an emblem.
+Key modules:
+- `domain/deck.ts` — deck model, `DECK_RULES`, section keys/targets. `domain/deck-rules.ts` — `validate(deck, indexes)`; indexes come from `buildDeckRuleIndexes`. `domain/deck-editing.ts` — add/refuse rules, natural section, rune ratio, champion pick (pure). The champion tag has one definition, `legendChampionTag` in `deck-rules.ts`: the legality checklist and the champion zone both use it, so they cannot disagree. `domain/deck-fit.ts` — one card's fit facts (no UI uses it today).
+- `domain/repositories/` — `DeckRepository` (the backend seam), `local-storage-deck-repository` (wraps `deck-store.ts`: one versioned `localStorage` entry, memory fallback, one-shot warning) and `memory-deck-repository` (tests).
+- `state/deck-store.ts` — Zustand store over a `DeckRepository`: library, open deck, `status`, editing actions that return a `Verdict`. Subscribe with narrow selectors.
+- `features/deck-manager/`: `DeckManager.tsx` (the island; owns the pane refs and applies the viewer's and browser's intent through the deck store), `CardBrowser.tsx` with its filters in `useBrowserFilters.ts` (pure `filterCards` plus the hook), `DeckViewer.tsx` composing `viewer/` (`DeckSection`, `SectionRow`, `ChampionZone`, `RuneRatio`, `LegalityChecklist`, each with its own typed props), `refusals.ts` (imperative refusal flashes and the polite live region, registered from the manager). Section chip codes are `SECTION_CODE` in `domain/deck.ts`. Components get their links back to the deck from `useCurrentAddress()` (`ui/hooks`), not from `window.location`.
+- `domain/hover-intent.ts` — the peek's dwell/stillness state machine (injected timers); `features/deck-manager/peek/CardPeek.tsx` wires it with delegated listeners.
+- `domain/card-tilt.ts` — tilt arithmetic; `behaviors/card-tilt.ts` is the delegated controller on `[data-tilt]` stages (angles live in `global.css`, "card tilt").
+- `domain/card-image.ts` — URL scheme, variant per role (`hero` = `full`, `tile` = `400w`, `thumb` = `240w`), dimensions. Use `<CardImage imageId role />`. The smaller variants ride as `data-fallback`; `behaviors/image-fallback.ts` (inlined in `Base.astro`) degrades, then removes, a failing image. React cannot render `onerror`.
+- `domain/card-text.ts` — tokenizer; `ui/molecules/CardText.tsx` renders it. `domain/deck-share.ts` — share links in the URL hash. `domain/deck-return.ts` — `?from=` back to the deck (only addresses inside `/decks/build` are accepted).
+
+Routes: `/` (grid), `/cards/[slug]`, `/decks` (library), `/decks/build` (manager; deck from the hash), `/peek/[slug].json` (static endpoint, one per card: `{ facts }`, rendered by `PeekFacts`; fetched lazily once a dwell completes; nothing in it depends on the deck).
+
+**Card description = the printing's printed text.** Its `printedEffectText` then `printedRulesText`, rendered through `CardText`; keywords appear inside it as `[Keyword]` labels. The card record's `keywords` array is a search index, never rendered on its own.
+
+**Domain emblems** are OpenRift's `/images/domains/{slug}` images, cached by `npm run refresh` into `data/glyphs/domain-{slug}.*` and resolved with `glyphUrl('domain_{slug}')`. They are distinct from the `rune_*` text glyphs.
 
 ## Workflow: OpenSpec
 
@@ -53,7 +63,7 @@ Features are specified with OpenSpec. Current behavior specs live in `openspec/s
 
 ## Design constraints
 
-Start UI work from `DESIGN.md`. Colors come from tokens in `src/styles/global.css` (`@theme`: retuned `slate`/`amber`, plus `bark`, `leaf`, `bloom`) — never raw hex in components. Domain and keyword hues are data-only, never decorative. The deck-manager panels use the plain `Frame.astro` bark border — no painted pieces; the only painted detail is the header branch with flowering sprigs (`Base.astro`, `src/assets/wood/`). The page background is a dusk gradient on `body`. The `slate` scale is bark-brown ink, not green.
+Start UI work from `DESIGN.md`. Colors come from tokens in `src/styles/tokens.css` (`@theme`: retuned `slate`/`amber`, plus `bark`, `leaf`, `bloom`) — never raw hex in new rules. Use Tailwind utilities (with `tailwind-variants` for variants) for layout and simple looks, and a co-located `*.module.css` for pseudo-elements, keyframes, scroll-driven animation or heavy transforms (see `DESIGN.md`). Shared component rules (buttons, chips, fields, the deck manager, the checklist, the card peek) live in `global.css` under `@layer components` by decision: keep them there and add new shared rules there. A rule used by one component only may sit in that component's module. Domain and keyword hues are data-only, never decorative. The deck-manager panels use the plain `Frame` bark border — no painted pieces; the only painted detail is the header branch with flowering sprigs (`SiteHeader`, `src/assets/wood/`). The page background is a dusk gradient on `body`. The `slate` scale is bark-brown ink, not green.
 
 ## Licensing
 

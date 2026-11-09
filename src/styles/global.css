@@ -1,187 +1,10 @@
 @import "tailwindcss";
 
-/* Deck pages inject most of their markup from src/scripts/*.ts at runtime;
- * without this hint Tailwind classes used only there are not generated. */
-@source "../scripts";
-
-/* ---------------------------------------------------------------------------
- * Palette: Bandlewood — bark ink, lantern gold, living green.
- *
- * Bandle City at dusk: deep brown-black shadow, a warm lamp, branch frames and
- * leaves around every panel, the cards themselves the brightest thing on the
- * table. Tailwind's `slate` scale is retuned to bark ink and `amber` to lantern
- * light so every existing `slate-*` / `amber-*` class lands in this world.
- * The six domain hues and the printed keyword hues remain data, not palette.
- * ------------------------------------------------------------------------ */
-@theme {
-	--font-sans: "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-	--font-display: "Bricolage Grotesque", "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-
-	--color-slate-950: #0c0906;
-	--color-slate-900: #15100b;
-	--color-slate-800: #241b12;
-	--color-slate-700: #3b2d1d;
-	--color-slate-600: #574330;
-	--color-slate-500: #9a8c76;
-	--color-slate-400: #b6a98f;
-	--color-slate-300: #d3c8b1;
-	--color-slate-200: #e7ddc9;
-	--color-slate-100: #f6efe0;
-
-	--color-amber-300: #f7e0ad;
-	--color-amber-400: #e9c479;
-	--color-amber-500: #c8a05e;
-	--color-amber-950: #241a0c;
-
-	--color-emerald-300: #9fd9b4;
-	--color-emerald-400: #5fbd86;
-	--color-red-300: #f2a8a0;
-	--color-red-400: #de7568;
-	--color-red-500: #c25649;
-
-	/* Wood and foliage: the header branch, the frame rail and highlights use these. */
-	--color-bark-950: #150c05;
-	--color-bark-900: #22150a;
-	--color-bark-700: #4a3218;
-	--color-bark-500: #7a4f26;
-	--color-bark-300: #a8703a;
-	/* The logo's own colours: sticker-bright leaf greens, the dark forest line it
-	 * is drawn with, and the cornflower of its flowers. */
-	--color-forest-950: #06200b;
-	--color-forest-900: #0d3412;
-	--color-leaf-600: #2f6a22;
-	--color-leaf-500: #46a02c;
-	--color-leaf-400: #7bd23c;
-	--color-leaf-200: #c3ee92;
-	--color-bloom: #5b9cf2;
-}
-
-@font-face {
-	font-family: "Bricolage Grotesque";
-	src: url("/fonts/bricolage-grotesque-latin.woff2") format("woff2");
-	font-weight: 300 800;
-	font-style: normal;
-	font-display: swap;
-	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@layer base {
-	/* The corner of a card. OpenRift's card images are cut to the printed card, a
-	   63 x 88mm face with a 3mm corner, so the art has transparent rounded corners
-	   of 4.76% of the card's width (measured on the 744px "full" image: ~35px).
-	   Whatever holds card art must clip to that same curve or its own corner shows
-	   through the art's: a square or too-tight container leaves a dark wedge, a
-	   too-round one cuts the art. A fixed radius only fits one size, so the radius
-	   is a percentage of the container, which is always the card's own shape.
-	   Horizontal radius is % of width and vertical is % of height, hence the pair:
-	   4.76% of 5 is 3.4% of 7 (portrait), and the other way round for a card lying
-	   on its side (a battlefield shown landscape). Use `.card-corner`, or
-	   `data-landscape` with it, rather than a rem radius, on any card art. */
-	:root {
-		--card-corner: 4.76% / 3.4%;
-		--card-corner-landscape: 3.4% / 4.76%;
-
-		/* One card, the same everywhere. The art is the card: it carries no border,
-		   no plate, no inner ring and no shadow of its own (the printed card already
-		   has its frame), and the three things that can touch it are shared.
-		   - ring: hover and selection, a gold ring drawn outside the card's edge.
-		   - halo: the dark edge that keeps a bare word readable over any art
-		     (a count, a legality word, a Rename action), so none of them needs a box.
-		   - foot fade: the dark rising from a card's foot under its +/- controls. */
-		--card-ring: 0 0 0 2px color-mix(in oklab, var(--color-amber-400) 65%, transparent);
-		--card-halo: 0 0 2px rgb(0 0 0 / 0.95), 0 1px 3px rgb(0 0 0 / 0.9), 0 0 8px rgb(0 0 0 / 0.7);
-		--card-foot-fade: linear-gradient(to top, rgb(0 0 0 / 0.78), rgb(0 0 0 / 0.45) 60%, transparent);
-	}
-
-	html {
-		color-scheme: dark;
-		-webkit-text-size-adjust: 100%;
-	}
-
-	body {
-		font-family: var(--font-sans);
-		font-synthesis-weight: none;
-		text-rendering: optimizeLegibility;
-		/* Dusk: violet and teal glows at the top corners over a lantern-amber
-		 * horizon, fading to bark ink behind the working area. No texture behind
-		 * card art — the art is the brightest thing on the table. */
-		background:
-			radial-gradient(60% 440px at 10% -40px, rgb(62 156 50 / 0.42), transparent 72%),
-			radial-gradient(48% 400px at 88% -20px, rgb(48 110 218 / 0.34), transparent 70%),
-			radial-gradient(80% 280px at 50% 150px, rgb(222 144 66 / 0.26), transparent 74%),
-			linear-gradient(180deg, #112519 0, #261b12 230px, var(--color-slate-950) 560px),
-			var(--color-slate-950);
-		background-attachment: fixed;
-	}
-
-	::selection {
-		background: color-mix(in oklab, var(--color-amber-400) 34%, transparent);
-		color: #fdf8ec;
-	}
-
-	/* One focus language for every control, including the ones scripts build. */
-	:focus-visible {
-		outline: 2px solid color-mix(in oklab, var(--color-amber-400) 82%, transparent);
-		outline-offset: 2px;
-	}
-
-	* {
-		scrollbar-width: thin;
-		scrollbar-color: var(--color-slate-700) transparent;
-	}
-
-	::-webkit-scrollbar {
-		width: 12px;
-		height: 12px;
-	}
-
-	::-webkit-scrollbar-thumb {
-		background: var(--color-slate-700);
-		border: 3px solid var(--color-slate-950);
-		border-radius: 999px;
-	}
-
-	::-webkit-scrollbar-thumb:hover {
-		background: var(--color-slate-600);
-	}
-
-	::-webkit-scrollbar-track {
-		background: transparent;
-	}
-
-	input,
-	select,
-	textarea {
-		caret-color: var(--color-amber-400);
-	}
-
-	h1,
-	h2,
-	h3 {
-		font-family: var(--font-display);
-		font-weight: 600;
-		text-wrap: balance;
-		letter-spacing: -0.005em;
-	}
-
-	p {
-		text-wrap: pretty;
-	}
-
-	a {
-		text-underline-offset: 0.22em;
-	}
-
-	/* Numerals that sit in columns (counts, deck totals, dates) stay aligned. */
-	.tnum {
-		font-variant-numeric: tabular-nums;
-	}
-
-	/* Attribute-driven hiding must beat component display rules (flex/grid). */
-	[hidden] {
-		display: none !important;
-	}
-}
+/* Design tokens (@theme) and base styles live in their own files (openspec
+ * change migrate-to-react, design D9). The component layer below shrinks as
+ * each component is ported to React and takes its rules with it. */
+@import "./tokens.css";
+@import "./base.css";
 
 @layer components {
 	/* --- shell ------------------------------------------------------------ */
@@ -1013,29 +836,6 @@
 		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.025);
 	}
 
-	.panel-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 0.5rem;
-		padding: 0.625rem 0.75rem;
-		border-bottom: 1px solid color-mix(in oklab, var(--color-slate-700) 55%, transparent);
-	}
-
-	.panel-title {
-		font-family: var(--font-display);
-		font-size: 0.9375rem;
-		font-weight: 600;
-		letter-spacing: 0;
-		color: var(--color-slate-200);
-	}
-
-	.panel-count {
-		font-size: 0.6875rem;
-		color: var(--color-slate-400);
-		font-variant-numeric: tabular-nums;
-	}
-
 	.empty-state {
 		border: 1px dashed color-mix(in oklab, var(--color-leaf-500) 55%, var(--color-slate-700));
 		border-radius: 0.625rem;
@@ -1067,70 +867,11 @@
 		color: var(--color-red-300);
 	}
 
-	/* --- card tiles ------------------------------------------------------- */
-
-	.card-tile {
-		display: block;
-		border-radius: 0.625rem;
-	}
-
-	.card-tile-art {
-		position: relative;
-		aspect-ratio: 5 / 7;
-		overflow: hidden;
-		border-radius: var(--card-corner);
-		background: var(--color-slate-900);
-		transition: box-shadow 140ms ease;
-	}
-
-	/* Hover is the shared ring, and the lean under "card tilt" below. */
-	.card-tile:hover .card-tile-art {
-		box-shadow: var(--card-ring);
-	}
-
-	.card-tile:focus-visible {
-		outline: 2px solid var(--color-amber-400);
-		outline-offset: 3px;
-	}
-
-	.card-tile-name {
-		margin-top: 0.5rem;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		line-height: 1.3;
-		color: var(--color-slate-200);
-		transition: color 140ms ease;
-	}
-
-	.card-tile:hover .card-tile-name {
-		color: var(--color-amber-300);
-	}
-
-	/* The set code at the end of the meta line: a word like the rest, no pill. */
-	.card-tile-set {
-		flex: none;
-		font-weight: 600;
-		letter-spacing: 0.04em;
-		color: var(--color-slate-400);
-	}
-
-	.card-tile-meta {
-		margin-top: 0.1875rem;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		font-size: 0.6875rem;
-		line-height: 1.4;
-		color: var(--color-slate-500);
-		font-variant-numeric: tabular-nums;
-	}
-
 	/* --- card tilt -------------------------------------------------------------
 	   A card art on the catalog grid, a deck tile and the card page's own art lean
 	   away from the mouse, like an upright card pressed with a fingertip: the edge
 	   nearest the pointer goes back, the far edge comes forward, and the card sinks
-	   a little. src/scripts/card-tilt.ts only publishes where the pointer is, as
+	   a little. src/behaviors/card-tilt.ts only publishes where the pointer is, as
 	   unitless --tilt-x / --tilt-y (-1..1 across and down the face) and --tilt-p
 	   (0..1, how far it is pressed back), smoothed per frame; the angles, depth and
 	   perspective are set here. They are set per stage because the same angle reads
@@ -1366,199 +1107,6 @@
 		font-size: 0.75rem;
 		color: var(--color-red-300);
 		overflow-wrap: anywhere;
-	}
-
-	/* --- deck tiles ------------------------------------------------------- */
-
-	/* Rename / Delete / Keep on a deck tile: pills, the same shape as the Legal / Not
-	   legal pill on the opposite corner, so a deck tile's two kinds of mark read as
-	   one family. Danger is the red-tinted pill. */
-	.tile-action {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		height: 1.375rem;
-		padding-inline: 0.5625rem;
-		border: 1px solid var(--color-slate-700);
-		border-radius: 999px;
-		background: color-mix(in oklab, var(--color-slate-950) 92%, transparent);
-		font-size: 0.6875rem;
-		font-weight: 600;
-		color: var(--color-slate-300);
-		white-space: nowrap;
-		transition:
-			border-color 120ms ease,
-			color 120ms ease,
-			background-color 120ms ease;
-	}
-
-	.tile-action:hover {
-		border-color: var(--color-slate-500);
-		background: var(--color-slate-900);
-		color: var(--color-slate-100);
-	}
-
-	.tile-action[data-variant="danger"] {
-		border-color: color-mix(in oklab, var(--color-red-400) 60%, transparent);
-		background: color-mix(in oklab, var(--color-red-400) 88%, #000);
-		color: #fff;
-	}
-
-	.tile-action[data-variant="danger"]:hover {
-		background: var(--color-red-400);
-		border-color: var(--color-red-300);
-	}
-
-	.create-tile {
-		display: flex;
-		height: 100%;
-		width: 100%;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		color: var(--color-slate-400);
-		transition: color 140ms ease;
-	}
-
-	.create-tile:hover {
-		color: var(--color-amber-300);
-	}
-
-	.create-tile-icon {
-		display: grid;
-		place-items: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		border: 1px solid var(--color-slate-700);
-		border-radius: 999px;
-		transition:
-			border-color 140ms ease,
-			background-color 140ms ease;
-	}
-
-	.create-tile:hover .create-tile-icon {
-		border-color: color-mix(in oklab, var(--color-amber-400) 55%, transparent);
-		background: color-mix(in oklab, var(--color-amber-400) 10%, transparent);
-	}
-
-	.legend-pick {
-		position: relative;
-		display: block;
-		width: 100%;
-		aspect-ratio: 5 / 7;
-		overflow: hidden;
-		border-radius: var(--card-corner);
-		background: var(--color-slate-900);
-		transition: box-shadow 140ms ease;
-	}
-
-	.legend-pick:hover {
-		box-shadow: var(--card-ring);
-	}
-
-	/* Chosen: the same ring, at full strength. */
-	.legend-pick[aria-pressed="true"] {
-		box-shadow: 0 0 0 2px var(--color-amber-400);
-	}
-
-	/* The name on a picker card: the card's foot fade, with the words on it. */
-	.legend-pick-label {
-		position: absolute;
-		inset-inline: 0;
-		bottom: 0;
-		background: var(--card-foot-fade);
-		padding: 0.875rem 0.375rem 0.25rem;
-		font-size: 0.6875rem;
-		line-height: 1.3;
-		color: var(--color-slate-100);
-	}
-
-	/* A deck tile is one card: the Legend art fills a 5:7 face and the deck's
-	   name and counts sit beneath it, the way a shelf label sits under a card. */
-	.dt-item {
-		position: relative;
-	}
-
-	.dt-face {
-		position: relative;
-		display: block;
-		aspect-ratio: 5 / 7;
-		overflow: hidden;
-		border-radius: var(--card-corner);
-		background: var(--color-slate-900);
-		transition: box-shadow 140ms ease;
-	}
-
-	/* The New-deck tile is not a card but a place for one, so it alone keeps an edge. */
-	.dt-face[data-empty] {
-		border: 1px dashed var(--color-slate-700);
-	}
-
-	.dt-item:hover .dt-face {
-		box-shadow: var(--card-ring);
-	}
-
-	.dt-face .create-tile {
-		border-radius: inherit;
-	}
-
-	.dt-label {
-		padding-top: 0.4375rem;
-	}
-
-	.dt-name {
-		display: block;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		font-size: 0.75rem;
-		font-weight: 600;
-		color: var(--color-slate-100);
-	}
-
-	.dt-counts {
-		display: block;
-		margin-top: 0.125rem;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-		font-size: 0.625rem;
-		color: var(--color-slate-400);
-	}
-
-	/* Legal / Not legal: the one status read at a glance, so it keeps its pill on the
-	   card's top corner (the only plate left on a card's art). */
-	.deck-badge {
-		position: absolute;
-		top: 0.375rem;
-		right: 0.375rem;
-		z-index: 10;
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		border: 1px solid var(--color-slate-700);
-		border-radius: 999px;
-		background: color-mix(in oklab, var(--color-slate-950) 92%, transparent);
-		padding: 0.125rem 0.4375rem;
-		font-size: 0.625rem;
-		font-weight: 600;
-		color: var(--color-slate-300);
-	}
-
-	/* Asking "Delete — sure?" needs the corner to itself, at any tile width. */
-	.dt-item:has([data-deck-confirm]) .deck-badge {
-		visibility: hidden;
-	}
-
-	.deck-badge[data-legal="true"] {
-		border-color: color-mix(in oklab, var(--color-emerald-400) 45%, transparent);
-		color: var(--color-emerald-300);
-	}
-
-	.deck-badge[data-legal="false"] {
-		border-color: color-mix(in oklab, var(--color-red-400) 45%, transparent);
-		color: var(--color-red-300);
 	}
 
 	/* A bare label on a card's corner (the Legend's and the Champion's copy count). */
@@ -1968,31 +1516,6 @@
 		animation: refuse-flash 700ms ease-out;
 	}
 
-	/* --- dialog ----------------------------------------------------------- */
-
-	.dialog-backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: 50;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 1rem;
-		background: color-mix(in oklab, #000 72%, transparent);
-	}
-
-	.dialog {
-		width: 100%;
-		max-width: 34rem;
-		border: 1px solid color-mix(in oklab, var(--color-bark-300) 45%, var(--color-slate-700));
-		border-radius: 0.75rem;
-		background: color-mix(in oklab, var(--color-slate-900) 92%, var(--color-bark-900));
-		padding: 1.125rem;
-		box-shadow:
-			0 1px 0 rgb(255 255 255 / 0.04) inset,
-			0 24px 60px -24px rgb(0 0 0 / 0.9);
-	}
-
 	.label {
 		display: block;
 		font-size: 0.6875rem;
@@ -2005,7 +1528,7 @@
 	/* --- card text (keyword labels, symbols, energy) ---------------------- */
 
 	/* Keyword labels follow the printed card: colored, slanted, uppercase.
-	 * The color arrives inline from src/lib/keyword-styles.ts as --kw-color. */
+	 * The color arrives inline from src/domain/keyword-styles.ts as --kw-color. */
 	.kw {
 		display: inline-block;
 		margin: 0 0.06em;
@@ -2336,50 +1859,8 @@
 
 	/* --- frame ------------------------------------------------------------ */
 
-	/* The working panels' border: a bark rail with a thin lantern hairline just
-	 * inside it, over a warm dark fill. Plain box model - no images, no
-	 * positioned pieces - so it reflows like any block. */
-	.frame {
-		--frame-pad: 0.875rem;
-		--frame-fill-top: #1b140d;
-		--frame-fill-bottom: #120d08;
-		position: relative;
-		border: 3px solid #4f3720;
-		border-radius: 1rem;
-		background: linear-gradient(180deg, var(--frame-fill-top), var(--frame-fill-bottom));
-		box-shadow:
-			inset 0 0 0 1px color-mix(in oklab, var(--color-amber-400) 22%, transparent),
-			inset 0 0 34px -10px #000,
-			0 0 0 1.5px var(--color-forest-950),
-			0 18px 34px -22px #000;
-	}
-
-	.frame--lit {
-		--frame-fill-top: #211910;
-		--frame-fill-bottom: #150f09;
-	}
-
-	.frame--quiet {
-		--frame-fill-top: #19130d;
-		--frame-fill-bottom: #100b07;
-	}
-
-	.frame-body {
-		position: relative;
-		display: flex;
-		flex: 1 1 auto;
-		flex-direction: column;
-		min-height: 0;
-		padding: var(--frame-pad);
-	}
-
-	@media (max-width: 40rem) {
-		.frame {
-			--frame-pad: 0.625rem;
-			border-radius: 0.75rem;
-		}
-	}
-
+	/* The frame itself is src/ui/organisms/Frame (its module owns the rail, the
+	 * fills and the padding variables); only the columns' foot fade lives here. */
 	/* Both columns scroll inside their frames at lg+; a foot fade says so
 	 * without adding a control. */
 	@media (min-width: 64rem) {

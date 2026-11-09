@@ -1,7 +1,13 @@
 ---
+// Browse cards (card-catalog-browser spec). The heading is static; the grid is
+// an island whose first step of tiles is rendered here at build. The full
+// catalog payload rides in a JSON tag the grid reads once it runs (design D3).
 import Base from '../layouts/Base.astro';
-import { index, setPrimaryRelease, type IndexCard } from '../lib/catalog';
-import { buildGridPayload, escapedJson, GRID_STEP, gridItemHtml } from '../lib/grid-payload';
+import { CatalogGrid } from '../features/catalog-grid/CatalogGrid';
+import { CatalogHead } from '../features/catalog-grid/CatalogHead';
+import { index, setPrimaryRelease } from '../server/catalog';
+import { PAYLOAD_IDS } from '../domain/payload-ids';
+import { buildGridPayload, escapedJson, GRID_STEP } from '../server/grid-payload';
 
 const rarityOrder = ['common', 'uncommon', 'rare', 'epic', 'showcase'];
 const typeOrder = ['legend', 'unit', 'spell', 'rune', 'gear', 'battlefield', 'other'];
@@ -16,77 +22,22 @@ const types = [...new Set(index.cards.flatMap((c) => c.types))].sort(byKnownFirs
 const rarities = [...new Set(index.cards.flatMap((c) => c.printings.map((p) => p.rarity).filter((r): r is string => Boolean(r))))].sort(
 	byKnownFirst(rarityOrder, 99),
 );
-const sets = [...index.sets].sort((a, b) => {
-	const ra = setPrimaryRelease(a)?.releasedAt ?? '9999-99-99';
-	const rb = setPrimaryRelease(b)?.releasedAt ?? '9999-99-99';
-	return ra.localeCompare(rb) || a.name.localeCompare(b.name);
-});
+const sets = [...index.sets]
+	.sort((a, b) => {
+		const ra = setPrimaryRelease(a)?.releasedAt ?? '9999-99-99';
+		const rb = setPrimaryRelease(b)?.releasedAt ?? '9999-99-99';
+		return ra.localeCompare(rb) || a.name.localeCompare(b.name);
+	})
+	.map((s) => ({ slug: s.slug, name: s.name }));
 
-// Client-side filter payload: precomputed everything the grid controller
-// needs (shared with the deck manager browser via grid-payload).
 const payload = buildGridPayload();
-const gridPayload = escapedJson(payload);
-
-// Server-rendered initial window; the controller reveals further steps.
-const firstWindow = payload.slice(0, GRID_STEP).map(gridItemHtml).join('');
+const initial = payload.slice(0, GRID_STEP).map(({ slug, name, meta, art }) => ({ slug, name, meta, art }));
 ---
 
 <Base title="Browse cards — BandleBox">
-	<header class="page-head">
-		<div>
-			<h1 class="page-title">Browse cards</h1>
-			<p class="page-lede">Catalog of all the cards in the game.</p>
-		</div>
-		<p class="page-meta">{index.cards.length.toLocaleString('en-US')} cards · {index.sets.length} sets</p>
-	</header>
-
-	<div class="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-		<input
-			id="grid-search"
-			class="field col-span-2 min-w-0 sm:min-w-48 sm:flex-1"
-			type="search"
-			placeholder="Search name or card text…"
-			autocomplete="off"
-		/>
-		<select id="grid-type" class="field">
-			<option value="">All types</option>
-			{types.map((t) => <option value={t}>{t}</option>)}
-		</select>
-		<select id="grid-rarity" class="field">
-			<option value="">All rarities</option>
-			{rarities.map((r) => <option value={r}>{r}</option>)}
-		</select>
-		<select id="grid-set" class="field">
-			<option value="">All sets</option>
-			{sets.map((s) => (
-				<option value={s.slug}>{s.name} ({s.slug})</option>
-			))}
-		</select>
-		<button id="grid-reset" class="btn" type="button">Reset</button>
-	</div>
-	<p id="grid-count" class="mt-3 text-xs text-slate-400 tnum" aria-live="polite">Showing all {index.cards.length.toLocaleString('en-US')} cards</p>
-
-	<ul id="grid-list" class="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-		<Fragment set:html={firstWindow} />
-		<li id="grid-sentinel" class="col-span-full" aria-hidden="true"></li>
-	</ul>
-
-	<div id="grid-empty" hidden class="empty-state mt-8 flex flex-col items-center gap-3">
-		<p>No cards match the current filters. Try <em>Reset</em> or shorter search text.</p>
-		<button id="grid-empty-reset" class="btn" type="button">Clear filters</button>
-	</div>
-
-	<button
-		id="grid-top"
-		type="button"
-		hidden
-		aria-label="Back to top"
-		class="btn fixed bottom-6 right-6 z-20 shadow-lg"
-	>
-		Back to top
-	</button>
-
-	<script type="application/json" id="grid-data" set:html={gridPayload} />
+	<CatalogHead cardCount={index.cards.length} setCount={index.sets.length} />
+	<CatalogGrid client:load initial={initial} total={payload.length} types={types} rarities={rarities} sets={sets} />
+	<script type="application/json" id={PAYLOAD_IDS.grid} set:html={escapedJson(payload)} />
 </Base>
 
 <style is:global>
@@ -96,9 +47,13 @@ const firstWindow = payload.slice(0, GRID_STEP).map(gridItemHtml).join('');
 		content-visibility: auto;
 		contain-intrinsic-size: auto 360px;
 	}
+	/* Restoring a scroll position lays every revealed tile out once, so their
+	 * real heights are remembered (useGridPlace.ts). */
+	#grid-list[data-measuring] > li[data-slug] {
+		content-visibility: visible;
+	}
 </style>
 
 <script>
-	import '../scripts/grid-filters';
-	import '../scripts/card-tilt';
+	import '../behaviors/card-tilt';
 </script>

@@ -1,7 +1,7 @@
 ---
 // One page per card (card-catalog-browser spec): built from the snapshot and
 // readable without JavaScript. Everything is static React; two small
-// framework-free behaviors add the card tilt and the "Back to deck" link.
+// framework-free behaviors add the card tilt and the Back button.
 import Base from '../../layouts/Base.astro';
 import { CardDetail } from '../../features/card-detail/CardDetail';
 import { DeckReturnLink } from '../../features/card-detail/DeckReturnLink';
@@ -19,9 +19,9 @@ const { card } = Astro.props;
 const detail = buildCardDetail(card);
 ---
 
-<Base title={`${card.name} — BandleBox`}>
+<Base title={`${card.name} — BandleBox`} roomy fitScreen>
 	<DeckReturnLink />
-	<CardDetail card={detail} />
+	<CardDetail client:load card={detail} />
 </Base>
 
 <script>

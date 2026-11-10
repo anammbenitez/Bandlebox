@@ -2,6 +2,7 @@
 // from the mouse through the card-tilt behavior), its live legality badge, its
 // counts, and Rename / Delete (Delete asks in place before it removes).
 import { DECK_RULES, sectionTotal, type Deck } from '../../domain/deck.ts';
+import { usePreferredImage } from '../../ui/hooks/usePreferredImage.ts';
 import { CardImage } from '../../ui/atoms/CardImage.tsx';
 import { VerdictBadge } from '../../ui/molecules/VerdictBadge.tsx';
 import styles from './DeckLibrary.module.css';
@@ -9,8 +10,21 @@ import styles from './DeckLibrary.module.css';
 export interface LegendEntry {
 	slug: string;
 	name: string;
+	/** The real Legend name(s), e.g. Ahri; searchable in the picker. */
+	tags: string[];
+	/** The Legend's domains (slugs), for the picker's domain filter. */
+	domains: string[];
 	/** OpenRift image id; covers use the tile role, the picker the thumb role. */
 	imageId: string | null;
+}
+
+/** A Legend's art as the browser remembers it: the printing the player chose on
+ *  the card page (kept in localStorage like the decks), else the catalog's first. */
+export function LegendArt({ legend, role, alt }: { legend: LegendEntry; role: 'tile' | 'thumb'; alt: string }) {
+	const preferred = usePreferredImage(legend.slug);
+	const imageId = preferred ?? legend.imageId;
+	if (!imageId) return <span className="grid h-full place-items-center text-slate-600">—</span>;
+	return <CardImage imageId={imageId} role={role} alt={alt} loading="lazy" className="h-full w-full object-cover" />;
 }
 
 interface DeckTileProps {
@@ -59,8 +73,8 @@ export function DeckTile({ deck, legal, legend, confirming, onRename, onDelete, 
 				</span>
 			)}
 			<a href={`/decks/build#d/${deck.id}`} aria-label={`Open ${deck.name}`} className={styles.face} data-tilt-face="">
-				{legend?.imageId ? (
-					<CardImage imageId={legend.imageId} role="tile" alt={`Legend art for ${legend.name}`} loading="lazy" className="h-full w-full object-cover" />
+				{legend ? (
+					<LegendArt legend={legend} role="tile" alt={`Legend art for ${legend.name}`} />
 				) : (
 					<span className="absolute inset-0 grid place-items-center px-2 text-center text-[11px] text-slate-500">no legend chosen</span>
 				)}

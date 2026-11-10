@@ -112,3 +112,18 @@ test('card faces carry no native tooltip over the art', async ({ page }) => {
 	await expect(art).not.toHaveAttribute('title', /.+/);
 	await expect(face(page, CHAMPION)).not.toHaveAttribute('title', /.+/);
 });
+
+test('See more opens the card\'s full detail in a modal, and the page stays where it was', async ({ page }) => {
+	await restOn(page, CHAMPION);
+	await expect(peek(page)).toBeVisible({ timeout: 3000 });
+	await peek(page).getByRole('link', { name: 'See more' }).click();
+	const modal = page.getByRole('dialog', { name: /full card details/ });
+	await expect(modal).toBeVisible();
+	await expect(modal.getByRole('heading', { level: 1 })).toContainText(CHAMPION_NAME);
+	await expect(modal.getByRole('heading', { name: 'Printings', exact: true })).toBeVisible();
+	await expect(modal.getByRole('link', { name: 'Open card page' })).toHaveAttribute('href', new RegExp(`^/cards/${CHAMPION}\\?from=`));
+	expect(new URL(page.url()).pathname).toBe('/decks/build');
+	await page.keyboard.press('Escape');
+	await expect(modal).toBeHidden();
+	expect(new URL(page.url()).pathname).toBe('/decks/build');
+});

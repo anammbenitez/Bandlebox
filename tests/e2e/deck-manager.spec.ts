@@ -101,12 +101,32 @@ test.describe('editing', () => {
 		await expect.poll(async () => (await storedDecks(page))[0].rune.find((s) => s.card === slugOf('Calm Rune'))?.qty).toBe(8);
 	});
 
+	test('the table starts open, collapses to a summary with a rune slider, and a ledger tab reopens it', async ({ page }) => {
+		const toggle = deckPane(page).getByRole('button', { name: /^The table/ });
+		await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.getByRole('spinbutton', { name: /Calm rune count/i })).toBeVisible();
+		await toggle.click();
+		await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+		const legend = page.locator('[data-summary-card="legend"]');
+		const champion = page.locator('[data-summary-card="champion"]');
+		const [l, c] = [await legend.boundingBox(), await champion.boundingBox()];
+		expect(l && c && Math.abs(l.width - c.width) < 1 && Math.abs(l.height - c.height) < 1).toBe(true);
+		const slider = page.getByRole('slider', { name: /Rune split/ });
+		await slider.focus();
+		await page.keyboard.press('ArrowRight');
+		await expect.poll(async () => (await storedDecks(page))[0].rune.find((s) => s.card === slugOf('Calm Rune'))?.qty).toBe(7);
+		expect((await storedDecks(page))[0].rune.find((s) => s.card === slugOf('Mind Rune'))?.qty).toBe(5);
+		await ledger(page, 'Runes').click();
+		await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.getByRole('spinbutton', { name: /Calm rune count/i })).toHaveValue('7');
+	});
+
 	test('the champion zone places a tag-matching champion', async ({ page }) => {
 		await page.getByRole('button', { name: 'Select champion' }).click();
 		await expect(page.getByRole('button', { name: 'Picking — click a champion' })).toBeVisible();
 		await search(page, CHAMPION_NAME);
 		await browserTile(page, CHAMPION_NAME).getByRole('link').click();
-		await expect(page.getByRole('button', { name: 'Switch champion' })).toBeVisible();
+		await expect(page.locator(`[data-champion-face] > [data-slug="${CHAMPION}"]`)).toBeVisible();
 		const stored = (await storedDecks(page))[0];
 		expect(stored.champion).toBe(CHAMPION);
 		expect(stored.main).toEqual([{ card: CHAMPION, qty: 1 }]);

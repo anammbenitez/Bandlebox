@@ -16,7 +16,7 @@ const SECTION_HINT: Record<SectionKey, string> = {
 	legend: 'Place one Legend from the browser.',
 	battlefields: 'Pick three different battlefields.',
 	main: 'Add units, spells, and gear — 40 cards.',
-	rune: 'Set the rune ratio above.',
+	rune: 'Place a Legend; its colors set the runes.',
 	side: 'Up to 10 optional cards.',
 };
 
@@ -59,10 +59,11 @@ export function DeckSection({ section, deck, idx, bySlug, domains, shared, activ
 				shared={shared}
 				address={address}
 				onChangeQty={(delta, from) => actions.changeQty(section, slot.card, delta, from)}
+				onRemove={() => actions.removeRow(section, slot.card)}
 			/>
 		))
 	) : (
-		<li className="section-empty col-span-full">{SECTION_HINT[section]}</li>
+		<li className="section-empty col-span-full w-full">{SECTION_HINT[section]}</li>
 	);
 
 	return (
@@ -89,9 +90,8 @@ export function DeckSection({ section, deck, idx, bySlug, domains, shared, activ
 				</span>
 			</button>
 			<div className="section-body">
-				{section === 'rune' && <RuneRatio deck={deck} idx={idx} shared={shared} domains={domains} onSet={actions.setRuneRatio} />}
 				{section === 'legend' ? (
-					<div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2">
+					<div className="legend-pair">
 						<ul data-rows="legend" className="contents">
 							{rows}
 						</ul>
@@ -109,9 +109,16 @@ export function DeckSection({ section, deck, idx, bySlug, domains, shared, activ
 						/>
 					</div>
 				) : section === 'battlefields' ? (
-					<ul data-rows="battlefields" className="flex flex-wrap gap-1.5">
+					<ul data-rows="battlefields" className="battlefield-row">
 						{rows}
 					</ul>
+				) : section === 'rune' ? (
+					<div className="rune-bay">
+						<RuneRatio deck={deck} idx={idx} shared={shared} domains={domains} onSet={actions.setRuneRatio} />
+						<ul data-rows="rune" className="rune-faces">
+							{rows}
+						</ul>
+					</div>
 				) : (
 					<ul data-rows={section} className="grid grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-1.5">
 						{rows}

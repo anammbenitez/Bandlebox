@@ -278,7 +278,7 @@ The deck editor's browsed-card grid SHALL lay out from its container's actual wi
 
 ### Requirement: Champion zone beside the Legend
 
-The deck viewer SHALL provide a Champion zone directly to the right of the Legend. A deck has at most one Champion: a single champion-unit card sharing the Legend's champion tag, shown up to the standard copy cap of 3. Its copies live in the main deck, so collecting or pulling them updates the main deck exactly once for the counter and the legality rules. The zone stays empty until a champion is placed, and a placed champion is replaceable.
+The deck viewer SHALL provide a Champion zone directly to the right of the Legend. A deck has at most one Champion: a single champion-unit card sharing the Legend's champion tag, shown up to the standard copy cap of 3. Its copies live in the main deck, so collecting or pulling them updates the main deck exactly once for the counter and the legality rules. The zone stays empty until a champion is placed, and a placed champion is replaceable. While empty, the zone's slot is itself the control that starts picking; there is no separate select or switch button, and a placed champion is replaced by dropping another tag-matching champion on the zone or by removing it and picking again.
 
 #### Scenario: Placing the deck's champion
 
@@ -302,7 +302,7 @@ The deck viewer SHALL provide a Champion zone directly to the right of the Legen
 
 ### Requirement: Deck viewer presents the field zones
 
-At desktop sizes, the deck viewer SHALL present the deck zones in a field-like layout within its panel: the Legend and the Champion zone side by side at the top, a horizontal row for Battlefields, and a main-deck grid of comfortably sized cards that reflows with the panel width instead of many tiny columns. The viewer's equal half of the desktop workspace SHALL be wide enough for this layout.
+At desktop sizes, the deck viewer SHALL present the deck zones in a field-like layout within its panel: the Legend and the Champion zone side by side at the top, with the Battlefields (a horizontal row) and the Rune deck (the written ratio beside its rune cards) filling the room to their right when the panel is wide enough, and a main-deck grid of comfortably sized cards that reflows with the panel width instead of many tiny columns. The viewer's equal half of the desktop workspace SHALL be wide enough for this layout.
 
 #### Scenario: Legend and Champion share the top row
 

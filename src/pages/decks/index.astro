@@ -6,17 +6,24 @@
 import Base from '../../layouts/Base.astro';
 import { DeckLibrary } from '../../features/deck-library/DeckLibrary';
 import { buildDeckRuleIndexes } from '../../domain/deck-rules';
+import { glyphUrl } from '../../domain/glyphs';
 import { PAYLOAD_IDS } from '../../domain/payload-ids';
 import { index, snapshot } from '../../server/catalog';
 import { escapedJson } from '../../server/grid-payload';
 
 const ruleIndexes = escapedJson(buildDeckRuleIndexes(snapshot, index));
 
+// Domain chips for the Legend picker: the emblem when refresh cached one.
+const domains = ((snapshot.enums?.domains ?? []) as Array<{ slug: string; label?: string }>)
+	.filter((domain) => domain.slug !== 'colorless')
+	.map((domain) => ({ ...domain, icon: glyphUrl(`domain_${domain.slug}`) ?? null }));
+
 const legends = index.cards
 	.filter((card) => card.types.includes('legend'))
 	.map((card) => {
 		const printing = card.printings.find((p) => p.imageIds.length > 0) ?? card.printings[0];
-		return { slug: card.slug, name: card.name, imageId: printing?.imageIds[0] ?? null };
+		return { slug: card.slug, name: card.name, tags: snapshot.cards[card.cardId]?.tags ?? [],
+			domains: snapshot.cards[card.cardId]?.domains ?? [], imageId: printing?.imageIds[0] ?? null };
 	});
 ---
 
@@ -27,7 +34,7 @@ const legends = index.cards
 			<p class="page-lede">Decks live in this browser locally and save themselves as you build, be creative!</p>
 		</div>
 	</header>
-	<DeckLibrary client:load legends={legends} />
+	<DeckLibrary client:load legends={legends} domains={domains} />
 	<script type="application/json" id={PAYLOAD_IDS.deckRules} set:html={ruleIndexes} />
 </Base>
 

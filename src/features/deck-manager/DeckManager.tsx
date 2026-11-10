@@ -11,7 +11,8 @@ import { useHash, useManagerData } from './boot.ts';
 import { CardBrowser, type DomainEntry } from './CardBrowser.tsx';
 import { DeckBar } from './DeckBar.tsx';
 import { DeckViewer, useLegality } from './DeckViewer.tsx';
-import { CardPeek, type CardPeekHandle } from './peek/CardPeek.tsx';
+import { LegalityChecklist } from './viewer/LegalityChecklist.tsx';
+import { CardPeek, type CardPeekHandle } from '../../ui/organisms/peek/CardPeek.tsx';
 import { announce, flashFace, flashSection, registerLiveRegion } from './refusals.ts';
 
 export function DeckManager({ domains }: { domains: DomainEntry[] }) {
@@ -88,6 +89,7 @@ export function DeckManager({ domains }: { domains: DomainEntry[] }) {
 				fallbackMeta={status === 'none' ? 'Open a deck from your deck list, or create one there first — decks always live in your browser.' : '0 cards'}
 				shared={shared}
 				legal={legal}
+				legality={ready ? <LegalityChecklist deck={deck} idx={idx} /> : null}
 				totalCopies={totalCopies}
 				active={active}
 				onRename={(name) => {

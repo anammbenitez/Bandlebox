@@ -21,6 +21,13 @@ interface Props {
 	/** Deck manager only: the page fills the viewport and never scrolls; the
 	 *  page's own panes carry the scrolling instead. */
 	appShell?: boolean;
+	/** A page that earns more room than the reading width (the card page): the
+	 *  content area grows with the window up to 100rem. */
+	roomy?: boolean;
+	/** From the lg breakpoint the page is exactly one window tall (header, content,
+	 *  footer): no page scroll, the content's own columns scroll instead. Below lg
+	 *  it scrolls as usual. */
+	fitScreen?: boolean;
 }
 
 // The header's art, optimized at build and handed to the React header (static:
@@ -33,7 +40,7 @@ const headerImages: SiteHeaderImages = {
 	sprigLower: await sprig(sprigLower),
 };
 
-const { title = 'BandleBox', description = 'Personal, offline-first browser for every available Riftbound card.', wide = false, appShell = false } = Astro.props;
+const { title = 'BandleBox', description = 'Personal, offline-first browser for every available Riftbound card.', wide = false, appShell = false, roomy = false, fitScreen = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -50,10 +57,10 @@ const { title = 'BandleBox', description = 'Personal, offline-first browser for 
 		<ClientRouter fallback="none" />
 		<script is:inline set:html={imageFallbackScript} />
 	</head>
-	<body class:list={['flex min-h-screen flex-col text-slate-100 antialiased', wide && 'is-wide', appShell && 'app-shell']}>
+	<body class:list={['flex min-h-screen flex-col text-slate-100 antialiased', wide && 'is-wide', appShell && 'app-shell', fitScreen && 'lg:h-dvh lg:min-h-0 lg:overflow-hidden']}>
 		<a class="skip-link" href="#main">Skip to content</a>
 		<SiteHeader client:load transition:persist="site-header" currentPath={Astro.url.pathname} images={headerImages} />
-		<main id="main" tabindex="-1" class={`mx-auto w-full flex-1 px-4 focus:outline-none ${wide ? 'mx-0 pb-6 pt-0' : 'max-w-6xl pb-10 pt-9'}`}>
+		<main id="main" tabindex="-1" class={`mx-auto w-full flex-1 px-4 focus:outline-none ${wide ? 'mx-0 pb-6 pt-0' : roomy ? `max-w-[100rem] pb-10 pt-6 sm:px-8 ${fitScreen ? ' lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden lg:pb-4' : ''}` : 'max-w-6xl pb-10 pt-9'}`}>
 			<slot />
 		</main>
 		<Colophon />

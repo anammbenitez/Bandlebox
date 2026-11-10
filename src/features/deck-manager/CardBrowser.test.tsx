@@ -94,9 +94,9 @@ describe('CardBrowser', () => {
 	it('the chip says where a card\'s copies are, and Not in the deck otherwise', () => {
 		render(<CardBrowser {...props()} />);
 		const bolt = document.querySelector('#bd-list li[data-slug="bolt"]')!;
-		expect(within(bolt as HTMLElement).getByText('M2')).toHaveAttribute('title', '2 in Main deck');
+		expect(within(bolt as HTMLElement).getByText('2')).toHaveAttribute('title', '2 in Main deck');
 		const ahri = document.querySelector('#bd-list li[data-slug="ahri"]')!;
-		expect(within(ahri as HTMLElement).getByText('—')).toHaveAttribute('title', 'Not in the deck');
+		expect(within(ahri as HTMLElement).getByText('0')).toHaveAttribute('title', 'Not in the deck');
 	});
 
 	it('search narrows by name or text', async () => {
@@ -184,8 +184,8 @@ describe('CardBrowser', () => {
 		}
 		observer.disconnect();
 		const after = new Map(faces().map((slug) => [slug, document.querySelector(`#bd-list li[data-slug="${slug}"] [data-chip-count]`)!.textContent]));
-		expect(before.get('bolt')).toBe('M2');
-		expect(after.get('bolt')).toBe('M3');
+		expect(before.get('bolt')).toBe('2');
+		expect(after.get('bolt')).toBe('3');
 		expect(after.get('ahri')).toBe(before.get('ahri'));
 		// nothing but the changed tile was touched, and no tile was recreated
 		expect([...marks.keys()]).toEqual(['bolt']);

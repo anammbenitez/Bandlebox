@@ -76,6 +76,67 @@
 	background: color-mix(in oklab, var(--color-amber-400) 10%, transparent);
 }
 
+/* The Legend field takes the dialog's spare height; only the grid scrolls. */
+.legendField {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	min-height: 0;
+	margin-top: 1rem;
+}
+
+/* One row: the search fills whatever width the domain chips leave, at the same
+   2.75rem height as the deck name field. */
+.legendControls {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-top: 0.375rem;
+}
+
+.legendSearch {
+	flex: 1 1 0;
+	min-width: 0;
+	height: 2.75rem;
+}
+
+.domainChips {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+/* Too narrow for field and chips side by side: the chips wrap under the field. */
+@media (max-width: 36rem) {
+	.legendControls {
+		flex-wrap: wrap;
+	}
+
+	.legendSearch {
+		flex-basis: 100%;
+	}
+
+	.domainChips {
+		flex-wrap: wrap;
+	}
+}
+
+/* Auto-fit columns so every card is a whole 5:7 face. The padding gives the
+   hover and chosen rings room: the scroller would otherwise clip them. */
+.legendGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+	gap: 0.625rem;
+	min-height: 9rem;
+	margin-top: 0.5rem;
+	padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-slate-700) transparent;
+}
+
 .legendPick {
 	position: relative;
 	display: block;
@@ -88,12 +149,20 @@
 }
 
 .legendPick:hover {
-	box-shadow: var(--card-ring);
+	outline: 2px solid color-mix(in oklab, var(--color-amber-400) 65%, transparent);
+	outline-offset: 2px;
 }
 
-/* Chosen: the same ring, at full strength. */
+/* Chosen: the same ring, at full strength. Outlines follow the card's rounded
+   corners and stand off the art, so ring and card edge stay concentric. */
 .legendPick[aria-pressed="true"] {
-	box-shadow: 0 0 0 2px var(--color-amber-400);
+	outline: 2px solid var(--color-amber-400);
+	outline-offset: 2px;
+}
+
+.legendPick:focus-visible {
+	outline: 2px solid var(--color-amber-300);
+	outline-offset: 2px;
 }
 
 /* The name on a picker card: the card's foot fade, with the words on it. */
@@ -176,7 +245,11 @@
 
 .dialog {
 	width: 100%;
-	max-width: 34rem;
+	max-width: 40rem;
+	/* The dialog takes the height it has: the Legend grid is the part that scrolls. */
+	display: flex;
+	flex-direction: column;
+	max-height: calc(100dvh - 2rem);
 	border: 1px solid color-mix(in oklab, var(--color-bark-300) 45%, var(--color-slate-700));
 	border-radius: 0.75rem;
 	background: color-mix(in oklab, var(--color-slate-900) 92%, var(--color-bark-900));

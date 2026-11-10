@@ -4,7 +4,7 @@
 // face adds it to its natural section; the chip's +/- add to or pull from the
 // focused section; a face can be dragged onto any section.
 import { memo, useLayoutEffect, useRef, type DragEvent, type MouseEvent, type RefObject } from 'react';
-import { qtyOf, SECTION_CODE, SECTION_KEYS, SECTION_LABELS, type Deck, type SectionKey } from '../../domain/deck.ts';
+import { qtyOf, SECTION_KEYS, SECTION_LABELS, type Deck, type SectionKey } from '../../domain/deck.ts';
 import { isKnown } from '../../domain/deck-editing.ts';
 import { cardPageHref } from '../../domain/deck-return.ts';
 import type { DeckRuleIndexes } from '../../domain/deck-rules.ts';
@@ -43,13 +43,10 @@ interface CardBrowserProps {
 	scrollerRef?: RefObject<HTMLElement | null>;
 }
 
+/** The card's copies across the whole deck; the title says where they are. */
 function chipText(deck: Deck, idx: DeckRuleIndexes, slug: string): string {
 	if (!isKnown(idx, slug)) return '?';
-	const parts = SECTION_KEYS.flatMap((section) => {
-		const qty = qtyOf(deck[section], slug);
-		return qty ? [`${SECTION_CODE[section]}${qty}`] : [];
-	});
-	return parts.length ? parts.join('·') : '—';
+	return String(SECTION_KEYS.reduce((sum, section) => sum + qtyOf(deck[section], slug), 0));
 }
 
 function chipTitle(deck: Deck, slug: string): string {
@@ -78,11 +75,13 @@ const BrowserTile = memo(function BrowserTile({ entry, href, shared, sectionLabe
 	return (
 		<li data-slug={entry.slug} draggable={shared ? undefined : true} className="face group relative aspect-[5/7] cursor-pointer">
 			<a href={href} aria-label={entry.name} className="absolute inset-0">
-				<FaceArt art={entry.art} />
+				<FaceArt art={entry.art} slug={entry.slug} />
 			</a>
 			<div className="face-bar">
 				{shared ? (
-					<span className="count-chip px-1">{chip}</span>
+					<span title={chipTitle} className="count-chip mx-auto">
+						{chip}
+					</span>
 				) : (
 					<>
 						<button type="button" data-chip-minus={entry.slug} className="stepper" aria-label={`Pull copies from ${sectionLabel}`}>

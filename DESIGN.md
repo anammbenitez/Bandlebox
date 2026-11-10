@@ -83,7 +83,25 @@ and straightened by `scripts/build-wood-loops.mjs` from the ChatGPT pack) with
 two flowering twigs resting on it (`.header-sprig--a/--b`, from
 `sprig_horizontal_upper/lower.png`) and the hanging vine on non-wide pages. The
 twigs are placed so their own branch sits on the strip's line, away from the nav
-links; the first is hidden below 48rem.
+links; the first is hidden below 48rem. The brand and the page links are parted
+by a twig planted in that branch (`.nav-twig`): a length of the same strip stood
+upright, a little thinner than the branch, its foot behind the branch and its
+tip fading out, with one of the strip's moss patches near the foot. Where it
+joins the branch sits a flowering knot: a window onto the center sprig around
+its cornflower, at that sprig's own scale, its sides fading into the branch. It
+is the header's top layer: its leaves may lie over a link's letters (it takes no
+pointer). Both are the same paintings, not new pieces, so they are part of this
+one painted detail.
+
+**Current page: lamplight.** The current nav link is lamplit: its label is
+`amber-300` and a warm pool of `amber-400` light sits on the branch below it
+(`.nav-link::after`, a radial wash added over the band and the branch with
+`plus-lighter`). It is hottest on the bark's top edge and its foot is blurred
+out through the bark: half strength at the bark's measured middle, gone at its
+lower edge, so nothing glows below the branch. Unlit links are
+`slate-400`; hover previews the light at 30%. The light cross-fades between
+links over 260ms (none under reduced motion). No icon or rule sits beside a
+label, so marking a page never moves one.
 
 **Background.** The page behind the header is a layered dusk gradient on `body`:
 a leaf-green glow top-left, a cornflower glow top-right and a vine-orange horizon over a
@@ -114,7 +132,17 @@ repeated inside panels.
   the browser's scroll offset.
 - The viewer is one deck sheet: a `.sheet-ledger` of five sections pins to the
   top of the frame, the sections follow as hairline-divided rows, and legality
-  closes the sheet.
+  closes the sheet. The first row is the table (`.sheet-table`, container
+  queries on `.sheet`): the Legend and Champion pair, with the Battlefields and
+  the Rune deck beside it so the room right of the pair is used. Below 30rem the
+  three stack; from 30rem the runes sit beside the pair and the battlefields run
+  across below; from 40rem the pair holds the left and the battlefields over the
+  runes fill the right. Battlefields share one row three across
+  (`.battlefield-row`); the rune ratio counters stand beside the rune cards
+  (`.rune-bay`), whose foot is their count and remove only, since the ratio sets
+  the counts. The empty Champion slot is itself the picking button
+  (`.champion-slot`, lit gold while picking); there is no select or switch
+  button.
 - Spacing scale: 2 / 4 / 6 / 8 / 10 / 12 / 16 px rhythm. Tight inside groups,
   generous between them.
 
@@ -229,8 +257,8 @@ the header branch are module territory. Either way, colors come from the tokens
   picker and every face in the deck manager. Only three things are shared and may
   touch it (tokens in `global.css`): `--card-ring`, a gold ring outside the edge for
   hover and selection (selection is the same ring at full strength); `--card-halo`,
-  a dark text edge that keeps a bare word readable over any art, used for the
-  Legend and Champion copy count (`.card-badge`), so it needs no plate; and
+  a dark text edge that keeps a bare word readable over any art, so it needs no
+  plate; and
   `--card-foot-fade`, a
   dark fade rising from a card's foot behind its - count + row (`.face-bar`) and a
   picker card's name. The only plates left on a card are the deck tile's pills, one
@@ -270,7 +298,7 @@ the header branch are module territory. Either way, colors come from the tokens
   it (an invisible bridge, `::before`, covers the gap to the face, and a 250ms
   grace covers the rest) and it stays while the pointer is on it. It ends with a
   **link**-role `.btn` "See more" that opens the card's page, which links back to the
-  deck ("Back to deck"). A `.dialog`-toned surface
+  page it came from ("Back"). A `.dialog`-toned surface
   (slate over bark, bark hairline), 24rem wide. It is read at a glance with the
   other hand on the deck, so nothing in it is a micro-label: the name is the
   display face at 18px, the type line is 14px sentence case,

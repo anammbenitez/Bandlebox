@@ -7,7 +7,7 @@ import { legendDomains, runeCopiesFor } from '../../../domain/deck-editing.ts';
 import type { DeckRuleIndexes } from '../../../domain/deck-rules.ts';
 
 /** Riftbound domain palette for the counters' color dots. */
-const DOMAIN_COLORS: Record<string, string> = {
+export const DOMAIN_COLORS: Record<string, string> = {
 	fury: '#ef4444',
 	chaos: '#a855f7',
 	mind: '#3b82f6',
@@ -27,10 +27,10 @@ export interface RuneRatioProps {
 export function RuneRatio({ deck, idx, shared, domains, onSet }: RuneRatioProps) {
 	const colors = [...new Set(legendDomains(deck, idx) ?? [])];
 	const [drafts, setDrafts] = useState<Record<string, string>>({});
-	if (shared || colors.length === 0) return <div data-rune-ratio="" className="mb-2 hidden" />;
+	if (shared || colors.length === 0) return <div data-rune-ratio="" className="hidden" />;
 	return (
-		<div data-rune-ratio="" className="mb-2 flex flex-wrap items-center gap-2">
-			<span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">Rune ratio</span>
+		<div data-rune-ratio="" className="rune-ratio">
+			<span className="text-[10px] font-semibold tracking-[0.08em] uppercase text-slate-500">Ratio</span>
 			{colors.map((domain) => {
 				const label = domains.find((d) => d.slug === domain)?.label ?? domain;
 				return (

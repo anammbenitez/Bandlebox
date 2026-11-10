@@ -141,19 +141,38 @@ test.describe('card detail', () => {
 		await expect(page.getByRole('heading', { level: 1 }).getByRole('link')).toHaveAttribute('href', 'https://openrift.app/cards/ahri-alluring');
 	});
 
-	test('back link reads "All cards" by default', async ({ page }) => {
+	test('the Back button goes to the card grid by default', async ({ page }) => {
 		await page.goto('/cards/ahri-alluring');
-		await expect(page.getByRole('link', { name: 'All cards' })).toHaveAttribute('href', '/');
+		await expect(page.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/');
 	});
 
-	test('opened from the deck manager, the back link returns to that deck', async ({ page }) => {
-		await page.goto('/cards/ahri-alluring?from=' + encodeURIComponent('/decks/build#d/abc'));
-		await expect(page.getByRole('link', { name: 'Back to deck' })).toHaveAttribute('href', '/decks/build#d/abc');
+	test('opened with a return address, Back leads to that page', async ({ page }) => {
+		await page.goto('/cards/ahri-alluring?from=' + encodeURIComponent('/decks'));
+		await expect(page.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/decks');
+	});
+
+	test('Back is the previous page: after a click-through it restores that page through history', async ({ page }) => {
+		await page.goto('/decks');
+		await page.goto('/');
+		const grid = page.url();
+		await page.locator('a[href^="/cards/"]').first().click();
+		await expect(page).toHaveURL(/\/cards\//);
+		const before = await page.evaluate(() => history.length);
+		await page.getByRole('link', { name: 'Back' }).click();
+		await expect(page).toHaveURL(grid);
+		expect(await page.evaluate(() => history.length)).toBe(before); // went back, pushed nothing
+	});
+
+	test('the card page has its wide side gutter and no page scroll on a desktop window', async ({ page }) => {
+		await page.setViewportSize({ width: 1280, height: 800 });
+		await page.goto('/cards/ahri-alluring');
+		expect(await page.locator('main#main').evaluate((el) => getComputedStyle(el).paddingLeft)).toBe('32px');
+		expect(await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight)).toBe(0);
 	});
 
 	test('an outside from= address is ignored', async ({ page }) => {
 		await page.goto('/cards/ahri-alluring?from=' + encodeURIComponent('https://example.com/'));
-		await expect(page.getByRole('link', { name: 'All cards' })).toHaveAttribute('href', '/');
+		await expect(page.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/');
 	});
 
 	test('shows errata as formatted content', async ({ page }) => {

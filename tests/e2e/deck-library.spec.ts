@@ -100,3 +100,23 @@ test('decks survive a reload', async ({ page }) => {
 	await page.reload();
 	await expect(page.getByRole('link', { name: 'Open Fox Legal' })).toBeVisible();
 });
+
+test('a Legend in the New deck picker shows the hover card, and See more opens its full detail over the dialog', async ({ page }) => {
+	await seedDecks(page, []);
+	await page.goto('/decks');
+	await page.getByRole('button', { name: 'Create a new deck' }).click();
+	const dialog = page.getByRole('dialog', { name: 'New deck' });
+	const pick = dialog.locator('[data-legend-pick]').first();
+	const box = (await pick.boundingBox())!;
+	await page.mouse.move(box.x + box.width / 2 - 20, box.y + box.height * 0.3);
+	await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.3, { steps: 4 });
+	const peek = page.getByRole('group', { name: 'Card details' });
+	await expect(peek).toBeVisible({ timeout: 3000 });
+	await peek.getByRole('link', { name: 'See more' }).click();
+	const modal = page.getByRole('dialog', { name: /full card details/ });
+	await expect(modal).toBeVisible();
+	// Escape closes only the modal: the New deck dialog stays open
+	await page.keyboard.press('Escape');
+	await expect(modal).toBeHidden();
+	await expect(dialog).toBeVisible();
+});

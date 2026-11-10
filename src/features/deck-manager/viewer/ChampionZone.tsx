@@ -1,7 +1,8 @@
 // The champion zone beside the Legend (deck-manager spec): the pick shown as a
-// face with its copy count out of three, a button to pick or switch (the
-// browser then places the next matching click), and a drop target that takes a
-// champion unit carrying the Legend's tag.
+// face with its copy count out of three, and a drop target that takes a
+// champion unit carrying the Legend's tag (dropping another one replaces the
+// pick). While empty, the slot itself is the button that starts picking (the
+// browser then places the next matching click).
 import { useState, type DragEvent } from 'react';
 import { qtyOf, type Deck } from '../../../domain/deck.ts';
 import { copyLimit, fitsChampionZone, isChampionUnit } from '../../../domain/deck-editing.ts';
@@ -72,14 +73,11 @@ export function ChampionZone({ deck, idx, art, shared, picking, dragging, onChan
 				{placed ? (
 					<div data-slug={slug} className="face relative aspect-[5/7] w-full max-w-32">
 						<a href={`/cards/${slug}`} aria-label={name} className="absolute inset-0">
-							<FaceArt art={art} />
+							<FaceArt art={art} slug={slug} />
 						</a>
-						<div title="Champion copies in the main deck" className="card-badge">
-							C{qty}
-						</div>
 						{shared ? (
 							<div className="face-bar justify-center">
-								<span className="count-chip">× {qty} copies</span>
+								<span className="count-chip">{qty}</span>
 							</div>
 						) : (
 							<div className="face-bar">
@@ -101,19 +99,22 @@ export function ChampionZone({ deck, idx, art, shared, picking, dragging, onChan
 						no champion picked
 					</div>
 				) : (
-					<div
-						className={`card-corner flex aspect-[5/7] w-full max-w-32 flex-col items-center justify-center gap-1.5 border border-dashed ${picking ? 'border-amber-400/70' : 'border-slate-700'} bg-slate-900/40 px-2 text-center text-slate-500`}
+					<button
+						type="button"
+						data-champion-pick=""
+						aria-pressed={picking}
+						aria-label={picking ? 'Picking — click a champion' : 'Select champion'}
+						className="champion-slot card-corner"
+						onClick={onTogglePicking}
 					>
 						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
 							<path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
 						</svg>
-						<span className="text-[10px] leading-tight">champion unit of the legend's tag</span>
-					</div>
+						<span className="text-[11px] font-semibold leading-tight">{picking ? 'Click a champion in the browser' : 'Select champion'}</span>
+						<span className="text-[10px] leading-tight text-slate-500">{picking ? 'or click here to cancel' : "a unit of the Legend's tag"}</span>
+					</button>
 				)}
 			</div>
-			<button type="button" data-champion-pick="" aria-pressed={picking} disabled={shared} className="btn mt-1.5 w-full" data-size="sm" onClick={onTogglePicking}>
-				{picking ? 'Picking — click a champion' : deck.champion ? 'Switch champion' : 'Select champion'}
-			</button>
 		</div>
 	);
 }

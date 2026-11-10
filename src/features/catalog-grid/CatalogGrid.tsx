@@ -10,6 +10,7 @@ import { PAYLOAD_IDS } from '../../domain/payload-ids.ts';
 import { readJsonTag } from '../../ui/hooks/useJsonTag.ts';
 import { Button } from '../../ui/atoms/Button.tsx';
 import { SelectField, TextField } from '../../ui/atoms/Field.tsx';
+import { usePreferredImage } from '../../ui/hooks/usePreferredImage.ts';
 import { CardTile } from '../../ui/molecules/CardTile.tsx';
 import { EmptyState } from '../../ui/molecules/EmptyState.tsx';
 import {
@@ -80,6 +81,12 @@ function BackToTop({ enabled }: { enabled: boolean }) {
 			Back to top
 		</Button>
 	);
+}
+
+/** The grid tile, in the printing's art the visitor chose for the card. */
+function PreferredTile(item: GridItemData) {
+	const preferred = usePreferredImage(item.slug);
+	return <CardTile {...item} art={item.art && preferred ? { ...item.art, imageId: preferred } : item.art} />;
 }
 
 export function CatalogGrid({ initial, total, types, rarities, sets }: CatalogGridProps) {
@@ -171,7 +178,7 @@ export function CatalogGrid({ initial, total, types, rarities, sets }: CatalogGr
 			<ul id="grid-list" className="mt-4 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
 				{visible.map((item) => (
 					<li key={item.slug} data-slug={item.slug}>
-						<CardTile {...item} />
+						<PreferredTile {...item} />
 					</li>
 				))}
 				<li id="grid-sentinel" ref={sentinel} className="col-span-full" aria-hidden="true" />

@@ -35,6 +35,7 @@ function printingOf(card: IndexCard, set: IndexSet, printing: PrintingRecord, i:
 		altCode: printing.publicCode ?? printing.shortCode ?? set.slug,
 		rarity: enumLabel('rarities', printing.rarity),
 		finish: enumLabel('finishes', printing.finish),
+		isFoil: printing.finish === 'foil',
 		artVariant: printing.artVariant && printing.artVariant !== 'normal' ? enumLabel('artVariants', printing.artVariant) : null,
 		isSigned: Boolean(printing.isSigned),
 		isOvernumbered: Boolean(printing.isOvernumbered),
@@ -71,6 +72,12 @@ export function buildCardDetail(card: IndexCard): CardDetailData {
 		bySet.set(printing.setSlug, list);
 	}
 
+	const sets = index.sets
+		.filter((set) => bySet.has(set.slug))
+		.sort(releaseSort)
+		.map((set) => ({ slug: set.slug, name: set.name, printings: (bySet.get(set.slug) ?? []).map((p, i) => printingOf(card, set, p, i)) }));
+	const foilPrintings = sets.flatMap((set) => set.printings).filter((p) => p.isFoil);
+
 	return {
 		slug: card.slug,
 		name: card.name,
@@ -78,6 +85,8 @@ export function buildCardDetail(card: IndexCard): CardDetailData {
 		hero: shownImageId
 			? { imageId: shownImageId, alt: `${card.name} card art${primaryIndex?.setSlug ? ` (${primaryIndex.setSlug})` : ''}` }
 			: null,
+		hasFoil: foilPrintings.length > 0,
+		foilImageId: foilPrintings.find((p) => p.thumbImageId)?.thumbImageId ?? null,
 		shown: primaryPrint?.publicCode ? `${primaryPrint.publicCode} · ${enumLabel('artVariants', primaryPrint.artVariant)} art` : null,
 		types: card.types.map((t) => enumLabel('cardTypes', t)),
 		superTypes: (record.superTypes ?? []).map((st) => enumLabel('superTypes', st)),
@@ -97,9 +106,6 @@ export function buildCardDetail(card: IndexCard): CardDetailData {
 		rulesText: primaryPrint?.printedRulesText ?? null,
 		flavorText: primaryPrint?.flavorText ?? null,
 		printingCount: card.printings.length,
-		sets: index.sets
-			.filter((set) => bySet.has(set.slug))
-			.sort(releaseSort)
-			.map((set) => ({ slug: set.slug, name: set.name, printings: (bySet.get(set.slug) ?? []).map((p, i) => printingOf(card, set, p, i)) })),
+		sets,
 	};
 }

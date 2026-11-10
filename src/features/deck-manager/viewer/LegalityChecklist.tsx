@@ -1,4 +1,5 @@
-// The deck's legality at the foot of the sheet (deck-legality spec): every
+// The deck's legality, shown in a popover when the deck bar's verdict pill is
+// hovered or focused (deck-legality spec): every
 // rule with its status, what is wrong when it fails (first six named, the rest
 // counted), and the verdict the deck bar shows. Derived from the deck on
 // render, never synced (react-best-practices: rerender-derived-state-no-effect).
@@ -68,7 +69,7 @@ function Checklist({ report }: { report: LegalityReport }) {
 export function LegalityChecklist({ deck, idx }: { deck: Deck; idx: DeckRuleIndexes }) {
 	const report = useMemo(() => validate(deck, idx), [deck, idx]);
 	return (
-		<section className="sheet-section" aria-label="Deck legality">
+		<section id="deck-legality" className="legality-popover" aria-label="Deck legality">
 			<div className="sheet-head">
 				<h2 className="section-name">Deck legality</h2>
 				<span className="section-count">Riftbound constructed</span>

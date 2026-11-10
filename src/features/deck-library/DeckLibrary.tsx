@@ -7,10 +7,10 @@ import { validate, type DeckRuleIndexes } from '../../domain/deck-rules.ts';
 import { PAYLOAD_IDS } from '../../domain/payload-ids.ts';
 import { useJsonTag } from '../../ui/hooks/useJsonTag.ts';
 import { useDeckStore } from '../../state/deck-store.ts';
-import { CreateDeckDialog } from './CreateDeckDialog.tsx';
+import { CreateDeckDialog, type DomainChip } from './CreateDeckDialog.tsx';
 import { CreateTile, DeckTile, type LegendEntry } from './DeckTile.tsx';
 
-export function DeckLibrary({ legends }: { legends: LegendEntry[] }) {
+export function DeckLibrary({ legends, domains = [] }: { legends: LegendEntry[]; domains?: DomainChip[] }) {
 	const idx = useJsonTag<DeckRuleIndexes>(PAYLOAD_IDS.deckRules);
 	const loaded = useDeckStore((s) => s.loaded);
 	const decks = useDeckStore((s) => s.library);
@@ -69,6 +69,7 @@ export function DeckLibrary({ legends }: { legends: LegendEntry[] }) {
 				key={creating ? 'open' : 'closed'}
 				open={creating}
 				legends={legends}
+				domains={domains}
 				onCancel={closeDialog}
 				onCreate={(name, legend) => {
 					const deck = create(name, legend.slug);

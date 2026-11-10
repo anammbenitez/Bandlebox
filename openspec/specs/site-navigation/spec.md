@@ -82,13 +82,13 @@ The header brand SHALL display the name "BandleBox" on every page, at every scre
 - **WHEN** a user activates the brand, or looks at the browser tab of any page
 - **THEN** the brand leads to the home page, and the tab title ends with or equals "BandleBox"
 
-### Requirement: Current page is marked with a discreet gold leaf
-The navigation entry for the current page SHALL carry a small gold leaf marker: slender, with a visible midrib and short stem, drawn in the app's gold token and without a glow or halo. Entries that are not current SHALL show no marker.
+### Requirement: Current page is lamplit
+The navigation entry for the current page SHALL be lamplit: its label in the app's lantern-gold token, and a warm pool of the same gold light sitting on the stretch of the header's branch below it, as if a lantern hung there. The light SHALL fall on the branch, with a blurred foot that fades out through the branch, and SHALL NOT extend below the branch. It SHALL add no icon, rule or other element beside the label, so marking a page never moves a label. Entries that are not current SHALL be unlit, their labels a step quieter than the lit one; hovering one MAY preview a faint light.
 
-#### Scenario: Marker on the active entry only
+#### Scenario: Light on the active entry only
 - **WHEN** the user is on the deck library, deck manager, or card grid
-- **THEN** only the corresponding entry shows the gold leaf beside its label
+- **THEN** only the corresponding entry's label is gold and only the branch under it is lit
 
-#### Scenario: Marker stays quiet
-- **WHEN** the marker is viewed next to the link label
-- **THEN** it is no taller than the label's text line, and does not outshine the label or the brand
+#### Scenario: Labels hold still
+- **WHEN** the user moves between Decks and Browse cards
+- **THEN** no nav label changes position; only the light moves, fading between the entries (and switching without a fade under a reduced-motion preference)

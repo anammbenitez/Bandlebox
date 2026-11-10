@@ -1,7 +1,7 @@
 // What the card detail page shows, as plain data (openspec change
 // migrate-to-react, design D3): built at build time by
 // src/server/card-detail.ts from the snapshot, rendered by
-// src/features/card-detail. Every label is resolved already, so the page's
+// src/ui/organisms/card-detail and src/features/card-detail. Every label is resolved already, so the page's
 // components never touch the catalog.
 
 import type { CardStat } from './card-stats.ts';
@@ -14,6 +14,8 @@ export interface CardDetailPrinting {
 	altCode: string;
 	rarity: string;
 	finish: string;
+	/** The foil finish, which the page's foil toggle lights up. */
+	isFoil: boolean;
 	/** Shown as a tag only when the art variant is not "normal". */
 	artVariant: string | null;
 	isSigned: boolean;
@@ -44,6 +46,10 @@ export interface CardDetailData {
 	/** Battlefields are landscape. */
 	rotate: boolean;
 	hero: { imageId: string; alt: string } | null;
+	/** Some printing is foil: the page offers the foil toggle. */
+	hasFoil: boolean;
+	/** Art of the first foil printing that has any (often the normal art), for the toggled hero. */
+	foilImageId: string | null;
 	/** "OGN-066/298 · Normal art", or null. */
 	shown: string | null;
 	types: string[];

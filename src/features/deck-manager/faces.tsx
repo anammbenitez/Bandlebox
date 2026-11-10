@@ -1,6 +1,7 @@
 // Card faces in the deck manager: every face is tile-role art (400w, then
 // 240w, then removed), battlefields drawn sideways in portrait boxes.
 import type { GridArt } from '../../domain/grid-item.ts';
+import { usePreferredImage } from '../../ui/hooks/usePreferredImage.ts';
 import { CardImage } from '../../ui/atoms/CardImage.tsx';
 
 export const ICON_MINUS = (
@@ -20,8 +21,9 @@ export const ICON_TRASH = (
 );
 
 /** A face's art; `landscape` keeps battlefield art unrotated in a wide box. */
-export function FaceArt({ art, landscape = false }: { art: GridArt | null | undefined; landscape?: boolean }) {
+export function FaceArt({ art, slug, landscape = false }: { art: GridArt | null | undefined; slug?: string; landscape?: boolean }) {
+	const preferred = usePreferredImage(slug);
 	if (!art) return <span className="absolute inset-0 grid place-items-center text-[10px] text-slate-500">no art</span>;
-	if (art.rotate && !landscape) return <CardImage imageId={art.imageId} role="tile" rotate alt="" loading="lazy" data-rotate="" />;
-	return <CardImage imageId={art.imageId} role="tile" rotate={art.rotate} alt="" loading="lazy" className="h-full w-full object-cover" />;
+	if (art.rotate && !landscape) return <CardImage imageId={preferred ?? art.imageId} role="tile" rotate alt="" loading="lazy" data-rotate="" />;
+	return <CardImage imageId={preferred ?? art.imageId} role="tile" rotate={art.rotate} alt="" loading="lazy" className="h-full w-full object-cover" />;
 }

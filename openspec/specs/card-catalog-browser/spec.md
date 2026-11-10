@@ -147,19 +147,19 @@ The grid page SHALL provide a control that scrolls back to the top of the page. 
 - **WHEN** the user has scrolled the grid more than one screenful
 - **THEN** a back-to-top control is visible, and activating it returns the page to the top and hides the control
 
-### Requirement: The card page's back link returns to the deck it was opened from
+### Requirement: The card page's Back button returns to the previous page
 
-The card detail page SHALL have a back link that, by default, reads "All cards" and goes to the card grid. When the page is opened with the deck manager's address as its return address (the deck manager's card peek and the links on its card faces carry one), the back link SHALL instead read "Back to deck" and return to that deck manager address. An address that is not the deck manager's SHALL be ignored.
+The card detail page SHALL have a Back button that reads "Back" and always returns to the page the reader came from. When the previous page in the tab is a page of this site, it SHALL be the browser's own back, restoring that page as it was left. Otherwise (a link opened in a new tab) it SHALL go to the return address the card link carried (`?from=`, set by the deck manager's faces and peek and by the deck library's Legend picker peek; other card links rely on the browser's history), or to the card grid when there is none. A return address that is not an address inside this site SHALL be ignored.
 
-#### Scenario: Opened from the deck manager
+#### Scenario: Opened from any page of the site
 
-- **WHEN** a card page is opened from the deck manager with its return address
-- **THEN** the back link reads "Back to deck" and returns to the deck being built
+- **WHEN** a card page is opened from the deck manager, the deck library or any other page, and the reader presses Back
+- **THEN** the reader returns to that previous page, not to the card grid
 
-#### Scenario: Opened any other way
+#### Scenario: Opened with no history
 
-- **WHEN** a card page is opened with no return address or one that is not the deck manager's
-- **THEN** the back link reads "All cards" and goes to the card grid
+- **WHEN** a card page is opened with no return address, or one outside this site, and no previous page
+- **THEN** Back goes to the card grid
 
 ### Requirement: Card detail page renders card text as formatted content
 

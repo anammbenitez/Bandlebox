@@ -1,7 +1,7 @@
 // The facts a card's peek shows (card-peek spec): one fixed layout for every
 // card, so a player reads it by position. Built at build time by the
 // /peek/[slug].json endpoint, fetched on demand, rendered by the React
-// PeekFacts component (src/features/deck-manager/peek). Every fact is the
+// PeekFacts component (src/ui/organisms/peek). Every fact is the
 // card's own; the description is the printing's printed text only (a card's
 // `keywords` field is a search index, never rendered).
 //

@@ -2,7 +2,7 @@
 // deck (Enter saves, Escape cancels) and plain text for a shared one; the meta
 // line (counts and the focused section, or the editing hint, or "Saved ✓");
 // the verdict; and Rename, Copy deck link, Save as my deck, All decks.
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { SECTION_LABELS, type SectionKey } from '../../domain/deck.ts';
 import { VerdictBadge } from '../../ui/molecules/VerdictBadge.tsx';
 
@@ -16,6 +16,8 @@ interface DeckBarProps {
 	fallbackMeta: string;
 	shared: boolean;
 	legal: boolean | null;
+	/** The legality checklist, revealed while the verdict pill is hovered or focused. */
+	legality?: ReactNode;
 	totalCopies: number;
 	active: SectionKey;
 	onRename(name: string): boolean;
@@ -23,7 +25,7 @@ interface DeckBarProps {
 	onSaveShared(): void;
 }
 
-export function DeckBar({ name, fallbackTitle, fallbackMeta, shared, legal, totalCopies, active, onRename, onShare, onSaveShared }: DeckBarProps) {
+export function DeckBar({ name, fallbackTitle, fallbackMeta, shared, legal, legality, totalCopies, active, onRename, onShare, onSaveShared }: DeckBarProps) {
 	const [draft, setDraft] = useState<string | null>(null);
 	const [note, setNote] = useState<string | null>(null);
 	const [shareLabel, setShareLabel] = useState('Copy deck link');
@@ -97,7 +99,10 @@ export function DeckBar({ name, fallbackTitle, fallbackMeta, shared, legal, tota
 				</p>
 			</div>
 			<div id="deck-actions" hidden={!open} className="flex flex-wrap items-center gap-1.5">
-				<VerdictBadge id="deck-verdict" kind="verdict" legal={legal} />
+				<div className="verdict-wrap" tabIndex={legality ? 0 : undefined} aria-describedby={legality ? 'deck-legality' : undefined}>
+					<VerdictBadge id="deck-verdict" kind="verdict" legal={legal} />
+					{legality}
+				</div>
 				<button
 					id="deck-rename"
 					type="button"

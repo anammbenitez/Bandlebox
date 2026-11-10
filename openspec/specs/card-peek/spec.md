@@ -302,34 +302,53 @@ The peek SHALL be non-modal: no backdrop and no focus capture. It takes pointer 
 - **WHEN** a shared deck is open in read-only view and the pointer rests on a card
 - **THEN** the peek opens as it does for the user's own decks
 
-### Requirement: The peek leads to the card's page, and back to the deck
+### Requirement: The peek leads to the card's page, and back to the page it came from
 
-The peek SHALL end with a "See more" link, last in the peek, styled as navigation (a row along the foot of the card, with an arrow at its far end, not a button plate), that opens the card's own page (`/cards/{slug}`). The link SHALL carry the address of the deck being built, so the card page can send the reader back to that deck. The card page's back link SHALL then read "Back to deck" and return to the deck manager with the same deck open, whether it is one of the user's own decks or a shared one. When the page before the card page in that tab is the deck manager, the back link SHALL use the browser's own back, so the deck comes back as it was left.
+The peek SHALL end with a "See more" link, last in the peek, styled as navigation (a row along the foot of the card, with an arrow at its far end, not a button plate), that opens the card's own page (`/cards/{slug}`). The same peek component SHALL serve every place that shows it (the deck manager and the deck library's New deck Legend picker), and its link SHALL carry the address of the page it was opened from, so the card page's Back button can return there: the deck manager with the same deck open (one of the user's own decks or a shared one), or the deck library. When the page before the card page in that tab is a page of this site, Back SHALL use the browser's own back, so that page comes back as it was left.
 
 #### Scenario: Following See more
 
 - **WHEN** the user moves onto a peek and clicks "See more"
-- **THEN** the card's page opens, and its back link reads "Back to deck"
+- **THEN** the card's page opens, and its Back button reads "Back"
 
-#### Scenario: Going back to the deck
+#### Scenario: Going back
 
-- **WHEN** the user clicks "Back to deck" on that card page
-- **THEN** the deck manager opens with the same deck, and no extra history entry is left behind
+- **WHEN** the user clicks "Back" on that card page
+- **THEN** the page they came from opens as it was left (the same deck in the deck manager, or the deck library), and no extra history entry is left behind
 
 #### Scenario: A shared deck
 
-- **WHEN** the deck being built is a shared, read-only deck and the user follows See more and then Back to deck
+- **WHEN** the deck being built is a shared, read-only deck and the user follows See more and then Back
 - **THEN** the same shared deck is open again
 
 #### Scenario: A card page opened some other way
 
-- **WHEN** a card page is opened with no return address, or with an address that is not the deck manager's
-- **THEN** its back link keeps its default and returns to the card grid
+- **WHEN** a card page is opened with no return address, or with an address outside this site
+- **THEN** Back returns to the card grid
 
 #### Scenario: A link opened in a new tab
 
-- **WHEN** the See more link is opened in a new tab and the user clicks Back to deck there
-- **THEN** the deck manager opens with the deck in that tab
+- **WHEN** the See more link is opened in a new tab and the user clicks Back there
+- **THEN** the page the link was opened from opens in that tab
+
+### Requirement: "See more" opens the card's full detail in a modal
+
+The peek shows a short summary of a card. A plain click on its "See more" link SHALL open a modal over the current page, without navigating, that shows everything the card page shows for the card: its art with the foil switch, name, types, domains, stats, printed text, errata, bans and every printing (choosing a printing there SHALL make its art the card's default, as on the card page). The modal SHALL reuse the card page's own components, SHALL be the same wherever a peek exists (the deck manager and the New deck Legend picker), and SHALL load its data on demand. The Escape key, a click on the backdrop and a Close button SHALL dismiss it, closing only the modal when another dialog is open beneath it, and focus SHALL return to where it was. The link SHALL keep its card-page address, which a modified click (new tab, new window) follows, and which the modal's "Open card page" link also leads to.
+
+#### Scenario: Opening the full detail
+
+- **WHEN** the user clicks "See more" in a peek
+- **THEN** a modal shows the card's full detail and the page behind it has not changed
+
+#### Scenario: Closing it
+
+- **WHEN** the user presses the Escape key, clicks the backdrop or clicks Close
+- **THEN** the modal closes and the page, and any dialog beneath it, is as it was
+
+#### Scenario: Over the New deck dialog
+
+- **WHEN** the modal is open over the New deck dialog and the user presses the Escape key
+- **THEN** only the modal closes
 
 ### Requirement: Card faces carry no competing native tooltip
 

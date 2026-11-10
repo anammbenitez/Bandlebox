@@ -69,9 +69,6 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
 	side: 'Side deck',
 };
 
-/** One-letter code per section, for the copy chips ("M2" = two in the main deck). */
-export const SECTION_CODE: Record<SectionKey, string> = { legend: 'L', battlefields: 'B', main: 'M', rune: 'R', side: 'S' };
-
 export const SECTION_ORDER: Record<SectionKey, number> = {
 	legend: 0,
 	battlefields: 1,

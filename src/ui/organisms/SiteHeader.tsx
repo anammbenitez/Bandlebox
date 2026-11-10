@@ -5,6 +5,7 @@
 // The layout persists it across navigations (it is never torn down and
 // rebuilt), so the marker follows the live address through a hook.
 // Image URLs come from the layout, which optimizes them at build.
+import type { CSSProperties } from 'react';
 import { useCurrentPath } from '../hooks/useCurrentPath.ts';
 
 export interface SiteHeaderImages {
@@ -17,23 +18,6 @@ const NAV = [
 	{ href: '/decks', label: 'Decks', match: (p: string) => p.startsWith('/decks') },
 	{ href: '/', label: 'Browse cards', match: (p: string) => p === '/' },
 ];
-
-function LeafMark() {
-	return (
-		<span className="nav-mark" aria-hidden="true">
-			<svg width="21" height="21" viewBox="0.9 -0.85 14 14" aria-hidden="true">
-				<path
-					d="M5.2 9C4.6 4.9 7.4 2 12.6 1.4 12.7 6.4 10 9.6 5.2 9Z"
-					fill="currentColor"
-					stroke="var(--color-forest-950)"
-					strokeWidth="1"
-					strokeLinejoin="round"
-				/>
-				<path d="M3.4 10.8 5.2 9M5.6 8.6C7.6 6.4 9.4 4.5 11.2 2.9" stroke="var(--color-forest-950)" strokeWidth="0.8" fill="none" strokeLinecap="round" />
-			</svg>
-		</span>
-	);
-}
 
 export function SiteHeader({ currentPath: builtPath, images }: { currentPath: string; images: SiteHeaderImages }) {
 	const currentPath = useCurrentPath(builtPath);
@@ -53,11 +37,13 @@ export function SiteHeader({ currentPath: builtPath, images }: { currentPath: st
 					/>
 					<span>BandleBox</span>
 				</a>
+				{/* a twig planted in the header's branch, between the brand and the
+				    pages, with a flowering knot of the center sprig where they join */}
+				<span className="nav-twig" style={{ '--sprig': `url(${images.sprigUpper})` } as CSSProperties} aria-hidden="true" />
 				{NAV.map((n) => {
 					const current = n.match(currentPath);
 					return (
 						<a key={n.href} className="nav-link" href={n.href} aria-current={current ? 'page' : undefined}>
-							{current && <LeafMark />}
 							{n.label}
 						</a>
 					);

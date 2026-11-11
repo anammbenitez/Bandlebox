@@ -2,7 +2,7 @@
 // landscape face, and every other card as a face. Each foot carries the shared
 // counter (minus, copy count, plus, remove — the champion zone's look), or the
 // count alone in a shared deck. The Legend has one copy, so its foot is just
-// the remove button; a rune's count is set by the ratio beside it, so its foot
+// the remove button; a rune's count is set by the ratio slider, so its foot
 // is the count and the remove button.
 import { SECTION_LABELS, type SectionKey } from '../../../domain/deck.ts';
 import type { GridArt } from '../../../domain/grid-item.ts';
@@ -59,7 +59,7 @@ function SharedCount({ qty }: { qty: number }) {
 export function SectionRow({ section, slug, qty, name, art, shared, address, onChangeQty, onRemove }: SectionRowProps) {
 	if (section === 'legend') {
 		return (
-			<li data-slug={slug} className="face relative aspect-[5/7] w-full max-w-44">
+			<li data-slug={slug} className="face relative aspect-[5/7] w-full">
 				<a href={cardPageHref(slug, address)} aria-label={name} className="absolute inset-0">
 					<FaceArt art={art} slug={slug} />
 				</a>
@@ -73,7 +73,7 @@ export function SectionRow({ section, slug, qty, name, art, shared, address, onC
 	}
 
 	if (section === 'rune') {
-		// The ratio counters beside the runes set their counts; the face shows the
+		// The slider beside the runes sets their counts; the face shows the
 		// count and can still drop a rune (one off the Legend's colors, say).
 		return (
 			<li data-slug={slug} className="face relative aspect-[5/7]">

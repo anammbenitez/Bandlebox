@@ -1,33 +1,55 @@
 // The rune split as one slider (deck-manager spec): the Legend's two colors
-// sit at the two ends, the thumb is where the rune deck divides between them.
-// Moving it rewrites both colors through the same `setRuneRatio` rule the
-// written counters use, so the total stays at the rune-deck size. With one
-// color, no Legend, or a shared deck it only reads out the counts.
+// sit at the two ends, each end showing that domain's emblem and its rune
+// count; the thumb is where the rune deck divides between them. It is the
+// only control for the amounts: moving it rewrites both colors through the
+// `setRuneRatio` rule, so the total stays at the rune-deck size. With one
+// color or a shared deck it only reads out the counts. Without a Legend it
+// renders nothing (the section says to place one).
 import type { CSSProperties } from 'react';
 import { DECK_RULES, type Deck } from '../../../domain/deck.ts';
 import { legendDomains, runeCopiesFor } from '../../../domain/deck-editing.ts';
 import type { DeckRuleIndexes } from '../../../domain/deck-rules.ts';
-import { DOMAIN_COLORS } from './RuneRatio.tsx';
+import { DomainEmblem } from '../../../ui/atoms/DomainEmblem.tsx';
+
+/** Riftbound domain palette for the slider's track (data, not decoration). */
+export const DOMAIN_COLORS: Record<string, string> = {
+	fury: '#ef4444',
+	chaos: '#a855f7',
+	mind: '#3b82f6',
+	calm: '#22c55e',
+	body: '#f97316',
+	order: '#eab308',
+};
+
+export interface DomainInfo {
+	slug: string;
+	label?: string;
+	/** OpenRift's emblem (`glyphUrl('domain_<slug>')`), or null: the name is printed instead. */
+	icon?: string | null;
+}
 
 export interface RuneSliderProps {
 	deck: Deck;
 	idx: DeckRuleIndexes;
 	shared: boolean;
-	domains: Array<{ slug: string; label?: string }>;
+	domains: DomainInfo[];
 	onSet(domain: string, target: number): void;
 }
 
-const dot = (domain: string) => ({ '--dot': DOMAIN_COLORS[domain] ?? '#98a3af' }) as CSSProperties;
+const hue = (domain: string | undefined) => (domain ? DOMAIN_COLORS[domain] : undefined) ?? '#98a3af';
 
 export function RuneSlider({ deck, idx, shared, domains, onSet }: RuneSliderProps) {
 	const colors = [...new Set(legendDomains(deck, idx) ?? [])];
-	if (colors.length === 0) return <p className="section-empty">Place a Legend; its colors set the runes.</p>;
-	const label = (domain: string) => domains.find((d) => d.slug === domain)?.label ?? domain;
+	if (colors.length === 0) return null;
+	const entry = (domain: string) => domains.find((d) => d.slug === domain);
+	const label = (domain: string) => entry(domain)?.label ?? domain;
 	const total = DECK_RULES.runeSize;
 	const counts = colors.map((domain) => runeCopiesFor(deck, idx, domain));
 	const interactive = colors.length === 2 && !shared;
 	const [left, right] = colors;
 	const [leftCount = 0, rightCount = 0] = counts;
+	const pos = right ? (Math.min(total, leftCount) / total) * 100 : 100;
+	const trackStyle = { '--dot': hue(left), '--dot-b': hue(right), '--pos': `${pos}%` } as CSSProperties;
 
 	function move(value: number) {
 		if (!left || !right) return;
@@ -43,16 +65,16 @@ export function RuneSlider({ deck, idx, shared, domains, onSet }: RuneSliderProp
 		}
 	}
 
+	const end = (domain: string, count: number | undefined) => (
+		<span data-slider-end={domain} className="rune-slider-end tnum">
+			<DomainEmblem src={entry(domain)?.icon ?? null} label={label(domain)} size={24} className="rune-slider-emblem" />
+			<span className="rune-slider-count">{count}</span>
+		</span>
+	);
+
 	return (
 		<div data-rune-slider="" className="rune-slider">
-			<div className="rune-slider-ends">
-				{colors.map((domain, i) => (
-					<span key={domain} data-slider-end={domain} className="rune-slider-end tnum" style={dot(domain)}>
-						<i className="dot" />
-						{`${label(domain)} ${counts[i]}`}
-					</span>
-				))}
-			</div>
+			{left && end(left, counts[0])}
 			{interactive && left && right ? (
 				<input
 					type="range"
@@ -63,16 +85,13 @@ export function RuneSlider({ deck, idx, shared, domains, onSet }: RuneSliderProp
 					aria-label={`Rune split: ${label(left)} to ${label(right)}`}
 					aria-valuetext={`${label(left)} ${leftCount}, ${label(right)} ${rightCount}`}
 					className="rune-range"
-					style={{ ...dot(left), '--dot-b': DOMAIN_COLORS[right] ?? '#98a3af', '--pos': `${(Math.min(total, leftCount) / total) * 100}%` } as CSSProperties}
+					style={trackStyle}
 					onChange={(e) => move(Number(e.currentTarget.value))}
 				/>
 			) : (
-				<div
-					aria-hidden="true"
-					className="rune-range rune-range-static"
-					style={{ ...dot(left ?? ''), '--dot-b': DOMAIN_COLORS[right ?? ''] ?? '#98a3af', '--pos': `${right ? (Math.min(total, leftCount) / total) * 100 : 100}%` } as CSSProperties}
-				/>
+				<div aria-hidden="true" className="rune-range rune-range-static" style={trackStyle} />
 			)}
+			{right && end(right, counts[1])}
 		</div>
 	);
 }

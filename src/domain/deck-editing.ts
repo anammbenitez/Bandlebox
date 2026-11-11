@@ -149,3 +149,58 @@ export function seedDefaultRunes(deck: Deck, idx: DeckRuleIndexes): Deck {
 	});
 	return rune === deck.rune ? deck : { ...deck, rune };
 }
+
+/** The rune deck after the Legend changed: re-colored to the Legend's colors.
+ *
+ *  Call it with the deck that already holds the new Legend. The rune deck's
+ *  total is always preserved (12, 10, 8, whatever it was). Let the Legend's
+ *  colors be [c1, c2]. Every rune of another color is deleted (a multi-domain
+ *  rune card is kept when any of its domains is a Legend color, otherwise
+ *  deleted and counted under its first domain). Each new color keeps the count
+ *  the deck already has of that same color; a color with no count yet takes, by
+ *  position, the count of a deleted color (deleted colors in the order they
+ *  stand in the rune deck, each count once). Any deleted count still left over
+ *  is added to the Legend's colors in order, round-robin from the first, so the
+ *  total never shrinks. Fury 8 / Chaos 4 under Fury + Calm becomes Fury 8 /
+ *  Calm 4; under Calm + Mind, Calm 8 / Mind 4. Fury 5 / Chaos 4 / Order 3
+ *  under Fury + Calm: Calm takes Chaos' 4, the 3 left over go Fury, Calm, Fury:
+ *  Fury 7 / Calm 5. Fury 6 / Calm 4 / Chaos 2 becomes Fury 7 / Calm 5.
+ *  A one-color Legend gets the whole preserved total in its color.
+ *  Same-color counts are kept as they are, and nothing is deleted from them: 12
+ *  Fury under Fury + Calm stays Fury 12 / Calm 0 (the slider moves it).
+ *  An empty rune deck gets the default even split of 12. A Legend with no
+ *  known color leaves the runes alone, as there is nothing to color them by. A
+ *  deck whose runes already match is returned as it is. */
+export function recolorRunesForLegend(deck: Deck, idx: DeckRuleIndexes): Deck {
+	const colors = [...new Set(legendDomains(deck, idx) ?? [])];
+	if (colors.length === 0) return deck;
+	if (deck.rune.length === 0) return seedDefaultRunes(deck, idx);
+	const wears = (card: string) => (idx.cards[card]?.domains ?? []).some((d) => colors.includes(d));
+
+	// deleted colors, in rune-deck order, with their counts
+	const deletedByColor = new Map<string, number>();
+	for (const slot of deck.rune) {
+		if (wears(slot.card)) continue;
+		const own = (idx.cards[slot.card]?.domains ?? [])[0] ?? slot.card;
+		deletedByColor.set(own, (deletedByColor.get(own) ?? 0) + slot.qty);
+	}
+	if (deletedByColor.size === 0) return deck;
+
+	let next: Deck = { ...deck, rune: deck.rune.filter((slot) => wears(slot.card)) };
+	const spare = [...deletedByColor.values()];
+	for (const color of colors) {
+		if (runeCopiesFor(deck, idx, color) > 0) continue;
+		const take = spare.shift();
+		if (take) next = setRuneRatio(next, idx, color, take);
+	}
+	const leftover = spare.reduce((sum, n) => sum + n, 0);
+	const extra = new Map<string, number>();
+	for (let i = 0; i < leftover; i++) {
+		const color = colors[i % colors.length]!;
+		extra.set(color, (extra.get(color) ?? 0) + 1);
+	}
+	for (const [color, add] of extra) next = setRuneRatio(next, idx, color, runeCopiesFor(next, idx, color) + add);
+
+	const sum = (d: Deck) => d.rune.reduce((n, slot) => n + slot.qty, 0);
+	return sum(next) === sum(deck) ? next : deck; // no rune card to hold a color: leave the runes alone
+}

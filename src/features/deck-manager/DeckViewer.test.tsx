@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { Deck } from '../../domain/deck.ts';
@@ -32,8 +32,8 @@ const IDX: DeckRuleIndexes = {
 const entry = (slug: string, name: string): GridEntry => ({ slug, name, meta: '', art: null, types: [], rarities: [], sets: [], variants: 1, text: '' });
 const BY_SLUG = new Map([entry('fox', 'Nine-Tailed Fox'), entry('ahri', 'Ahri, Alluring'), entry('bolt', 'Bolt')].map((e) => [e.slug, e]));
 const DOMAINS = [
-	{ slug: 'calm', label: 'Calm' },
-	{ slug: 'mind', label: 'Mind' },
+	{ slug: 'calm', label: 'Calm', icon: '/g/calm.webp' },
+	{ slug: 'mind', label: 'Mind', icon: '/g/mind.webp' },
 ];
 
 const DECK: Deck = {
@@ -75,6 +75,25 @@ function setup(overrides: Partial<Parameters<typeof DeckViewer>[0]> = {}) {
 }
 
 describe('DeckViewer', () => {
+	it('a rune dragged onto the Legend section is accepted and dropped on the rune deck', () => {
+		const a = setup({ dragging: 'calm-rune' });
+		const legend = document.querySelector('[data-section="legend"]')!;
+		const over = createEvent.dragOver(legend);
+		fireEvent(legend, over);
+		expect(over.defaultPrevented).toBe(true);
+		expect(legend).toHaveClass('drag-accept');
+		fireEvent.drop(legend);
+		expect(a.dropOn).toHaveBeenCalledWith('rune', 'calm-rune');
+	});
+
+	it('anything else dragged onto the Legend section still follows the Legend rule', () => {
+		setup({ dragging: 'bolt' });
+		const legend = document.querySelector('[data-section="legend"]')!;
+		const over = createEvent.dragOver(legend);
+		fireEvent(legend, over);
+		expect(over.defaultPrevented).toBe(false);
+	});
+
 	it('the ledger shows each section count against its target and marks the focused one', () => {
 		setup();
 		const cell = (key: string) => screen.getByRole('group', { name: 'Deck sections' }).querySelector(`[data-ledger-section="${key}"]`)!;
@@ -121,20 +140,10 @@ describe('DeckViewer', () => {
 		expect(screen.getByText('0 / ≤ 3')).toBeInTheDocument();
 	});
 
-	it('the rune ratio shows each color of the Legend and writes what is typed', async () => {
-		const a = setup();
-		const calm = screen.getByRole('spinbutton', { name: 'Calm rune count' });
-		expect(calm).toHaveValue(6);
-		expect(screen.getByRole('spinbutton', { name: 'Mind rune count' })).toHaveValue(6);
-		await userEvent.clear(calm);
-		await userEvent.type(calm, '8');
-		expect(a.setRuneRatio).toHaveBeenLastCalledWith('calm', 8);
-	});
-
 	it('a shared deck is read-only: counts only, no steppers, no ratio, no picking', () => {
 		setup({ shared: true });
 		expect(screen.queryByRole('button', { name: 'Add copy of Bolt' })).toBeNull();
-		expect(screen.queryByRole('spinbutton')).toBeNull();
+		expect(screen.queryByRole('slider')).toBeNull();
 		expect(screen.queryByRole('button', { name: /champion/i })).toBeNull();
 		const bolt = document.querySelector('[data-rows="main"] li[data-slug="bolt"]') as HTMLElement;
 		expect(within(bolt).getByText('2')).toHaveClass('count-chip');
@@ -147,52 +156,95 @@ describe('DeckViewer', () => {
 		expect(screen.getByText('Pick three different battlefields.')).toBeInTheDocument();
 	});
 
-	describe('the table group', () => {
-		const toggle = () => screen.getByRole('button', { name: /^The table/ });
+	it('the deck zone is two groups: General info, then Main deck with its cards and the side deck', () => {
+		setup();
+		const general = screen.getByRole('group', { name: 'General info' });
+		const main = screen.getByRole('group', { name: 'Main deck' });
+		expect(general.querySelector('[data-section="legend"]')).not.toBeNull();
+		// the rune cards live inside the Legend section: there is no Rune deck section
+		expect(general.querySelector('[data-section="rune"]')).toBeNull();
+		expect(general.querySelector('[data-section="legend"] [data-rows="rune"]')).not.toBeNull();
+		expect(general.querySelector('[data-section="battlefields"]')).not.toBeNull();
+		expect(main.querySelector('[data-section="main"]')).not.toBeNull();
+		expect(main.querySelector('[data-section="side"]')).not.toBeNull();
+		expect(general.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+	});
 
-		it('starts open with the full sections and collapses to a summary', async () => {
+	describe('General info', () => {
+		const toggle = () => screen.getByRole('button', { name: /^General info/ });
+
+		it('is open by default: Legend and Champion at one size, no counter inputs', () => {
 			setup();
 			expect(toggle()).toHaveAttribute('aria-expanded', 'true');
-			expect(document.querySelector('.sheet-table')).not.toBeNull();
-			expect(screen.queryByRole('slider')).toBeNull();
-			await userEvent.click(toggle());
-			expect(toggle()).toHaveAttribute('aria-expanded', 'false');
-			expect(document.querySelector('.sheet-table')).toBeNull();
-			expect(document.getElementById(toggle().getAttribute('aria-controls')!)).not.toBeNull();
+			expect(document.getElementById(toggle().getAttribute('aria-controls')!)).toHaveClass('sheet-table');
+			const legend = document.querySelector('[data-section="legend"] [data-rows="legend"] > li')!;
+			const champion = document.querySelector('[data-champion-face] > [data-slug]')!;
+			expect(legend.className).toBe(champion.className); // the same box rules, no per-card cap
+			expect(legend.className).not.toMatch(/max-w/);
+			expect(screen.queryByRole('spinbutton')).toBeNull();
+			expect(document.querySelector('[data-ratio]')).toBeNull();
 		});
 
-		it('the summary shows the Legend and the Champion at one size, and the battlefield count', async () => {
+		it('the slider has each domain emblem and count at its ends, with the rune cards above it in the Legend section', () => {
 			setup();
-			await userEvent.click(toggle());
-			const legend = document.querySelector('[data-summary-card="legend"]')!;
-			const champion = document.querySelector('[data-summary-card="champion"]')!;
-			expect(legend).toHaveClass('summary-card');
-			expect(champion.className).toBe(legend.className);
-			expect(within(legend as HTMLElement).getByRole('link', { name: 'Nine-Tailed Fox' })).toBeInTheDocument();
-			expect(within(champion as HTMLElement).getByRole('link', { name: 'Ahri, Alluring' })).toBeInTheDocument();
-			expect(screen.getByText('0 / 3')).toBeInTheDocument();
-		});
-
-		it('the rune slider has one color at each end and rebalances through the ratio action', async () => {
-			const a = setup();
-			await userEvent.click(toggle());
 			const slider = screen.getByRole('slider', { name: 'Rune split: Calm to Mind' });
 			expect(slider).toHaveValue('6');
-			expect(screen.getByText('Calm 6')).toBeInTheDocument();
-			expect(screen.getByText('Mind 6')).toBeInTheDocument();
-			fireEvent.change(slider, { target: { value: '8' } });
+			const ends = document.querySelectorAll('[data-rune-slider] [data-slider-end]');
+			expect(ends).toHaveLength(2);
+			expect(within(ends[0] as HTMLElement).getByRole('img', { name: 'Calm' })).toHaveAttribute('src', '/g/calm.webp');
+			expect(within(ends[1] as HTMLElement).getByRole('img', { name: 'Mind' })).toHaveAttribute('src', '/g/mind.webp');
+			expect(ends[0]).toHaveTextContent('6');
+			// the two rune cards sit with the slider under them, in the Legend section, with the 12 / 12 count
+			const bay = document.querySelector('[data-section="legend"] .rune-bay')!;
+			expect(bay.contains(slider)).toBe(true);
+			expect(bay.querySelectorAll('[data-rows="rune"] > li')).toHaveLength(2);
+			expect(bay.querySelector('.rune-cap')).toHaveTextContent('Runes12 / 12');
+			expect(bay.querySelector('[data-rows="rune"]')!.compareDocumentPosition(slider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		});
+
+		it('names a domain in text when it has no emblem', () => {
+			setup({ domains: [{ slug: 'calm', label: 'Calm', icon: null }, { slug: 'mind', label: 'Mind' }] });
+			expect(screen.getByText('Calm')).toBeInTheDocument();
+			expect(screen.getByText('Mind')).toBeInTheDocument();
+		});
+
+		it('moving the slider rebalances through the ratio action', () => {
+			const a = setup();
+			fireEvent.change(screen.getByRole('slider'), { target: { value: '8' } });
 			expect(a.setRuneRatio).toHaveBeenCalledWith('mind', 4);
 			expect(a.setRuneRatio).toHaveBeenCalledWith('calm', 8);
 		});
 
-		it('a shared deck summary shows the counts with no slider', async () => {
+		it('shows the battlefields after (under) the rune slider', () => {
+			setup();
+			const slider = screen.getByRole('slider');
+			const fields = document.querySelector('[data-section="battlefields"]')!;
+			expect(slider.compareDocumentPosition(fields) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+		});
+
+		it('rolled up it shows a Legend preview, the live slider and the battlefield counter n / 3', async () => {
+			const a = setup({ deck: { ...DECK, battlefields: [{ card: 'bolt', qty: 1 }] } });
+			await userEvent.click(toggle());
+			expect(toggle()).toHaveAttribute('aria-expanded', 'false');
+			expect(document.querySelector('.sheet-table')).toBeNull();
+			expect(document.getElementById(toggle().getAttribute('aria-controls')!)).not.toBeNull();
+			const legend = document.querySelector('[data-summary-card="legend"]') as HTMLElement;
+			expect(within(legend).getByRole('link', { name: 'Nine-Tailed Fox' })).toBeInTheDocument();
+			expect(document.querySelector('[data-summary-card="champion"]')).toBeNull();
+			expect(document.querySelector('[data-battlefield-count]')).toHaveTextContent('Battlefields1 / 3');
+			expect(document.querySelectorAll('[data-slider-end] img')).toHaveLength(2);
+			fireEvent.change(screen.getByRole('slider', { name: 'Rune split: Calm to Mind' }), { target: { value: '7' } });
+			expect(a.setRuneRatio).toHaveBeenCalledWith('calm', 7);
+		});
+
+		it('a shared deck rolled up reads out the counts with no slider', async () => {
 			setup({ shared: true });
 			await userEvent.click(toggle());
 			expect(screen.queryByRole('slider')).toBeNull();
-			expect(screen.getByText('Calm 6')).toBeInTheDocument();
+			expect(document.querySelectorAll('[data-slider-end]')).toHaveLength(2);
 		});
 
-		it('pressing a ledger tab of a hidden section reopens the table', async () => {
+		it('pressing a ledger tab of a hidden section reopens it', async () => {
 			const a = setup();
 			await userEvent.click(toggle());
 			await userEvent.click(screen.getByRole('group', { name: 'Deck sections' }).querySelector('[data-ledger-section="rune"]')!);
@@ -201,7 +253,12 @@ describe('DeckViewer', () => {
 			expect(document.querySelector('.sheet-table')).not.toBeNull();
 		});
 
-		it('a ledger tab of a section outside the table leaves it collapsed', async () => {
+		it('the Legend section is the focused one while the Runes tab is active', () => {
+			setup({ active: 'rune' });
+			expect(document.querySelector('[data-section="legend"]')).toHaveAttribute('data-active', 'true');
+		});
+
+		it('a ledger tab of a section outside the group leaves it rolled up', async () => {
 			setup();
 			await userEvent.click(toggle());
 			await userEvent.click(screen.getByRole('group', { name: 'Deck sections' }).querySelector('[data-ledger-section="side"]')!);

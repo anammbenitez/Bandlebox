@@ -1195,55 +1195,6 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	/* --- rune ratio counters --------------------------------------------- */
-
-	.rune-counter {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.375rem;
-		height: 2.25rem;
-		padding-inline: 0.5rem;
-		border: 1px solid var(--color-slate-700);
-		border-radius: 0.4375rem;
-		background: var(--color-slate-900);
-		transition: border-color 140ms ease;
-	}
-
-	.rune-counter:hover {
-		border-color: var(--color-slate-600);
-	}
-
-	.rune-counter:focus-within {
-		border-color: color-mix(in oklab, var(--color-amber-400) 75%, transparent);
-	}
-
-	.rune-counter .dot {
-		width: 0.5rem;
-		height: 0.5rem;
-	}
-
-	.rune-counter-input {
-		width: 1.75rem;
-		background: transparent;
-		border: 0;
-		outline: none;
-		text-align: center;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--color-slate-100);
-	}
-
-	.rune-counter-input::-webkit-outer-spin-button,
-	.rune-counter-input::-webkit-inner-spin-button {
-		appearance: none;
-		margin: 0;
-	}
-
-	.rune-counter-input {
-		appearance: textfield;
-		-moz-appearance: textfield;
-	}
-
 	/* --- legality --------------------------------------------------------- */
 
 	.verdict {
@@ -1724,83 +1675,52 @@
 		color: var(--color-slate-500);
 	}
 
-	/* The table: the Legend and its Champion, with the battlefields and runes the
-	 * deck is played with beside them, so the room right of the Legend pair is
-	 * used. Three arrangements by the sheet's width, each split by hairlines:
-	 *   narrow   the three sections stacked, as any others;
-	 *   ≥ 30rem  the runes beside the Legend pair, the battlefields across below;
-	 *   ≥ 40rem  the Legend pair on the left, the battlefields over the runes
-	 *            filling the right. */
+	/* General info, open: the Legend section (Legend, Champion and the two rune
+	 * cards with the slider under them) over the battlefields, split by a
+	 * hairline. */
 	.sheet-table {
 		--table-rule: 1px solid color-mix(in oklab, var(--color-slate-700) 42%, transparent);
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		grid-template-areas: "legend" "battlefields" "rune";
 		border-bottom: var(--table-rule);
 	}
 
-	.sheet-table > [data-section="legend"] {
-		grid-area: legend;
-	}
-
 	.sheet-table > [data-section="battlefields"] {
-		grid-area: battlefields;
-	}
-
-	.sheet-table > [data-section="rune"] {
-		grid-area: rune;
 		border-bottom: 0;
 	}
 
+	/* The four cards of the Legend section: the Legend pair and the rune bay.
+	 * Narrow they stack, each at most one card pair wide; from 30rem they sit
+	 * in one row with a hairline between the pair and the runes. */
+	.legend-row {
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
+	}
+
+	.legend-row > * {
+		width: 100%;
+		min-width: 0;
+		max-width: 15.75rem;
+	}
+
 	@container (min-width: 30rem) {
-		.sheet-table {
-			grid-template-columns: auto minmax(0, 1fr);
-			grid-template-areas: "legend rune" "battlefields battlefields";
+		.legend-row {
+			flex-direction: row;
+			align-items: flex-start;
+			gap: 1.5rem;
 		}
 
-		.sheet-table > [data-section="legend"] {
-			border-right: var(--table-rule);
+		.legend-row > * {
+			flex: 1 1 0;
+			width: auto;
 		}
 
-		.sheet-table > [data-section="rune"] {
-			border-bottom: var(--table-rule);
-		}
-
-		.sheet-table > [data-section="battlefields"] {
-			border-bottom: 0;
-		}
-	}
-
-	@container (min-width: 40rem) {
-		.sheet-table {
-			grid-template-rows: auto minmax(0, 1fr);
-			grid-template-areas: "legend battlefields" "legend rune";
-		}
-
-		.sheet-table > [data-section="legend"] {
-			border-bottom: 0;
-		}
-
-		.sheet-table > [data-section="battlefields"] {
-			border-bottom: var(--table-rule);
-		}
-
-		.sheet-table > [data-section="rune"] {
-			border-bottom: 0;
-		}
-	}
-
-	/* beside the Legend pair the rune column is narrow: the ratio lies in a row
-	 * above the rune cards instead of standing beside them */
-	@container (min-width: 30rem) and (max-width: 39.99rem) {
-		.rune-bay .rune-ratio {
-			display: grid;
-			grid-template-columns: repeat(2, auto);
-			justify-content: start;
-		}
-
-		.rune-bay .rune-ratio > :first-child {
-			grid-column: 1 / -1;
+		.rune-bay::before {
+			content: "";
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			left: -0.75rem;
+			border-left: 1px solid color-mix(in oklab, var(--color-slate-700) 60%, transparent);
 		}
 	}
 
@@ -1812,37 +1732,44 @@
 		gap: 0.375rem;
 	}
 
+	/* Legend and Champion: two columns of exactly one width, so the cards match. */
 	.legend-pair {
 		display: grid;
-		grid-template-columns: minmax(0, 9.5rem) minmax(0, 7rem);
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		align-items: start;
 		gap: 0.75rem;
 	}
 
-	/* The ratio counters, then the rune cards they set, on one line. */
-	.rune-bay {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-start;
-		gap: 0.75rem;
+	.legend-pair .champion-slot {
+		max-width: none;
 	}
 
-	.rune-ratio {
+	/* The two rune cards with the slider under them; the caption carries the
+	 * rune deck's count. */
+	.rune-bay {
+		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: 0.375rem;
+		gap: 0.625rem;
+	}
+
+	.rune-cap {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		padding-inline: 0.125rem;
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--color-slate-500);
 	}
 
 	.rune-faces {
 		display: grid;
-		flex: 1;
-		/* two rune cards side by side, or the row wraps under the ratio */
-		min-width: 9.5rem;
-		/* auto-fill counts tracks by their max, so the max is 1fr and the row is
-		   capped instead: three tracks of at most ~5.5rem */
-		max-width: 17.25rem;
-		grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
-		gap: 0.375rem;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+		margin-top: -0.25rem;
 	}
 
 	/* The empty champion slot is the button that starts picking: the dashed
@@ -1880,9 +1807,24 @@
 		color: var(--color-amber-300);
 	}
 
-	/* The table's fold: a header row that opens and closes it, then, folded, a
-	 * summary: the Legend and Champion as two cards of one size, beside (or,
-	 * on a phone, above) the battlefield count and the rune split slider. */
+	/* The group heading row: General info is a button that rolls the group up and
+	 * down (chevron, aria-expanded); Main deck is the same row as plain text. */
+	.group-heading {
+		margin: 0;
+		font: inherit;
+	}
+
+	.group-title {
+		display: flex;
+		align-items: baseline;
+		padding: 0.6875rem 0.75rem 0.5rem;
+		font-family: var(--font-display);
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--color-slate-200);
+		border-bottom: 1px solid color-mix(in oklab, var(--color-slate-700) 42%, transparent);
+	}
+
 	.table-toggle {
 		display: flex;
 		width: 100%;
@@ -1916,29 +1858,19 @@
 		margin-left: auto;
 	}
 
+	/* General info rolled up: a small Legend card beside the rune slider and the
+	 * battlefield counter. */
 	.table-summary {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 0.875rem 1.25rem;
+		grid-template-columns: 4.5rem minmax(0, 1fr);
+		align-items: center;
+		gap: 0.875rem;
 		padding: 0.75rem;
 		border-bottom: 1px solid color-mix(in oklab, var(--color-slate-700) 42%, transparent);
 	}
 
-	@container (min-width: 30rem) {
-		.table-summary {
-			grid-template-columns: minmax(0, 19rem) minmax(0, 1fr);
-		}
-	}
-
-	.summary-pair {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.75rem;
-	}
-
 	.summary-label {
 		display: block;
-		margin: 0 0 0.375rem 0.125rem;
 		font-size: 0.625rem;
 		font-weight: 600;
 		letter-spacing: 0.08em;
@@ -1946,23 +1878,10 @@
 		color: var(--color-slate-500);
 	}
 
-	.summary-label .tnum {
-		letter-spacing: 0;
-		text-transform: none;
-		color: var(--color-slate-400);
-	}
-
-	/* both cards: the same box, whatever sits inside it */
 	.summary-card {
 		position: relative;
 		width: 100%;
 		aspect-ratio: 5 / 7;
-	}
-
-	.summary-card .champion-slot {
-		max-width: none;
-		height: 100%;
-		aspect-ratio: auto;
 	}
 
 	.summary-card-empty {
@@ -1980,63 +1899,60 @@
 		display: flex;
 		min-width: 0;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.5rem;
 	}
 
-	.summary-names {
-		display: grid;
-		gap: 0.125rem;
-		margin-left: 0.125rem;
+	.summary-count {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
 		font-size: 0.8125rem;
 		color: var(--color-slate-200);
 	}
 
-	.summary-names li {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
 	.summary-none {
-		margin-left: 0.125rem;
 		font-size: 0.75rem;
 		color: var(--color-slate-500);
 	}
 
-	/* The rune split: one color at each end, the thumb where the deck divides.
-	 * The track is filled from each end in that color's own hue (data, not
-	 * decoration) and meets under the thumb. */
+	/* The rune split: a domain emblem and its count at each end, the thumb where
+	 * the deck divides. The track is filled from each end in that color's own hue
+	 * (data, not decoration) and meets under the thumb. */
 	.rune-slider {
-		display: grid;
-		gap: 0.375rem;
-		margin-inline: 0.125rem;
-	}
-
-	.rune-slider-ends {
 		display: flex;
-		justify-content: space-between;
+		align-items: center;
 		gap: 0.5rem;
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: var(--color-slate-100);
+		min-width: 0;
 	}
 
 	.rune-slider-end {
 		display: inline-flex;
+		flex: none;
 		align-items: center;
-		gap: 0.375rem;
+		gap: 0.25rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--color-slate-100);
 	}
 
-	.rune-slider-end .dot {
-		width: 0.5rem;
-		height: 0.5rem;
+	.rune-slider-emblem {
+		display: block;
+		width: 1.5rem;
+		height: 1.5rem;
+		object-fit: contain;
+	}
+
+	.rune-slider-count {
+		min-width: 1.25ch;
+		text-align: center;
 	}
 
 	.rune-range {
 		--track: 0.375rem;
 		--thumb: 1.25rem;
 		display: block;
-		width: 100%;
+		flex: 1;
+		min-width: 3rem;
 		height: 1.75rem;
 		margin: 0;
 		appearance: none;
@@ -2047,7 +1963,6 @@
 
 	.rune-range-static {
 		height: var(--track);
-		margin-block: 0.6875rem;
 		border-radius: 999px;
 		cursor: default;
 		background: linear-gradient(to right, var(--dot) var(--pos), var(--dot-b) var(--pos));

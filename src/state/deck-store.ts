@@ -12,6 +12,7 @@ import {
 	canAdd,
 	naturalSection,
 	placeChampion as placeChampionRule,
+	recolorRunesForLegend,
 	seedDefaultRunes,
 	setRuneRatio as setRuneRatioRule,
 	settleChampion,
@@ -71,9 +72,13 @@ const OK: Verdict = { ok: true, why: '' };
 
 export function createDeckStore(repo: DeckRepository): StoreApi<DeckStoreState> {
 	return createStore<DeckStoreState>()((set, get) => {
-		/** Saves an edit of the open (owned) deck. */
+		/** Saves an edit of the open (owned) deck. A Legend that is newly placed
+		 *  (a different one, or one placed after the last was removed) re-colors
+		 *  the rune deck in this same save; removing a Legend leaves the runes. */
 		function commit(idx: DeckRuleIndexes, next: Deck): void {
-			const deck = repo.save(settleChampion(next, idx));
+			const placed = next.legend[0]?.card;
+			const recolored = placed && placed !== get().open?.legend[0]?.card ? recolorRunesForLegend(next, idx) : next;
+			const deck = repo.save(settleChampion(recolored, idx));
 			set({ open: deck, library: repo.list() });
 		}
 

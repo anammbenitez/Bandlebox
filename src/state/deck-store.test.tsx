@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { useStore } from 'zustand';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { CardInfo, DeckRuleIndexes } from '../domain/deck-rules.ts';
 import { createMemoryDeckRepository } from '../domain/repositories/memory-deck-repository.ts';
 import { createDeckStore, type DeckStoreState } from './deck-store.ts';
@@ -26,6 +26,8 @@ const IDX: DeckRuleIndexes = {
 		field: info(['battlefield']),
 		'calm-rune': info(['rune'], { domains: ['calm'] }),
 		'mind-rune': info(['rune'], { domains: ['mind'] }),
+		'body-rune': info(['rune'], { domains: ['body'] }),
+		duo: info(['legend'], { domains: ['mind', 'body'] }),
 	},
 	names: {},
 	championTags: ['Ahri', 'Lee Sin'],
@@ -132,6 +134,45 @@ describe('editing the open deck', () => {
 			{ card: 'calm-rune', qty: 8 },
 			{ card: 'mind-rune', qty: 4 },
 		]);
+	});
+
+	it('placing another Legend after editing the ratio re-colors the runes in one save', () => {
+		const { s, repo } = opened('fox');
+		s().seedRunes(IDX);
+		s().setRuneRatio(IDX, 'calm', 8);
+		s().setRuneRatio(IDX, 'mind', 4);
+		const save = vi.spyOn(repo, 'save');
+		expect(s().clickAdd(IDX, 'duo').ok).toBe(true); // Mind + Body
+		expect(save).toHaveBeenCalledTimes(1);
+		expect(s().open?.rune).toHaveLength(2);
+		expect(s().open?.rune).toEqual(expect.arrayContaining([
+			{ card: 'mind-rune', qty: 4 },
+			{ card: 'body-rune', qty: 8 },
+		]));
+		expect(s().library[0].rune).toEqual(s().open?.rune);
+	});
+
+	it('removing the Legend leaves the runes; the next Legend placed re-colors them', () => {
+		const { s } = opened('fox');
+		s().seedRunes(IDX);
+		s().removeRow(IDX, 'legend', 'fox');
+		expect(s().open?.rune).toEqual([
+			{ card: 'calm-rune', qty: 6 },
+			{ card: 'mind-rune', qty: 6 },
+		]);
+		s().addTo(IDX, 'legend', 'monk'); // a drop on the Legend section
+		expect(s().open?.rune).toEqual([{ card: 'body-rune', qty: 12 }]);
+	});
+
+	it('opening an owned deck that has a Legend and runes does not save it', () => {
+		const { s, repo } = opened('fox');
+		s().seedRunes(IDX);
+		const id = s().open!.id;
+		s().close();
+		const save = vi.spyOn(repo, 'save');
+		s().openOwned(id);
+		expect(s().open?.rune).toHaveLength(2);
+		expect(save).not.toHaveBeenCalled();
 	});
 
 	it('renames the open deck; blank or unchanged names are ignored', () => {

@@ -58,8 +58,14 @@ export function announce(message: string): void {
 export function flashSection(section: SectionKey, why: string): void {
 	// The one lookup left: the section's element is rendered by the deck viewer,
 	// far from the code that reports the refusal, and its note is appended to it.
-	const el = document.querySelector<HTMLElement>(`[data-section="${section}"]`);
-	if (!el) return;
+	// The rune cards sit inside the Legend section, so a refused rune flashes it.
+	const el = document.querySelector<HTMLElement>(`[data-section="${section === 'rune' ? 'legend' : section}"]`);
+	// Folded away (the deck table's summary is showing): there is nothing to flash,
+	// but the reason is still spoken.
+	if (!el) {
+		announce(`${SECTION_LABELS[section]}: ${why}`);
+		return;
+	}
 	el.classList.remove('drag-refuse');
 	void el.offsetWidth; // restart the CSS animation
 	el.classList.add('drag-refuse');

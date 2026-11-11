@@ -71,7 +71,7 @@ export function ChampionZone({ deck, idx, art, shared, picking, dragging, onChan
 			</div>
 			<div data-champion-face="" className="mt-1.5">
 				{placed ? (
-					<div data-slug={slug} className="face relative aspect-[5/7] w-full max-w-32">
+					<div data-slug={slug} className="face relative aspect-[5/7] w-full">
 						<a href={`/cards/${slug}`} aria-label={name} className="absolute inset-0">
 							<FaceArt art={art} slug={slug} />
 						</a>
@@ -95,7 +95,7 @@ export function ChampionZone({ deck, idx, art, shared, picking, dragging, onChan
 						)}
 					</div>
 				) : shared ? (
-					<div className="card-corner flex aspect-[5/7] w-full max-w-32 items-center justify-center border border-dashed border-slate-800 bg-slate-900/40 px-2 text-center text-[10px] leading-tight text-slate-500">
+					<div className="card-corner flex aspect-[5/7] w-full items-center justify-center border border-dashed border-slate-800 bg-slate-900/40 px-2 text-center text-[10px] leading-tight text-slate-500">
 						no champion picked
 					</div>
 				) : (

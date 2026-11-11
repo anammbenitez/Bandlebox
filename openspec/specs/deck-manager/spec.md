@@ -49,7 +49,7 @@ The system SHALL scope the browser to the section currently being edited — the
 
 #### Scenario: Switching section retargets the browser
 
-- **WHEN** the user focuses or pill-selects the rune deck section
+- **WHEN** the user focuses or pill-selects the rune deck (its cards and slider sit in the Legend section)
 - **THEN** the browser presets show rune cards by default, and a card added from this view enters the rune deck
 
 ### Requirement: Adding and removing copies
@@ -153,19 +153,19 @@ The deck manager browser SHALL offer a Domain filter, and when a deck's Legend i
 - **WHEN** the Battlefields pill is active with a domain filter set
 - **THEN** battlefields of every color remain browsable
 
-### Requirement: Rune deck accepts written color ratios
+### Requirement: Rune deck is set by the color slider
 
-The Rune deck section SHALL provide per-color count inputs matching the deck's Legend colors, so the user can declare how many runes of each color to play; the inputs SHALL fill the rune deck with copies of that color's rune cards up to the declared counts and keep the section's total at the required rune-deck size (exceeding or falling short shows in the count as usual). Battlefields and other sections do not provide this per-color writing.
+The rune deck (the two rune cards in the Legend section) SHALL be split between the deck's Legend colors by the rune slider (see "The rune slider is the only rune control"), so the user can declare how many runes of each color to play; the slider SHALL fill the rune deck with copies of that color's rune cards up to the chosen counts and keep the section's total at the required rune-deck size. A fresh rune deck with a Legend SHALL start with the default even split of the rune-deck size (6 and 6 for two colors). Battlefields and other sections do not provide this per-color setting.
 
-#### Scenario: Writing a ratio fills the rune deck
+#### Scenario: Moving the slider fills the rune deck
 
-- **WHEN** a user with a fury/chaos Legend writes 8 fury and 4 chaos
-- **THEN** the rune deck holds 8 Fury Rune copies and 4 Chaos Rune copies, modifications via other controls update the inputs, and the legal/unlegal outcome tracks the exact-12 rule as any other rune change
+- **WHEN** a user with a fury/chaos Legend moves the slider to 8 fury
+- **THEN** the rune deck holds 8 Fury Rune copies and 4 Chaos Rune copies, changes made through other controls move the slider, and the legal/illegal outcome tracks the exact-12 rule as any other rune change
 
-#### Scenario: Ratio edits respect copy behavior
+#### Scenario: Slider moves respect copy behavior
 
-- **WHEN** the user lowers a per-color count below the current copies of that color
-- **THEN** surplus copies are pulled from the rune deck accordingly
+- **WHEN** the user moves the slider so a color drops below its current copies
+- **THEN** surplus copies of that color are pulled from the rune deck accordingly
 
 ### Requirement: Neutral-domain cards are always legal and always searchable
 
@@ -288,7 +288,7 @@ The deck viewer SHALL provide a Champion zone directly to the right of the Legen
 #### Scenario: Playset counts in the main deck
 
 - **WHEN** a user raises the Champion zone's champion to all 3 copies
-- **THEN** the slider shows 3 in the zone and the Main deck counter counts those 3 cards — exactly once, with no doubled counting and no copies duplicated in another section
+- **THEN** the zone's counter shows 3 and the Main deck counter counts those 3 cards — exactly once, with no doubled counting and no copies duplicated in another section
 
 #### Scenario: Zone accepts only the Legend's tag
 
@@ -302,7 +302,7 @@ The deck viewer SHALL provide a Champion zone directly to the right of the Legen
 
 ### Requirement: Deck viewer presents the field zones
 
-At desktop sizes, the deck viewer SHALL present the deck zones in a field-like layout within its panel: the Legend and the Champion zone side by side at the top, with the Battlefields (a horizontal row) and the Rune deck (the written ratio beside its rune cards) filling the room to their right when the panel is wide enough, and a main-deck grid of comfortably sized cards that reflows with the panel width instead of many tiny columns. The viewer's equal half of the desktop workspace SHALL be wide enough for this layout.
+At desktop sizes, the deck viewer SHALL present the deck zones in a field-like layout within its panel: the Legend section holding the Legend, the Champion zone and the two rune cards (the rune slider under the rune cards) in one row at the top, with the Battlefields (a horizontal row) under it, and a main-deck grid of comfortably sized cards that reflows with the panel width instead of many tiny columns. The viewer's equal half of the desktop workspace SHALL be wide enough for this layout.
 
 #### Scenario: Legend and Champion share the top row
 
@@ -430,7 +430,7 @@ After a rename is saved, the deck bar's meta line SHALL briefly confirm it and t
 
 ### Requirement: Renaming does not disturb the deck views
 
-Saving a rename SHALL change only the deck's name. It SHALL NOT rebuild the deck sections, checklist, rune ratio, card chips or Champion zone, and SHALL NOT dismiss or recreate any element other than the title and the meta line, so that the click that moved focus out of the title still takes effect.
+Saving a rename SHALL change only the deck's name. It SHALL NOT rebuild the deck sections, checklist, rune slider, card chips or Champion zone, and SHALL NOT dismiss or recreate any element other than the title and the meta line, so that the click that moved focus out of the title still takes effect.
 
 #### Scenario: The click that ends the edit still lands
 
@@ -455,3 +455,53 @@ A deck opened from a shared link SHALL show its title as plain text: no hover hi
 
 - **WHEN** a user presses "Save as my deck" on a shared deck
 - **THEN** the title becomes editable and the "Rename" button appears
+
+### Requirement: The deck zone has General info and Main deck groups
+
+The deck viewer SHALL group the deck into "General info" (Legend, champion unit, runes, battlefields) and "Main deck" (the deck cards, then the side deck). General info SHALL be a dropdown with a toggle exposing `aria-expanded`/`aria-controls`, open by default. Open, it SHALL show one Legend section holding the Legend, the champion unit and the two rune cards, all at exactly the same size in one row (a hairline between the Legend pair and the rune pair), with the rune slider under the two rune cards and the rune count (12 / 12) shown with them, and the Battlefields as their own section below; there SHALL be no separate Rune deck section in General info. Rolled up, it SHALL show a preview of the Legend, the rune slider with its information and the battlefield counter "n / 3". Focusing the Legend, Battlefields or Rune section (a ledger tab, a browser section pill) SHALL open General info again.
+
+#### Scenario: General info starts open and rolls up
+- **WHEN** a deck is opened
+- **THEN** General info shows the Legend, champion unit and the two rune cards at one size in one Legend section with the rune slider under the rune cards, and the battlefields below; rolling it up replaces them with the Legend preview, the slider and the counter
+
+#### Scenario: A ledger tab reopens General info
+- **GIVEN** General info is rolled up
+- **WHEN** the user presses the Runes tab of the ledger
+- **THEN** General info opens with the Legend section (which holds the runes) focused
+
+### Requirement: The rune slider is the only rune control
+
+The rune split SHALL be one range slider with the Legend's two colors at its two ends, each end showing that domain's emblem (its name as text when there is no emblem) and its rune count. The slider's range SHALL always be the full rune deck of 12, the game's fixed size, whatever the deck holds at the moment: its two ends are 0 and 12 runes of one color, and moving it SHALL set both colors through the rune-ratio rule so that the rune deck is always 12. There SHALL be no number inputs for rune counts. With one color, no Legend or a shared (read-only) deck it SHALL show the counts without an interactive slider. The slider stays interactive when General info is rolled up.
+
+#### Scenario: The slider rebalances the runes
+- **GIVEN** a Legend of two colors
+- **WHEN** the user moves the slider so the first color has 8
+- **THEN** the rune deck holds 8 runes of the first color and 4 of the second
+
+### Requirement: A Legend change re-colors the rune deck
+
+Whenever a different Legend is placed (including after the previous one was removed), the rune deck SHALL be re-colored in the same save, even if its ratio had been edited. The rune deck's total is always preserved (12, 10, 8, whatever it was). Let the new Legend's colors be [c1, c2]: every rune of another color is deleted (a multi-domain rune card is kept when any of its domains is a Legend color, otherwise deleted and counted under its first domain); each of c1, c2 keeps the count the deck already has of that color; a color with no count takes, by position, the counts of the deleted colors; any deleted count still left over is added to c1, c2 in order, round-robin starting with c1, so the total never shrinks. An empty rune deck gets the default even split of 12, and a one-color Legend gets the whole preserved total in its color (a 10-rune deck becomes 10 of that color). Counts of a color the Legend keeps are never moved: 12 Fury under a Fury + Calm Legend stays Fury 12 / Calm 0 (nothing is deleted; the slider adjusts it). A Legend with no known color, or the same Legend, leaves the runes alone. Removing the Legend without placing another leaves the runes alone.
+
+#### Scenario: Fury 8 / Chaos 4 under a Fury + Calm Legend
+- **WHEN** the Legend becomes a Fury + Calm Legend
+- **THEN** the rune deck is Fury 8 / Calm 4
+
+#### Scenario: Fury 8 / Chaos 4 under a Calm + Mind Legend
+- **WHEN** the Legend becomes a Calm + Mind Legend
+- **THEN** the rune deck is Calm 8 / Mind 4 and no Fury or Chaos runes remain
+
+#### Scenario: Fury 5 / Chaos 4 / Order 3 under a Fury + Calm Legend
+- **WHEN** the Legend becomes a Fury + Calm Legend
+- **THEN** Calm takes Chaos' 4, the 3 leftover Order runes go to Fury, Calm, Fury, and the rune deck is Fury 7 / Calm 5 (total 12)
+
+#### Scenario: Fury 6 / Calm 4 / Chaos 2 under a Fury + Calm Legend
+- **WHEN** the Legend becomes a Fury + Calm Legend
+- **THEN** the 2 Chaos runes go to Fury then Calm and the rune deck is Fury 7 / Calm 5
+
+#### Scenario: A one-color Legend keeps the total
+- **WHEN** a deck with 10 runes gets a one-color Legend
+- **THEN** the rune deck is 10 runes of that color
+
+#### Scenario: 12 Fury under a Fury + Calm Legend
+- **WHEN** the Legend becomes a Fury + Calm Legend
+- **THEN** the rune deck stays Fury 12 / Calm 0 (nothing is deleted)

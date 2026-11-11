@@ -39,9 +39,9 @@ token, never a raw hex.
 | `bloom` | `#5b9cf2` | the logo flower's cornflower — the only cool colour |
 
 The six Riftbound domains keep their fixed hues (`deck-builder.ts`
-`DOMAIN_COLORS`). They appear only as data: a dot beside the rune-ratio count
-(the domain filter chips wear OpenRift's emblems instead, which carry their own
-colors). Keyword labels (`src/lib/keyword-styles.ts`) follow the
+`DOMAIN_COLORS`). They appear only as data: the colors of the rune slider's track
+(the domain filter chips and the slider's ends wear OpenRift's emblems instead,
+which carry their own colors). Keyword labels (`src/lib/keyword-styles.ts`) follow the
 same rule. Game symbols render as their own artwork. Nothing decorative borrows
 a domain or keyword hue, and nothing decorative uses `bloom` except a blossom
 inside a sprig.
@@ -132,17 +132,31 @@ repeated inside panels.
   the browser's scroll offset.
 - The viewer is one deck sheet: a `.sheet-ledger` of five sections pins to the
   top of the frame, the sections follow as hairline-divided rows, and legality
-  closes the sheet. The first row is the table (`.sheet-table`, container
-  queries on `.sheet`): the Legend and Champion pair, with the Battlefields and
-  the Rune deck beside it so the room right of the pair is used. Below 30rem the
-  three stack; from 30rem the runes sit beside the pair and the battlefields run
-  across below; from 40rem the pair holds the left and the battlefields over the
-  runes fill the right. Battlefields share one row three across
-  (`.battlefield-row`); the rune ratio counters stand beside the rune cards
-  (`.rune-bay`), whose foot is their count and remove only, since the ratio sets
-  the counts. The empty Champion slot is itself the picking button
+  closes the sheet. The first group is General info (`.sheet-table`): the Legend
+  section over the Battlefields. The Legend section is one row of four equal
+  cards (`.legend-row`): the Legend and the Champion (`.legend-pair`), a hairline,
+  then the two rune cards (`.rune-bay`, `.rune-faces`) with the rune slider under
+  them and the rune count "12 / 12" in their caption (`.rune-cap`); there is no
+  separate Rune deck section. Below 30rem (container query on `.sheet`) the pair
+  and the runes stack. Battlefields share one row three across
+  (`.battlefield-row`). The rune cards' foot is their count and remove only,
+  since the slider sets the counts.
+  The empty Champion slot is itself the picking button
   (`.champion-slot`, lit gold while picking); there is no select or switch
   button.
+- The deck zone is two groups. "General info" is a dropdown (`.table-toggle`, a
+  chevron row; open by default). Open, the Legend section shows the Legend, the
+  Champion slot and the two rune cards at one size in a row with the rune slider
+  under the runes, then the Battlefields under it. Rolled up, `.table-summary` holds a small Legend card,
+  the rune slider (still live) and the battlefield counter, "n / 3". The rune
+  split is one range slider (`.rune-slider`) and the only rune control (no number
+  inputs): the Legend's first color at the left end, its second at the right,
+  each end showing the domain emblem (`DomainEmblem`, name as text fallback) and
+  its count, the track filled from each end in that color's hue (data) and the
+  thumb where the twelve divide. With one color or a shared deck it only reads
+  out the counts. "Main deck" is the second group: the deck cards, then the side
+  deck. Focusing a Legend, Battlefields or Runes tab opens General info again.
+  Placing a different Legend re-colors the runes to its colors (see the spec).
 - Spacing scale: 2 / 4 / 6 / 8 / 10 / 12 / 16 px rhythm. Tight inside groups,
   generous between them.
 
@@ -313,7 +327,7 @@ the header branch are module territory. Either way, colors come from the tokens
   absent. The width is set so the longest card name and its corner emblems still hold one line. A domain is its
   emblem alone (28px, OpenRift's own artwork, which carries its own colors),
   named by its alt text; no hue of the interface stands for a domain here (the filter chips
-  use the same emblems), so the rune counters' dots are the only domain dots left in the
+  use the same emblems), so the rune slider's track colors are the only domain hues left in the
   deck manager. The description is the printed text only; keywords show as the
   `.kw` labels the text prints, never as a row of their own. A banned card
   carries a small red-outlined "Banned in Constructed" marker beside its type

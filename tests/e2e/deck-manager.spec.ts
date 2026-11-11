@@ -38,8 +38,7 @@ test.describe('opening', () => {
 		await expect(page.getByRole('textbox', { name: 'Deck name' })).toHaveValue('Fresh Fox');
 		await expect(deckPane(page).getByRole('link', { name: LEGEND_NAME })).toBeVisible();
 		await expect(ledger(page, 'Runes')).toContainText('12');
-		await expect(page.getByRole('spinbutton', { name: /Calm rune count/i })).toHaveValue('6');
-		await expect(page.getByRole('spinbutton', { name: /Mind rune count/i })).toHaveValue('6');
+		await expect(deckPane(page).getByRole('slider', { name: 'Rune split: Calm to Mind' })).toHaveValue('6');
 	});
 });
 
@@ -95,30 +94,52 @@ test.describe('editing', () => {
 		await expect(filters.getByRole('button', { name: 'Fury', exact: true })).toHaveAttribute('aria-pressed', 'false');
 	});
 
-	test('the written rune ratio rebalances the rune deck', async ({ page }) => {
-		const calm = page.getByRole('spinbutton', { name: /Calm rune count/i });
-		await calm.fill('8');
-		await expect.poll(async () => (await storedDecks(page))[0].rune.find((s) => s.card === slugOf('Calm Rune'))?.qty).toBe(8);
-	});
-
-	test('the table starts open, collapses to a summary with a rune slider, and a ledger tab reopens it', async ({ page }) => {
-		const toggle = deckPane(page).getByRole('button', { name: /^The table/ });
-		await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-		await expect(page.getByRole('spinbutton', { name: /Calm rune count/i })).toBeVisible();
-		await toggle.click();
-		await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-		const legend = page.locator('[data-summary-card="legend"]');
-		const champion = page.locator('[data-summary-card="champion"]');
-		const [l, c] = [await legend.boundingBox(), await champion.boundingBox()];
-		expect(l && c && Math.abs(l.width - c.width) < 1 && Math.abs(l.height - c.height) < 1).toBe(true);
-		const slider = page.getByRole('slider', { name: /Rune split/ });
+	test('the rune slider is the only rune control and rebalances the rune deck', async ({ page }) => {
+		await expect(page.getByRole('spinbutton')).toHaveCount(0);
+		const slider = deckPane(page).getByRole('slider', { name: /Rune split/ });
 		await slider.focus();
 		await page.keyboard.press('ArrowRight');
 		await expect.poll(async () => (await storedDecks(page))[0].rune.find((s) => s.card === slugOf('Calm Rune'))?.qty).toBe(7);
 		expect((await storedDecks(page))[0].rune.find((s) => s.card === slugOf('Mind Rune'))?.qty).toBe(5);
+	});
+
+	test('General info is open with the slider ends, rune cards and battlefields under it, and rolls up to a preview', async ({ page }) => {
+		const toggle = deckPane(page).getByRole('button', { name: /^General info/ });
+		await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+		const [l, c] = [await page.locator('[data-section="legend"] [data-rows="legend"] > li').boundingBox(), await page.locator('[data-champion-zone] [data-champion-pick]').boundingBox()];
+		expect(l && c && Math.abs(l.width - c.width) < 1 && Math.abs(l.height - c.height) < 1).toBe(true);
+		await expect(deckPane(page).locator('[data-slider-end]')).toHaveCount(2);
+		await expect(deckPane(page).locator('[data-slider-end] img[alt="Calm"]')).toBeVisible();
+		await expect(deckPane(page).locator('[data-section="legend"] [data-rows="rune"] > li')).toHaveCount(2);
+		const slider = await deckPane(page).getByRole('slider').boundingBox();
+		const fields = await deckPane(page).locator('[data-section="battlefields"]').boundingBox();
+		expect(slider && fields && fields.y > slider.y).toBe(true);
+		await toggle.click();
+		await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+		await expect(page.locator('[data-summary-card="legend"]')).toBeVisible();
+		await expect(page.locator('[data-battlefield-count]')).toContainText('0 / 3');
+		const rolled = deckPane(page).getByRole('slider', { name: /Rune split/ });
+		await rolled.focus();
+		await page.keyboard.press('ArrowRight');
+		await expect.poll(async () => (await storedDecks(page))[0].rune.find((s) => s.card === slugOf('Calm Rune'))?.qty).toBe(7);
 		await ledger(page, 'Runes').click();
 		await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-		await expect(page.getByRole('spinbutton', { name: /Calm rune count/i })).toHaveValue('7');
+		await expect(deckPane(page).getByRole('slider', { name: /Rune split/ })).toHaveValue('7');
+	});
+
+	test('replacing the Legend turns the edited runes to its colors (the kept color keeps its count) and drops the others', async ({ page }) => {
+		const slider = deckPane(page).getByRole('slider', { name: /Rune split/ });
+		await slider.focus();
+		await page.keyboard.press('ArrowRight'); // Calm 7 / Mind 5
+		await expect.poll(async () => (await storedDecks(page))[0].rune.find((s) => s.card === slugOf('Calm Rune'))?.qty).toBe(7);
+		const other = slugOf('Blind Monk'); // a Calm + Body Legend
+		await ledger(page, 'Legend').click();
+		await search(page, 'Blind Monk');
+		await browser(page).locator(`li[data-slug="${other}"] a`).click();
+		await expect.poll(async () => Object.fromEntries((await storedDecks(page))[0].rune.map((s) => [s.card, s.qty]))).toEqual({ [slugOf('Calm Rune')]: 7, [slugOf('Body Rune')]: 5 });
+		await expect(deckPane(page).locator(`[data-rows="rune"] > li[data-slug="${slugOf('Body Rune')}"]`)).toBeVisible();
+		await expect(deckPane(page).locator(`[data-rows="rune"] > li[data-slug="${slugOf('Mind Rune')}"]`)).toHaveCount(0);
+		await expect(deckPane(page).locator('[data-slider-end] img[alt="Body"]')).toBeVisible();
 	});
 
 	test('the champion zone places a tag-matching champion', async ({ page }) => {
@@ -163,6 +184,7 @@ test.describe('legality checklist', () => {
 		await seedDecks(page, [emptyDeck('x', 'Fresh Fox', LEGEND)]);
 		await openDeck(page, 'x');
 		await expect(verdict(page)).toHaveText('Not legal');
+		await verdict(page).click(); // the checklist is a popover opened from the verdict pill
 		const checklist = page.getByRole('region', { name: 'Deck legality' });
 		await expect(checklist.getByText('Main deck: exactly 40')).toBeVisible();
 		await expect(page.locator('#deck-checklist > li[data-status="fail"]').filter({ hasText: 'Main deck: exactly 40' })).toHaveCount(1);

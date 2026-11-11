@@ -1,15 +1,18 @@
 // The deck as one sheet (deck-manager spec): the composition ledger pinned at
-// the top (five sections, counts and targets, the focused one marked), the
-// table (Legend and Champion, with Battlefields and Runes beside them; a
-// group that starts open and folds into a summary), and the main and side
-// decks. The pieces live in ./viewer; this composes them.
-import { useState } from 'react';
+// the top (five sections, counts and targets, the focused one marked), then two
+// groups. "General info" is a dropdown (open by default): one Legend section
+// with the Legend, the Champion and the two rune cards as a row of equal cards
+// and the rune slider under the runes, then the battlefields; rolled up it is a
+// Legend preview, the slider and the battlefield count. "Main deck" holds the deck cards and the side deck. The
+// pieces live in ./viewer; this composes them.
+import { useState, type ReactNode } from 'react';
 import { SECTION_KEYS, sectionTarget, sectionTotal, type Deck, type SectionKey } from '../../domain/deck.ts';
 import type { DeckRuleIndexes } from '../../domain/deck-rules.ts';
 import type { GridEntry } from '../../domain/grid-item.ts';
 import { useCurrentAddress } from '../../ui/hooks/useCurrentAddress.ts';
 import { Frame } from '../../ui/organisms/Frame.tsx';
 import { DeckSection } from './viewer/DeckSection.tsx';
+import { RuneSlider, type DomainInfo } from './viewer/RuneSlider.tsx';
 import { TableSummary } from './viewer/TableSummary.tsx';
 import type { ViewerActions } from './viewer/viewer-actions.ts';
 
@@ -25,7 +28,7 @@ export interface DeckViewerProps {
 	shared: boolean;
 	idx: DeckRuleIndexes;
 	bySlug: Map<string, GridEntry>;
-	domains: Array<{ slug: string; label?: string }>;
+	domains: DomainInfo[];
 	active: SectionKey;
 	championPicking: boolean;
 	/** The slug being dragged from the browser, if any. */
@@ -33,21 +36,21 @@ export interface DeckViewerProps {
 	actions: ViewerActions;
 }
 
-/** The sections the table group holds; the others always show. */
+/** The sections the General info group holds; the others always show. */
 const TABLE_SECTIONS: readonly SectionKey[] = ['legend', 'battlefields', 'rune'];
-const TABLE_ID = 'sheet-table';
+const TABLE_ID = 'sheet-general';
 
-function TableToggle({ open, deck, onToggle }: { open: boolean; deck: Deck; onToggle(): void }) {
+function GeneralToggle({ open, onToggle }: { open: boolean; onToggle(): void }) {
 	return (
-		<button type="button" className="table-toggle" aria-expanded={open} aria-controls={open ? TABLE_ID : `${TABLE_ID}-summary`} onClick={onToggle}>
-			<svg className="table-toggle-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-				<path d="M3 4.5 6 7.5l3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-			</svg>
-			<span className="section-name">The table</span>
-			<span className="section-count">
-				{open ? 'Legend, battlefields, runes' : `Battlefields ${sectionTotal(deck.battlefields)} / 3`}
-			</span>
-		</button>
+		<h2 className="group-heading">
+			<button type="button" className="table-toggle" aria-expanded={open} aria-controls={open ? TABLE_ID : `${TABLE_ID}-summary`} onClick={onToggle}>
+				<svg className="table-toggle-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+					<path d="M3 4.5 6 7.5l3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+				</svg>
+				<span className="section-name">General info</span>
+				<span className="section-count">Legend, runes, battlefields</span>
+			</button>
+		</h2>
 	);
 }
 
@@ -98,20 +101,20 @@ export function DeckViewer({ deck, shared, idx, bySlug, domains, active, champio
 		if (TABLE_SECTIONS.includes(key)) setTableOpen(true);
 		actions.focusSection(key);
 	};
-	const section = (key: SectionKey) => (
+	const section = (key: SectionKey, extra?: (runeRows: ReactNode) => ReactNode) => (
 		<DeckSection
 			key={key}
 			section={key}
 			deck={deck}
 			idx={idx}
 			bySlug={bySlug}
-			domains={domains}
 			shared={shared}
-			active={key === active}
+			active={key === active || (key === 'legend' && active === 'rune')}
 			championPicking={championPicking}
 			dragging={dragging}
 			address={address}
 			actions={actions}
+			extra={extra}
 		/>
 	);
 	return (
@@ -119,30 +122,37 @@ export function DeckViewer({ deck, shared, idx, bySlug, domains, active, champio
 			<div className="sheet scroll-column min-h-0 flex-1 overflow-y-auto overscroll-contain">
 				<Ledger deck={deck} active={active} onFocus={focusSection} />
 				<div className="sheet-sections">
-					<TableToggle open={tableOpen} deck={deck} onToggle={() => setTableOpen((v) => !v)} />
-					{tableOpen ? (
-						/* the table: Legend and Champion, with the battlefields and runes
-						   they are played with beside them once the sheet is wide enough */
-						<div id={TABLE_ID} className="sheet-table">
-							{section('legend')}
-							{section('battlefields')}
-							{section('rune')}
-						</div>
-					) : (
-						<TableSummary
-							id={`${TABLE_ID}-summary`}
-							deck={deck}
-							shared={shared}
-							idx={idx}
-							bySlug={bySlug}
-							domains={domains}
-							championPicking={championPicking}
-							address={address}
-							actions={actions}
-						/>
-					)}
-					{section('main')}
-					{section('side')}
+					<div role="group" aria-label="General info" className="sheet-group">
+						<GeneralToggle open={tableOpen} onToggle={() => setTableOpen((v) => !v)} />
+						{tableOpen ? (
+							<div id={TABLE_ID} className="sheet-table">
+								{section('legend', (runeRows) => (
+									<div className="rune-bay">
+										<span className="rune-cap">
+											<span>Runes</span>
+											<span className="tnum">
+												{sectionTotal(deck.rune)} / {sectionTarget('rune').exact}
+											</span>
+										</span>
+										<ul data-rows="rune" className="rune-faces">
+											{runeRows}
+										</ul>
+										<RuneSlider deck={deck} idx={idx} shared={shared} domains={domains} onSet={actions.setRuneRatio} />
+									</div>
+								))}
+								{section('battlefields')}
+							</div>
+						) : (
+							<TableSummary id={`${TABLE_ID}-summary`} deck={deck} shared={shared} idx={idx} bySlug={bySlug} domains={domains} address={address} actions={actions} />
+						)}
+					</div>
+					<div role="group" aria-labelledby="sheet-main-title" className="sheet-group">
+						<h2 id="sheet-main-title" className="group-heading group-title">
+							Main deck
+						</h2>
+						{section('main')}
+						{section('side')}
+					</div>
 				</div>
 			</div>
 		</Frame>
